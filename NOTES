@@ -1,0 +1,25 @@
+## SNES
+
+dev wiki: https://wiki.superfamicom.org/
+
+- up to 128 sprites (various sizes up to 64x64)
+- only 16Kb of sprite image data (without DMAing in new data)
+  -> 128 16x16 sprite frames
+- sprites support h+v flipping
+screen resolution:
+  - 256x240 (PAL)
+  - 256x224 (NTSC)
+
+
+## Megadrive
+
+- 80 sprites (20 per scanline)
+  - up to 32x32 (1-4 tiles in each dir. tiles are 8x8 pixels)
+
+screen resolution (ntsc):
+  - 320x224  H40 mode
+  - 256x224  H32 mode
+screen resolution (pal):
+  - 320x240  H40 mode
+  - 256x240  H32 mode
+
