@@ -35,6 +35,14 @@ void testum() {
     }
 }
 
+
+#define DIR_UP 0x08
+#define DIR_DOWN 0x04
+#define DIR_LEFT 0x02
+#define DIR_RIGHT 0x01
+
+
+
 #define GK_NONE 0
 // Player kind
 #define GK_PLAYER 0x10
@@ -60,6 +68,7 @@ uint8_t gobkind[MAX_GOBS];
 uint16_t gobx[MAX_GOBS];
 uint16_t goby[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
+uint8_t gobtimer[MAX_GOBS];
 
 
 void player_tick(uint8_t d);
@@ -160,6 +169,7 @@ void gob_init(uint8_t d, uint8_t kind, int x, int y) {
     gobx[d] = x;
     goby[d] = y;
     gobdat[d] = 0;
+    gobtimer[d] = 0;
 }
 
 // returns 0 if none free.
@@ -186,33 +196,61 @@ uint8_t dude_alloc() {
 // player
 
 void player_tick(uint8_t d) {
-
+    uint8_t dir = 0;
     if ((inp_joystate & JOY_UP_MASK) ==0) {
+        dir |= DIR_UP;
         goby[d] -= 2;
     } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
+        dir |= DIR_DOWN;
         goby[d] += 2;
     }
     if ((inp_joystate & JOY_LEFT_MASK) ==0) {
+        dir |= DIR_LEFT;
         gobx[d] -= 2;
     } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
+        dir |= DIR_RIGHT;
         gobx[d] += 2;
     }
 
+
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
+        if (gobdat[d] == 0 && dir != 0) {
+            gobdat[d] = dir;
+        }
+
         uint8_t shot = shot_alloc();
         if (shot) {
-            gob_init(shot, GK_SHOT, gobx[d], goby[d]);
+            gobkind[shot] = GK_SHOT;
+            gobx[shot] = gobx[d];
+            goby[shot] = goby[d];
+            gobdat[shot] = gobdat[d];   // direction
+            gobtimer[shot] = 16;
         }
+    } else {
+        gobdat[d] = 0;
     }
 }
 
 // shot
+// dat: dir
+// timer: dies at 0
 
-void shot_tick(uint8_t d)
+void shot_tick(uint8_t s)
 {
-    ++gobdat[d];
-    if (gobdat[d] > 30) {
-        gobkind[d] = GK_NONE;
+    if (--gobtimer[s] == 0) {
+        gobkind[s] = GK_NONE;
+        return;
+    }
+    uint8_t dir = gobdat[s];
+    if (dir & DIR_UP) {
+        goby[s] -= 4;
+    } else if (dir & DIR_DOWN) {
+        goby[s] += 4;
+    }
+    if (dir & DIR_LEFT) {
+        gobx[s] -= 4;
+    } else if (dir & DIR_RIGHT) {
+        gobx[s] += 4;
     }
 }
 
