@@ -35,19 +35,6 @@ void testum() {
     }
 }
 
-
-
-typedef struct dude {
-    int8_t kind;
-    int8_t dat;
-    int16_t x;
-    int16_t y;
-} dude;
-
-// Dude flags
-#define DF_LIVE 0x01
-
-
 // Dude Kinds
 #define DK_NONE 0
 #define DK_PLAYER 1
@@ -57,39 +44,42 @@ typedef struct dude {
 
 #define MAX_DUDES 80
 
-dude dudes[MAX_DUDES];
+// Dude table.
+uint8_t obkind[MAX_DUDES];
+uint16_t obx[MAX_DUDES];
+uint16_t oby[MAX_DUDES];
+uint8_t obdat[MAX_DUDES];
 
 
-void player_tick(dude* d);
-void shot_tick(dude* d);
-void grunt_tick(dude* d);
+
+void player_tick(uint8_t d);
+void shot_tick(uint8_t d);
+void grunt_tick(uint8_t d);
 
 
 void dudes_init()
 {
     for (uint8_t i = 0; i < MAX_DUDES; ++i) {
-        dude* d = &dudes[i];
-        d->kind = DK_NONE;
+        obkind[i] = DK_NONE;
     }
 }
 
 void dudes_tick()
 {
     for (uint8_t i = 0; i < MAX_DUDES; ++i) {
-        dude* d = &dudes[i];
-        switch(d->kind) {
+        switch(obkind[i]) {
             case DK_NONE:
                 break;
             case DK_PLAYER:
-                player_tick(d);
+                player_tick(i);
                 break;
             case DK_SHOT:
-                shot_tick(d);
+                shot_tick(i);
                 break;
             case DK_BLOCK:
                 break;
             case DK_GRUNT:
-                grunt_tick(d);
+                grunt_tick(i);
                 break;
             default:
                 break;
@@ -111,9 +101,11 @@ void sproff() {
     VERA.data0 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
-void sprout(int16_t x, int16_t y, uint8_t idx) {
-    VERA.data0 = ((0x10000+256*idx)>>5) & 0xFF;
-    VERA.data0 = (1 << 7) | ((0x10000+256*idx)>>13);
+void sprout(uint8_t d, uint8_t img) {
+    int16_t x = obx[d];
+    int16_t y = oby[d];
+    VERA.data0 = ((0x10000+256*img)>>5) & 0xFF;
+    VERA.data0 = (1 << 7) | ((0x10000+256*img)>>13);
     VERA.data0 = x & 0xff;  // x lo
     VERA.data0 = (x>>8) & 0x03;  // x hi
     VERA.data0 = y & 0xff;  // y lo
@@ -129,23 +121,22 @@ void dudes_render()
     VERA.address = 0xFC00;
     VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
 
-    for (uint8_t i = 0; i < MAX_DUDES; ++i) {
-        dude* d = &dudes[i];
-        switch(d->kind) {
+    for (uint8_t d = 0; d < MAX_DUDES; ++d) {
+        switch(obkind[d]) {
             case DK_NONE:
                 sproff();
                 break;
             case DK_PLAYER:
-                sprout(d->x, d->y, 0);
+                sprout(d, 0);
                 break;
             case DK_SHOT:
-                sprout(d->x, d->y, 1);
+                sprout(d, 1);
                 break;
             case DK_BLOCK:
-                sprout(d->x, d->y, 2);
+                sprout(d, 2);
                 break;
             case DK_GRUNT:
-                sprout(d->x, d->y, 3 + (tick >> 2) & 0x03);
+                sprout(d, 3 + ((tick >> 5) & 0x01));
                 break;
             default:
                 sproff();
@@ -154,17 +145,18 @@ void dudes_render()
     }
 }
 
-void dude_init(dude* d, uint8_t kind, int x, int y) {
-    d->kind = kind;
-    d->x = x;
-    d->y = y;
-    d->dat = 0;
+void dude_init(uint8_t d, uint8_t kind, int x, int y) {
+    obkind[d] = kind;
+    obx[d] = x;
+    oby[d] = y;
+    obdat[d] = 0;
 }
 
-dude* dude_alloc() {
-    for(uint8_t i=0; i<MAX_DUDES; ++i) {
-        if(dudes[i].kind == DK_NONE) {
-            return &dudes[i];
+// returns player idx if none free.
+uint8_t dude_alloc() {
+    for(uint8_t d=1; d<MAX_DUDES; ++d) {
+        if(obkind[d] == DK_NONE) {
+            return d;
         }
     }
     return 0;
@@ -173,55 +165,63 @@ dude* dude_alloc() {
 
 // player
 
-void player_tick(dude* d) {
+void player_tick(uint8_t d) {
 
     if ((inp_joystate & JOY_UP_MASK) ==0) {
-        d->y -= 2;
+        oby[d] -= 2;
     } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
-        d->y += 2;
+        oby[d] += 2;
     }
     if ((inp_joystate & JOY_LEFT_MASK) ==0) {
-        d->x -= 2;
+        obx[d] -= 2;
     } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
-        d->x += 2;
+        obx[d] += 2;
     }
 
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
-        dude* shot = dude_alloc();
+        uint8_t shot = dude_alloc();
         if (shot) {
-            dude_init(shot, DK_SHOT, d->x, d->y);
+            dude_init(shot, DK_SHOT, obx[d], oby[d]);
         }
     }
 }
 
 // shot
-void shot_tick(dude* d)
+void shot_tick(uint8_t d)
 {
-    ++d->dat;
-    if (d->dat>30) {
-        d->kind = DK_NONE;
+    ++obdat[d];
+    if (obdat[d] > 30) {
+        obkind[d] = DK_NONE;
     }
 }
 
 // grunt
-void grunt_tick(dude* d)
+void grunt_tick(uint8_t d)
 {
-    d->dat++;
-    if (d->dat>13) {
-        d->dat = 0;
-        dude* plr = &dudes[0];
-        if (plr->x < d->x) {
-            --d->x;
-        } else if (plr->x > d->x) {
-            ++d->x;
+    obdat[d]++;
+    if (obdat[d]>13) {
+        obdat[d] = 0;
+        int16_t px = obx[0];
+        if (px < obx[d]) {
+            --obx[d];
+            --obx[d];
+            --obx[d];
+        } else if (px > obx[d]) {
+            ++obx[d];
+            ++obx[d];
+            ++obx[d];
         }
-        if (plr->y < d->y) {
-            --d->y;
-        } else if (plr->y > d->y) {
-            ++d->y;
+        int16_t py = oby[0];
+        if (py < oby[d]) {
+            --oby[d];
+            --oby[d];
+            --oby[d];
+        } else if (py > oby[d]) {
+            ++oby[d];
+            ++oby[d];
+            ++oby[d];
         }
     }
-
 }
 
 
@@ -296,12 +296,12 @@ int main(void) {
     irq_init();
 
     dudes_init();
-    dude_init(&dudes[0], DK_PLAYER, (320/2) + 8, (240/2)+8);
+    dude_init(0, DK_PLAYER, (320/2) + 8, (240/2)+8);
 
     uint8_t i=1;
     for( uint8_t y=0; y<8; ++y) {
         for( uint8_t x=0; x<8; ++x) {
-            dude_init(&dudes[i++], DK_GRUNT, 4+x*38,4+y*38);
+            dude_init(i++, DK_GRUNT, 4+x*38,4+y*38);
         }
     }
     while (1) {
