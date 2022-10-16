@@ -35,21 +35,27 @@ void testum() {
     }
 }
 
-// Dude Kinds
-#define DK_NONE 0
-#define DK_PLAYER 1
-#define DK_SHOT 2
-#define DK_BLOCK 3
-#define DK_GRUNT 4
+#define GK_NONE 0
+// Player kind
+#define GK_PLAYER 0x10
+// Shot kinds
+#define GK_SHOT 0x20
+// Dude kinds
+#define GK_BLOCK 0x80
+#define GK_GRUNT 0x81
 
-#define MAX_DUDES 80
 
-// Dude table.
-uint8_t obkind[MAX_DUDES];
-uint16_t obx[MAX_DUDES];
-uint16_t oby[MAX_DUDES];
-uint8_t obdat[MAX_DUDES];
+#define MAX_PLAYERS 1
+#define MAX_SHOTS 15
+#define MAX_DUDES 64
 
+#define MAX_GOBS (MAX_PLAYERS + MAX_SHOTS + MAX_DUDES)
+
+// Game objects table.
+uint8_t gobkind[MAX_GOBS];
+uint16_t gobx[MAX_GOBS];
+uint16_t goby[MAX_GOBS];
+uint8_t gobdat[MAX_GOBS];
 
 
 void player_tick(uint8_t d);
@@ -57,28 +63,28 @@ void shot_tick(uint8_t d);
 void grunt_tick(uint8_t d);
 
 
-void dudes_init()
+void gobs_init()
 {
-    for (uint8_t i = 0; i < MAX_DUDES; ++i) {
-        obkind[i] = DK_NONE;
+    for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+        gobkind[i] = GK_NONE;
     }
 }
 
-void dudes_tick()
+void gobs_tick()
 {
-    for (uint8_t i = 0; i < MAX_DUDES; ++i) {
-        switch(obkind[i]) {
-            case DK_NONE:
+    for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+        switch(gobkind[i]) {
+            case GK_NONE:
                 break;
-            case DK_PLAYER:
+            case GK_PLAYER:
                 player_tick(i);
                 break;
-            case DK_SHOT:
+            case GK_SHOT:
                 shot_tick(i);
                 break;
-            case DK_BLOCK:
+            case GK_BLOCK:
                 break;
-            case DK_GRUNT:
+            case GK_GRUNT:
                 grunt_tick(i);
                 break;
             default:
@@ -102,8 +108,8 @@ void sproff() {
 }
 
 void sprout(uint8_t d, uint8_t img) {
-    int16_t x = obx[d];
-    int16_t y = oby[d];
+    int16_t x = gobx[d];
+    int16_t y = goby[d];
     VERA.data0 = ((0x10000+256*img)>>5) & 0xFF;
     VERA.data0 = (1 << 7) | ((0x10000+256*img)>>13);
     VERA.data0 = x & 0xff;  // x lo
@@ -114,28 +120,28 @@ void sprout(uint8_t d, uint8_t img) {
     VERA.data0 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
-void dudes_render()
+void gobs_render()
 {
     VERA.control = 0x00;
     // sprite attrs start at 0x1FC00
     VERA.address = 0xFC00;
     VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
 
-    for (uint8_t d = 0; d < MAX_DUDES; ++d) {
-        switch(obkind[d]) {
-            case DK_NONE:
+    for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+        switch(gobkind[d]) {
+            case GK_NONE:
                 sproff();
                 break;
-            case DK_PLAYER:
+            case GK_PLAYER:
                 sprout(d, 0);
                 break;
-            case DK_SHOT:
+            case GK_SHOT:
                 sprout(d, 1);
                 break;
-            case DK_BLOCK:
+            case GK_BLOCK:
                 sprout(d, 2);
                 break;
-            case DK_GRUNT:
+            case GK_GRUNT:
                 sprout(d, 3 + ((tick >> 5) & 0x01));
                 break;
             default:
@@ -145,17 +151,27 @@ void dudes_render()
     }
 }
 
-void dude_init(uint8_t d, uint8_t kind, int x, int y) {
-    obkind[d] = kind;
-    obx[d] = x;
-    oby[d] = y;
-    obdat[d] = 0;
+void gob_init(uint8_t d, uint8_t kind, int x, int y) {
+    gobkind[d] = kind;
+    gobx[d] = x;
+    goby[d] = y;
+    gobdat[d] = 0;
 }
 
-// returns player idx if none free.
+// returns 0 if none free.
+uint8_t shot_alloc() {
+    for(uint8_t d = MAX_PLAYERS; d < MAX_PLAYERS + MAX_SHOTS; ++d) {
+        if(gobkind[d] == GK_NONE) {
+            return d;
+        }
+    }
+    return 0;
+}
+
+// returns 0 if none free.
 uint8_t dude_alloc() {
-    for(uint8_t d=1; d<MAX_DUDES; ++d) {
-        if(obkind[d] == DK_NONE) {
+    for(uint8_t d = MAX_PLAYERS+MAX_SHOTS; d < MAX_GOBS; ++d) {
+        if(gobkind[d] == GK_NONE) {
             return d;
         }
     }
@@ -168,58 +184,60 @@ uint8_t dude_alloc() {
 void player_tick(uint8_t d) {
 
     if ((inp_joystate & JOY_UP_MASK) ==0) {
-        oby[d] -= 2;
+        goby[d] -= 2;
     } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
-        oby[d] += 2;
+        goby[d] += 2;
     }
     if ((inp_joystate & JOY_LEFT_MASK) ==0) {
-        obx[d] -= 2;
+        gobx[d] -= 2;
     } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
-        obx[d] += 2;
+        gobx[d] += 2;
     }
 
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
-        uint8_t shot = dude_alloc();
+        uint8_t shot = shot_alloc();
         if (shot) {
-            dude_init(shot, DK_SHOT, obx[d], oby[d]);
+            gob_init(shot, GK_SHOT, gobx[d], goby[d]);
         }
     }
 }
 
 // shot
+
+
 void shot_tick(uint8_t d)
 {
-    ++obdat[d];
-    if (obdat[d] > 30) {
-        obkind[d] = DK_NONE;
+    ++gobdat[d];
+    if (gobdat[d] > 30) {
+        gobkind[d] = GK_NONE;
     }
 }
 
 // grunt
 void grunt_tick(uint8_t d)
 {
-    obdat[d]++;
-    if (obdat[d]>13) {
-        obdat[d] = 0;
-        int16_t px = obx[0];
-        if (px < obx[d]) {
-            --obx[d];
-            --obx[d];
-            --obx[d];
-        } else if (px > obx[d]) {
-            ++obx[d];
-            ++obx[d];
-            ++obx[d];
+    gobdat[d]++;
+    if (gobdat[d]>13) {
+        gobdat[d] = 0;
+        int16_t px = gobx[0];
+        if (px < gobx[d]) {
+            --gobx[d];
+            --gobx[d];
+            --gobx[d];
+        } else if (px > gobx[d]) {
+            ++gobx[d];
+            ++gobx[d];
+            ++gobx[d];
         }
-        int16_t py = oby[0];
-        if (py < oby[d]) {
-            --oby[d];
-            --oby[d];
-            --oby[d];
-        } else if (py > oby[d]) {
-            ++oby[d];
-            ++oby[d];
-            ++oby[d];
+        int16_t py = goby[0];
+        if (py < goby[d]) {
+            --goby[d];
+            --goby[d];
+            --goby[d];
+        } else if (py > goby[d]) {
+            ++goby[d];
+            ++goby[d];
+            ++goby[d];
         }
     }
 }
@@ -290,28 +308,36 @@ void display_init()
     }
 }
 
+void testlevel()
+{
+    for( uint8_t y=0; y<8; ++y) {
+        for( uint8_t x=0; x<8; ++x) {
+            uint8_t d = dude_alloc();
+            if (!d) {
+                return; // no more free dudes.
+            }
+            gob_init(d, GK_GRUNT, 4+x*28, 4+y*28);
+        }
+    }
+}
+
+
 int main(void) {
     display_init();
 
     irq_init();
 
-    dudes_init();
-    dude_init(0, DK_PLAYER, (320/2) + 8, (240/2)+8);
-
-    uint8_t i=1;
-    for( uint8_t y=0; y<8; ++y) {
-        for( uint8_t x=0; x<8; ++x) {
-            dude_init(i++, DK_GRUNT, 4+x*38,4+y*38);
-        }
-    }
+    gobs_init();
+    gob_init(0, GK_PLAYER, (320/2) + 8, (240/2)+8);
+    testlevel();
     while (1) {
         VERA.display.border = 2;
-        dudes_render();
+        gobs_render();
         VERA.display.border = 3;
         testum();
         inp_tick();
         VERA.display.border = 15;
-        dudes_tick();
+        gobs_tick();
         VERA.display.border = 0;
         waitvbl();
     }
