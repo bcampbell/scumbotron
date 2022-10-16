@@ -49,6 +49,10 @@ void testum() {
 #define MAX_SHOTS 15
 #define MAX_DUDES 64
 
+#define FIRST_PLAYER 0
+#define FIRST_SHOT (FIRST_PLAYER + MAX_PLAYERS)
+#define FIRST_DUDE (FIRST_SHOT + MAX_SHOTS)
+
 #define MAX_GOBS (MAX_PLAYERS + MAX_SHOTS + MAX_DUDES)
 
 // Game objects table.
@@ -204,12 +208,37 @@ void player_tick(uint8_t d) {
 
 // shot
 
-
 void shot_tick(uint8_t d)
 {
     ++gobdat[d];
     if (gobdat[d] > 30) {
         gobkind[d] = GK_NONE;
+    }
+}
+
+void shot_collisions()
+{
+    for (uint8_t s = FIRST_SHOT; s < (FIRST_SHOT + MAX_SHOTS); ++s) {
+        if (gobkind[s] == GK_NONE) {
+            continue;
+        }
+        // Take centre point of shot.
+        int16_t sx = gobx[s] + 8;
+        int16_t sy = goby[s] + 8;
+
+        for (uint8_t d = FIRST_DUDE + (tick & 0x01); d < (FIRST_DUDE + MAX_DUDES); d=d+2) {
+            if (gobkind[d]==GK_NONE) {
+                continue;
+            }
+            int16_t dx = gobx[d];
+            int16_t dy = goby[d];
+            if (sx >= dx && sx < (dx + 16) && sy >= dy && sy < (dy + 16)) {
+                // boom.
+                gobkind[d] = GK_NONE;
+                gobkind[s] = GK_NONE;
+                break;  // next shot.
+            }
+        }
     }
 }
 
@@ -338,6 +367,8 @@ int main(void) {
         inp_tick();
         VERA.display.border = 15;
         gobs_tick();
+        VERA.display.border = 7;
+        shot_collisions();
         VERA.display.border = 0;
         waitvbl();
     }
