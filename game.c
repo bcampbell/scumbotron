@@ -12,6 +12,9 @@ extern void sproff();
 extern void sprout(int16_t x, int16_t y, uint8_t img);
 extern void sys_render_finish();
 
+extern void sys_clr();
+extern void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
+
 extern volatile uint16_t inp_joystate;
 extern volatile uint8_t tick;
 
@@ -167,7 +170,7 @@ void dude_randompos(uint8_t d) {
         y = -128 + rnd();
 
         int16_t lsq = x*x + y*y;
-        if (lsq > 80*80 ) {
+        if (lsq > 80*80 && lsq <100*100 ) {
             break;
         }
     }
@@ -299,6 +302,28 @@ void grunt_tick(uint8_t d)
     }
 }
 
+void titlescreen()
+{
+    sys_clr();
+    while(1)
+    {
+        inp_tick();
+        sys_render_start();
+        sys_text(0,12,"*** TITLE SCREEN ***", tick & 0x0f);
+        sys_text(0,14,"FIRE TO START", tick & 0x01);
+        //testum();
+        sys_render_finish();
+
+        if ((inp_joystate & 0x80) == 0) {
+            return;
+        }
+
+        waitvbl();
+    }
+}
+
+
+
 void testlevel()
 {
     for( uint8_t i=0; i<MAX_DUDES; ++i) {
@@ -313,10 +338,8 @@ void testlevel()
     }
 }
 
-
-int main(void) {
-    sys_init();
-
+void level() {
+    sys_clr();
     gobs_init();
     gob_init(0, GK_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
     testlevel();
@@ -333,9 +356,30 @@ int main(void) {
         gobs_tick();
         //VERA.display.border = 7;
         shot_collisions();
+
+        uint8_t cnt = 0;
+        for (uint8_t i = FIRST_DUDE; i<FIRST_DUDE+MAX_DUDES; ++i ) {
+            if (gobkind[i] != GK_NONE) {
+                ++cnt;
+            }
+        }
+        if (cnt==0) {
+            break;
+        }
+
+        char foo[2] = {'A'+cnt, '\0'};
+        sys_text(0,1,foo, tick&0x0f);
+
         //VERA.display.border = 0;
         waitvbl();
     }
-    return 0;
 }
 
+
+int main(void) {
+    sys_init();
+    while(1) {
+        titlescreen();
+        level();
+    }
+}

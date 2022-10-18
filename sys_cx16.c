@@ -90,11 +90,12 @@ void sys_init()
     VERA.display.hstop = 640>>2;
     VERA.display.vstart = 0;
     VERA.display.vstop = 480>>1;
+    VERA.control = 0x00;    //DCSEL=0
 
     // layer setup
     VERA.layer1.config = 0x10;    // 64x32 tiles, !T256C, !bitmapmode, 1bpp
 //    VERA.layer0.mapbase = 
-//    VERA.layer0.tilebase = 
+    VERA.layer1.tilebase = ((0x1F000)>>11)<<2;
     VERA.layer1.hscroll = 0; // 16bit
     VERA.layer1.vscroll = 0; // 16bit
 
@@ -138,4 +139,41 @@ void sys_init()
     }
 }
 
+void sys_clr()
+{
+    // clear the screen (0x1B0000)
+    VERA.control = 0x00;
+    VERA.address = 0xB000;
+    VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
+
+    // 64x32*2 (w*h*(char+colour))
+    const uint8_t* src = sprites;
+    for (int i=0; i<64*32*2; ++i) {
+        VERA.data0 = ' '; // tile
+        VERA.data0 = 0; // colour
+    }
+}
+
+static uint8_t screencode(char asc)
+{
+    if (asc >= 0x40 && asc < 0x60) {
+        return (uint8_t)asc-0x40;
+    }
+    return (uint8_t)asc;
+}
+
+void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+{
+    // clear the screen (0x1B0000)
+    VERA.control = 0x00;
+    VERA.address = 0xB000 + cy*64*2 + cx*2;
+    VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
+
+    const char* p = txt;
+    while(*p) {
+        VERA.data0 = screencode(*p);
+        VERA.data0 = colour;
+        ++p;
+    }
+}
 
