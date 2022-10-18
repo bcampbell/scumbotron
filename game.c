@@ -3,9 +3,6 @@
 #include <cx16.h>
 #include <stdint.h>
 
-//#define IRQVEC        (*(volatile void* *)0xFFFE)
-#define IRQVEC        (*(volatile void* *)0x0314)
-
 extern volatile uint8_t tick;
 extern void irq_init();
 extern void waitvbl();
@@ -212,9 +209,8 @@ void player_tick(uint8_t d) {
         gobx[d] += 2;
     }
 
-
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
-        if (gobdat[d] == 0 && dir != 0) {
+        if (!gobdat[d]) {
             gobdat[d] = dir;
         }
 
@@ -227,7 +223,9 @@ void player_tick(uint8_t d) {
             gobtimer[shot] = 16;
         }
     } else {
-        gobdat[d] = 0;
+        if (dir) {
+            gobdat[d] = dir;
+        }
     }
 }
 

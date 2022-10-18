@@ -23,3 +23,27 @@ screen resolution (pal):
   - 320x240  H40 mode
   - 256x240  H32 mode
 
+# GBA
+
+  - 128 sprites
+  - screen resoulution 240x160
+  - up to 4 tilemap layers
+
+# NDS
+
+https://www.copetti.org/writings/consoles/nintendo-ds/
+
+  - 128 sprites per screen (+polys)
+  - 256x192 per screen
+  - up to 4 tilemap layers
+
+# PC engine
+
+https://www.copetti.org/writings/consoles/pc-engine/
+compiler: https://github.com/uli/huc
+
+- Screen resolution: from 256×224 up to 512x240
+- 64 sprites (16x16)
+- tile layer
+
+
