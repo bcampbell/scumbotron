@@ -8,6 +8,12 @@ extern void irq_init();
 extern void waitvbl();
 extern void inp_tick();
 
+
+#define SCREEN_W 320
+#define SCREEN_H 240
+
+
+
 //  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 //              SNES | B | Y |SEL|STA|UP |DN |LT |RT |
 //
@@ -191,22 +197,23 @@ uint8_t dude_alloc() {
 
 
 // player
+#define PLAYER_SPD 1
 
 void player_tick(uint8_t d) {
     uint8_t dir = 0;
     if ((inp_joystate & JOY_UP_MASK) ==0) {
         dir |= DIR_UP;
-        goby[d] -= 2;
+        goby[d] -= PLAYER_SPD;
     } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
         dir |= DIR_DOWN;
-        goby[d] += 2;
+        goby[d] += PLAYER_SPD;
     }
     if ((inp_joystate & JOY_LEFT_MASK) ==0) {
         dir |= DIR_LEFT;
-        gobx[d] -= 2;
+        gobx[d] -= PLAYER_SPD;
     } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
         dir |= DIR_RIGHT;
-        gobx[d] += 2;
+        gobx[d] += PLAYER_SPD;
     }
 
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
@@ -288,9 +295,7 @@ void grunt_tick(uint8_t d)
         if (px < gobx[d]) {
             --gobx[d];
             --gobx[d];
-            --gobx[d];
         } else if (px > gobx[d]) {
-            ++gobx[d];
             ++gobx[d];
             ++gobx[d];
         }
@@ -298,9 +303,7 @@ void grunt_tick(uint8_t d)
         if (py < goby[d]) {
             --goby[d];
             --goby[d];
-            --goby[d];
         } else if (py > goby[d]) {
-            ++goby[d];
             ++goby[d];
             ++goby[d];
         }
@@ -318,8 +321,8 @@ void display_init()
     vid &= ~(1<<4);    // layer 1 off
     VERA.display.video = vid;
 
-    VERA.display.hscale = 64;   // 2x scale
-    VERA.display.vscale = 64;   // 2x scale
+    VERA.display.hscale = (uint8_t)(((int32_t)SCREEN_W*128)/640);       // 64 = 2x scale
+    VERA.display.vscale = (uint8_t)(((int32_t)SCREEN_H*128)/480);       // 64 = 2x scale
     VERA.control = 0x02;    //DCSEL=1
     VERA.display.hstart = 2;    // 2 to allow some border for rastertiming
     VERA.display.hstop = 640>>2;
@@ -393,7 +396,7 @@ int main(void) {
     irq_init();
 
     gobs_init();
-    gob_init(0, GK_PLAYER, (320/2) + 8, (240/2)+8);
+    gob_init(0, GK_PLAYER, (SCREEN_W/2) + 8, (SCREEN_H/2)+8);
     testlevel();
     while (1) {
         VERA.display.border = 2;
