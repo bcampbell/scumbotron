@@ -24,6 +24,18 @@ extern volatile uint16_t inp_joystate;
 extern uint8_t sprites[16*16*16];
 extern uint8_t palette[16*2];   // just 16 colours
 
+
+// by darsie,
+// https://www.avrfreaks.net/forum/tiny-fast-prng
+uint8_t rnd() {
+        static uint8_t s=0xaa,a=0;
+        s^=s<<3;
+        s^=s>>5;
+        s^=a++>>2;
+        return s;
+}
+
+
 void testum() {
     VERA.control = 0x00;
     // Writing to 0x1b000 onward.
@@ -57,8 +69,8 @@ void testum() {
 
 
 #define MAX_PLAYERS 1
-#define MAX_SHOTS 15
-#define MAX_DUDES 64
+#define MAX_SHOTS 7
+#define MAX_DUDES 40
 
 #define FIRST_PLAYER 0
 #define FIRST_SHOT (FIRST_PLAYER + MAX_PLAYERS)
@@ -195,6 +207,27 @@ uint8_t dude_alloc() {
     return 0;
 }
 
+void dude_randompos(uint8_t d) {
+    const int16_t xmid = (SCREEN_W/2)-8;
+    const int16_t ymid = (SCREEN_H/2)-8;
+
+    int16_t x;
+    int16_t y;
+    while (1) {
+        x = -128 + rnd();
+        y = -128 + rnd();
+
+        int16_t lsq = x*x + y*y;
+        if (lsq > 80*80 ) {
+            break;
+        }
+    }
+
+    gobx[d] = xmid + x;
+    goby[d] = ymid + y;
+}
+
+
 
 // player
 #define PLAYER_SPD 1
@@ -240,6 +273,7 @@ void player_tick(uint8_t d) {
 // dat: dir
 // timer: dies at 0
 
+#define SHOT_SPD 8
 void shot_tick(uint8_t s)
 {
     if (--gobtimer[s] == 0) {
@@ -248,14 +282,14 @@ void shot_tick(uint8_t s)
     }
     uint8_t dir = gobdat[s];
     if (dir & DIR_UP) {
-        goby[s] -= 4;
+        goby[s] -= SHOT_SPD;
     } else if (dir & DIR_DOWN) {
-        goby[s] += 4;
+        goby[s] += SHOT_SPD;
     }
     if (dir & DIR_LEFT) {
-        gobx[s] -= 4;
+        gobx[s] -= SHOT_SPD;
     } else if (dir & DIR_RIGHT) {
-        gobx[s] += 4;
+        gobx[s] += SHOT_SPD;
     }
 }
 
@@ -269,7 +303,7 @@ void shot_collisions()
         int16_t sx = gobx[s] + 8;
         int16_t sy = goby[s] + 8;
 
-        for (uint8_t d = FIRST_DUDE + (tick & 0x01); d < (FIRST_DUDE + MAX_DUDES); d=d+2) {
+        for (uint8_t d = FIRST_DUDE /*+ (tick & 0x01)*/; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
@@ -378,14 +412,15 @@ void display_init()
 
 void testlevel()
 {
-    for( uint8_t y=0; y<8; ++y) {
-        for( uint8_t x=0; x<8; ++x) {
+    for( uint8_t i=0; i<MAX_DUDES; ++i) {
             uint8_t d = dude_alloc();
             if (!d) {
                 return; // no more free dudes.
             }
-            gob_init(d, GK_GRUNT, 4+x*28, 4+y*28);
-        }
+            gobkind[d] = GK_GRUNT;
+            gobdat[d] = 0;
+            gobtimer[d] = 0;
+            dude_randompos(d);
     }
 }
 
@@ -396,7 +431,7 @@ int main(void) {
     irq_init();
 
     gobs_init();
-    gob_init(0, GK_PLAYER, (SCREEN_W/2) + 8, (SCREEN_H/2)+8);
+    gob_init(0, GK_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
     testlevel();
     while (1) {
         VERA.display.border = 2;
