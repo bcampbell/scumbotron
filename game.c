@@ -43,6 +43,7 @@ uint8_t rnd() {
 
 
 #define GK_NONE 0
+#define GK_SPAWNING 1
 // Player kind
 #define GK_PLAYER 0x10
 // Shot kinds
@@ -70,6 +71,11 @@ uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
 
+uint8_t dude_alloc();
+uint8_t shot_alloc();
+void dude_randompos(uint8_t d);
+
+void spawning_tick(uint8_t g);
 void player_tick(uint8_t d);
 void shot_tick(uint8_t d);
 void grunt_tick(uint8_t d);
@@ -87,6 +93,9 @@ void gobs_tick()
     for (uint8_t i = 0; i < MAX_GOBS; ++i) {
         switch(gobkind[i]) {
             case GK_NONE:
+                break;
+            case GK_SPAWNING:
+                spawning_tick(i);
                 break;
             case GK_PLAYER:
                 player_tick(i);
@@ -112,6 +121,9 @@ void gobs_render()
             case GK_NONE:
                 sproff();
                 break;
+            case GK_SPAWNING:
+                sprout(gobx[d], goby[d], tick & 0x07);
+                break;
             case GK_PLAYER:
                 sprout(gobx[d], goby[d], 0);
                 break;
@@ -130,6 +142,35 @@ void gobs_render()
         }
     }
 }
+
+void dudes_spawn(uint8_t kind, uint8_t n)
+{
+    while(n--) {
+        uint8_t g = dude_alloc();
+        if (!g) {
+            return;
+        }
+        gobkind[g] = GK_SPAWNING;
+        gobdat[g] = kind;
+        gobtimer[g] = 30;
+        dude_randompos(g);
+    }
+}
+
+
+
+void dudes_respawn() {
+    for (uint8_t g = FIRST_DUDE; g < FIRST_DUDE+MAX_DUDES; ++g) {
+        if (gobkind[g] == GK_NONE) {
+            continue;
+        }
+        gobdat[g] = gobkind[g];
+        gobtimer[g] = 30;
+        dude_randompos(g);
+    }
+}
+
+
 
 void gob_init(uint8_t d, uint8_t kind, int x, int y) {
     gobkind[d] = kind;
@@ -261,7 +302,7 @@ void shot_collisions()
         int16_t sx = gobx[s] + 8;
         int16_t sy = goby[s] + 8;
 
-        for (uint8_t d = FIRST_DUDE /*+ (tick & 0x01)*/; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
+        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
@@ -276,6 +317,19 @@ void shot_collisions()
         }
     }
 }
+
+// spawning-in effect
+
+void spawning_tick(uint8_t g)
+{
+    if(--gobtimer[g] == 0) {
+        // Turn it into real dude.
+        gobkind[g] = gobdat[g];
+        gobdat[g] = 0;
+        gobtimer[g] = 0;
+    }
+}
+
 
 // grunt
 void grunt_tick(uint8_t d)
@@ -309,8 +363,9 @@ void titlescreen()
     {
         inp_tick();
         sys_render_start();
-        sys_text(0,12,"*** TITLE SCREEN ***", tick & 0x0f);
-        sys_text(0,14,"FIRE TO START", tick & 0x01);
+        for (uint8_t i=0; i<20; ++i) {
+            sys_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
+        }
         //testum();
         sys_render_finish();
 
@@ -322,20 +377,10 @@ void titlescreen()
     }
 }
 
-
-
 void testlevel()
 {
-    for( uint8_t i=0; i<MAX_DUDES; ++i) {
-            uint8_t d = dude_alloc();
-            if (!d) {
-                return; // no more free dudes.
-            }
-            gobkind[d] = GK_GRUNT;
-            gobdat[d] = 0;
-            gobtimer[d] = 0;
-            dude_randompos(d);
-    }
+    dudes_spawn(GK_BLOCK, 5);
+    dudes_spawn(GK_GRUNT, MAX_DUDES-5);
 }
 
 void level() {
