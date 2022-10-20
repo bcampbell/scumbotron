@@ -1,6 +1,7 @@
 // mos-cx16-clang -Os -o game.prg game.c
 
 #include <stdint.h>
+#include <stdbool.h>
 
 // from sys
 extern void sys_init();
@@ -318,6 +319,36 @@ void shot_collisions()
     }
 }
 
+
+static inline bool overlap(uint16_t amin, uint16_t amax, uint16_t bmin, uint16_t bmax)
+{
+    return (amin <= bmax) && (amax >= bmin);
+}
+
+void player_collisions()
+{
+    for (uint8_t p = FIRST_PLAYER; p < (FIRST_PLAYER + MAX_PLAYERS); ++p) {
+        if (gobkind[p] != GK_PLAYER) {
+            continue;
+        }
+        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
+            if (gobkind[d]==GK_NONE) {
+                continue;
+            }
+            if (overlap(gobx[p]+4, gobx[p]+12, gobx[d], gobx[d]+16) &&
+                overlap(goby[p]+4, goby[p]+12, goby[d], goby[d]+16)) {
+                // boom
+                //gobkind[d] = GK_NONE;
+                dudes_respawn();
+                return;
+                //gamestate = 0;
+            }
+        }
+    }
+}
+
+
+
 // spawning-in effect
 
 void spawning_tick(uint8_t g)
@@ -401,6 +432,7 @@ void level() {
         gobs_tick();
         //VERA.display.border = 7;
         shot_collisions();
+        player_collisions();
 
         uint8_t cnt = 0;
         for (uint8_t i = FIRST_DUDE; i<FIRST_DUDE+MAX_DUDES; ++i ) {
