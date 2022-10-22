@@ -44,7 +44,6 @@ uint8_t rnd() {
 
 
 #define GK_NONE 0
-#define GK_SPAWNING 1
 // Player kind
 #define GK_PLAYER 0x10
 // Shot kinds
@@ -95,9 +94,6 @@ void gobs_tick()
         switch(gobkind[i]) {
             case GK_NONE:
                 break;
-            case GK_SPAWNING:
-                spawning_tick(i);
-                break;
             case GK_PLAYER:
                 player_tick(i);
                 break;
@@ -115,15 +111,12 @@ void gobs_tick()
     }
 }
 
-void gobs_render()
+void gobs_render(uint8_t nspawned)
 {
-    for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+    for (uint8_t d = 0; d < nspawned; ++d) {
         switch(gobkind[d]) {
             case GK_NONE:
                 sproff();
-                break;
-            case GK_SPAWNING:
-                sprout(gobx[d], goby[d], tick & 0x07);
                 break;
             case GK_PLAYER:
                 sprout(gobx[d], goby[d], 0);
@@ -151,9 +144,9 @@ void dudes_spawn(uint8_t kind, uint8_t n)
         if (!g) {
             return;
         }
-        gobkind[g] = GK_SPAWNING;
-        gobdat[g] = kind;
-        gobtimer[g] = 30;
+        gobkind[g] = kind;
+        gobdat[g] = 0;
+        gobtimer[g] = 0;
         dude_randompos(g);
     }
 }
@@ -165,8 +158,7 @@ void dudes_respawn() {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
-        gobdat[g] = gobkind[g];
-        gobtimer[g] = 30;
+        gobtimer[g] = 0;
         dude_randompos(g);
     }
 }
@@ -414,38 +406,90 @@ void testlevel()
     dudes_spawn(GK_GRUNT, MAX_DUDES-5);
 }
 
+
+#define LEVELSTATE_GETREADY 0   // pause, get ready
+#define LEVELSTATE_PLAY 1       // main gameplay
+#define LEVELSTATE_CLEARED 2    // all dudes clear
+#define LEVELSTATE_COMPLETE 4   // level was completed
+#define LEVELSTATE_KILLED 5     // player just died
+#define LEVELSTATE_GAMEOVER 6   // all lives lost
+
+
+
 void level() {
+    uint8_t statetimer=0;
+    uint8_t state = LEVELSTATE_GETREADY;
+    uint8_t spawncnt = 0;
+    uint8_t spawntimer = 0;
+
     sys_clr();
     gobs_init();
     gob_init(0, GK_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
     testlevel();
     while (1) {
+        ++statetimer;
+        switch (state) {
+            case LEVELSTATE_GETREADY:
+                sys_text(10,10,"GET READY", tick & 0x07);
+                if(statetimer>=2) {
+                    statetimer = 0;
+                    // skip empty slots.
+                    while(++spawncnt <MAX_DUDES && gobkind[spawncnt] == GK_NONE) {
+                    }
+                    // all spawned?
+                    if (spawncnt==MAX_DUDES) {
+                        state = LEVELSTATE_PLAY;
+                        sys_text(10,10,"GET READY", 0); // clear
+                    }
+                };
+                break;
+            case LEVELSTATE_PLAY:
+                break;
+            case LEVELSTATE_CLEARED:
+                if (statetimer > 30) {
+                    state = LEVELSTATE_COMPLETE;
+                    statetimer = 0;
+                }
+                break;
+            case LEVELSTATE_KILLED:
+                if (statetimer > 30) {
+                    state = LEVELSTATE_GETREADY;
+                    statetimer = 0;
+                }
+                break;
+        }
+
+
         sys_render_start();
-        //VERA.display.border = 2;
-        gobs_render();
-        testum();
+        for (uint8_t g=spawncnt; g<MAX_GOBS; ++g) {
+            //sprout(gobx[g],goby[g], tick & 0x07);
+        }
+        gobs_render(spawncnt);
         sys_render_finish();
 
-        //VERA.display.border = 3;
+        testum();
+
         inp_tick();
-        //VERA.display.border = 15;
-        gobs_tick();
-        //VERA.display.border = 7;
-        shot_collisions();
-        player_collisions();
 
-        uint8_t cnt = 0;
-        for (uint8_t i = FIRST_DUDE; i<FIRST_DUDE+MAX_DUDES; ++i ) {
-            if (gobkind[i] != GK_NONE) {
-                ++cnt;
+        if (state != LEVELSTATE_GETREADY) {
+            gobs_tick();
+            shot_collisions();
+            player_collisions();
+
+            // count remaining dudes
+            uint8_t cnt = 0;
+            for (uint8_t i = FIRST_DUDE; i<FIRST_DUDE+MAX_DUDES; ++i ) {
+                if (gobkind[i] != GK_NONE) {
+                    ++cnt;
+                }
             }
-        }
-        if (cnt==0) {
-            break;
-        }
+            if (cnt==0) {
+                break;
+            }
 
-        char foo[2] = {'A'+cnt, '\0'};
-        sys_text(0,1,foo, tick&0x0f);
+            char foo[2] = {'A'+cnt, '\0'};
+            sys_text(0,1,foo, tick&0x0f);
+        }
 
         //VERA.display.border = 0;
         waitvbl();

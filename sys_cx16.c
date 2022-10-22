@@ -6,6 +6,9 @@
 #define SCREEN_W 320
 #define SCREEN_H 240
 
+void sys_clr();
+
+
 // irq.s, glue.s
 extern void inp_tick();
 extern void irq_init();
@@ -20,6 +23,36 @@ extern volatile uint16_t inp_joystate;
 extern uint8_t sprites[16*16*16];
 extern uint8_t palette[16*2];   // just 16 colours
 
+
+// Our VERA memory map
+#define VRAM_SPRITES 0x10000    // sprite images
+#define VRAM_LAYER1_MAP 0x1b000
+#define VRAM_LAYER1_TILES 0x1F000
+#define VRAM_LAYER0_MAP  0x00000    //64x64
+#define VRAM_LAYER0_TILES  0x08000
+
+// hardwired:
+#define VRAM_PALETTE 0x1FA00    // fixed
+
+
+#if 0
+#define verawrite0(addr, inc) \
+    VERA.control = 0x00;\
+    VERA.address = ((addr)&0xffff); \
+    VERA.address_hi = (inc) | (((addr)>>16)&1);
+#endif
+
+static inline void verawrite0(uint32_t addr, uint8_t inc) {
+    VERA.control = 0x00;
+    VERA.address = ((addr)&0xffff);
+    VERA.address_hi = (inc) | (((addr)>>16)&1);
+}
+
+static inline void verawrite1(uint32_t addr, uint8_t inc) {
+    VERA.control = 0x01;
+    VERA.address = ((addr)&0xffff);
+    VERA.address_hi = (inc) | (((addr)>>16)&1);
+}
 
 void testum() {
     VERA.control = 0x00;
@@ -37,39 +70,62 @@ void testum() {
 
 void sys_render_start()
 {
-    VERA.control = 0x00;
-    // sprite attrs start at 0x1FC00
-    VERA.address = 0xFC00;
-    VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
+    // use channel 1 exclusively for writing sprite attrs,
+    // use channel 0 for effects.
+    verawrite1(0x1FC00, VERA_INC_1);
 }
 
 void sproff() {
     const int16_t x = -16;
     const int16_t y = -16;
-    VERA.data0 = ((0x10000+256)>>5) & 0xFF;
-    VERA.data0 = (1 << 7) | ((0x10000+256)>>13);
-    VERA.data0 = x & 0xff;  // x lo
-    VERA.data0 = (x>>8) & 0x03;  // x hi
-    VERA.data0 = y & 0xff;  // y lo
-    VERA.data0 = (y>>8) & 0x03;  // y hi
-    VERA.data0 = 3<<2; // collmask(4),z(2),vflip,hflip
-    VERA.data0 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
+    VERA.data1 = ((VRAM_SPRITES)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES)>>13);
+    VERA.data1 = x & 0xff;  // x lo
+    VERA.data1 = (x>>8) & 0x03;  // x hi
+    VERA.data1 = y & 0xff;  // y lo
+    VERA.data1 = (y>>8) & 0x03;  // y hi
+    VERA.data1 = 3<<2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
 void sprout(int16_t x, int16_t y, uint8_t img) {
-    VERA.data0 = ((0x10000+256*img)>>5) & 0xFF;
-    VERA.data0 = (1 << 7) | ((0x10000+256*img)>>13);
-    VERA.data0 = x & 0xff;  // x lo
-    VERA.data0 = (x>>8) & 0x03;  // x hi
-    VERA.data0 = y & 0xff;  // y lo
-    VERA.data0 = (y>>8) & 0x03;  // y hi
-    VERA.data0 = 3<<2; // collmask(4),z(2),vflip,hflip
-    VERA.data0 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
+    VERA.data1 = ((VRAM_SPRITES+256*img)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES+256*img)>>13);
+    VERA.data1 = x & 0xff;  // x lo
+    VERA.data1 = (x>>8) & 0x03;  // x hi
+    VERA.data1 = y & 0xff;  // y lo
+    VERA.data1 = (y>>8) & 0x03;  // y hi
+    VERA.data1 = 3<<2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
 void sys_render_finish()
 {
+    // todo: clear unused sprites...
 }
+
+void sys_clr()
+{
+    // text layer
+    // 64x32*2 (w*h*(char+colour))
+    verawrite0(VRAM_LAYER1_MAP, VERA_INC_1);
+    const uint8_t* src = sprites;
+    for (int i=0; i<64*32*2; ++i) {
+        VERA.data0 = ' '; // tile
+        VERA.data0 = 0; // colour
+    }
+
+    // effects layer
+    verawrite0(VRAM_LAYER0_MAP, VERA_INC_1);
+    for (uint8_t y = 0; y < 64; ++y) {
+        for (uint8_t x = 0; x < 64; ++x) {
+            VERA.data0 = (x&1) ^ (y&1);
+            VERA.data0 = x & 15;
+        }
+    }
+
+}
+
 
 void sys_init()
 {
@@ -78,9 +134,9 @@ void sys_init()
     // screen mode 40x30
     VERA.control = 0x00;    //DCSEL=0
     uint8_t vid = VERA.display.video;
-    vid |= 1<<6;    // enable sprites
-    vid |= 1<<5; // layer 1 on
-    vid &= ~(1<<4);    // layer 1 off
+    vid |= 1<<6;    // sprites on
+    vid |= 1<<5;    // layer 1 on
+    vid |= 1<<4;    // layer 0 on
     VERA.display.video = vid;
 
     VERA.display.hscale = (uint8_t)(((int32_t)SCREEN_W*128)/640);       // 64 = 2x scale
@@ -92,12 +148,24 @@ void sys_init()
     VERA.display.vstop = 480>>1;
     VERA.control = 0x00;    //DCSEL=0
 
-    // layer setup
+    // text layer setup
     VERA.layer1.config = 0x10;    // 64x32 tiles, !T256C, !bitmapmode, 1bpp
-//    VERA.layer0.mapbase = 
-    VERA.layer1.tilebase = ((0x1F000)>>11)<<2;
+    VERA.layer1.mapbase = (VRAM_LAYER1_MAP>>9);
+    VERA.layer1.tilebase = ((VRAM_LAYER1_TILES)>>11)<<2 | 0<<1 | 0; // 8x8 tiles;
     VERA.layer1.hscroll = 0; // 16bit
     VERA.layer1.vscroll = 0; // 16bit
+
+    // layer 0 for effects (spawning, frags, explosions, whatever)
+    // 64x64 tiles (=512x512 pixels), but displaying the center of that area,
+    // so we don't have to bother with clipping at the edges.
+
+    // effects layer setup
+    VERA.layer0.config = (1<<6) | (1<<4) | (0<<3) | (0<<2) | 0;    // 64x64 tiles, !T256C, !bitmapmode, 1bpp
+    VERA.layer0.mapbase = (VRAM_LAYER0_MAP>>9);
+    VERA.layer0.tilebase = ((VRAM_LAYER0_TILES)>>11)<<2 | 0<<1 | 0; // 8x8 tiles
+    VERA.layer0.hscroll = 12*8; // 16bit
+    VERA.layer0.vscroll = 12*8; // 16bit
+
 
     // load the palette to vram (fixed at 0x1FA00 onward)
     {
@@ -113,10 +181,7 @@ void sys_init()
 
     // load the sprite images to vram (0x10000 onward)
     {
-        VERA.control = 0x00;
-        VERA.address = 0x0000;
-        VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
-
+        verawrite0(VRAM_SPRITES, VERA_INC_1);
         // 16 16*16 images
         const uint8_t* src = sprites;
         for (int i=0; i<16*16*16; ++i) {
@@ -124,34 +189,21 @@ void sys_init()
         }
     }
 
-    // clear the screen (0x1B0000)
+    // stand-in images for effect layers
     {
-        VERA.control = 0x00;
-        VERA.address = 0xB000;
-        VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
-
-        // 16 16*16 images
-        const uint8_t* src = sprites;
-        for (int i=0; i<64*32; ++i) {
-            VERA.data0 = ' '; // tile
-            VERA.data0 = 0; // colour
+        verawrite0(VRAM_LAYER0_TILES, VERA_INC_1);
+        for (int i=0; i<8; ++i) {
+            VERA.data0 = 0;
+        }
+        for (int i=0; i<4; ++i) {
+            VERA.data0 = 0b10101010;
+            VERA.data0 = 0b01010101;
         }
     }
-}
 
-void sys_clr()
-{
-    // clear the screen (0x1B0000)
-    VERA.control = 0x00;
-    VERA.address = 0xB000;
-    VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
 
-    // 64x32*2 (w*h*(char+colour))
-    const uint8_t* src = sprites;
-    for (int i=0; i<64*32*2; ++i) {
-        VERA.data0 = ' '; // tile
-        VERA.data0 = 0; // colour
-    }
+    // clear the tile layers
+    sys_clr();
 }
 
 static uint8_t screencode(char asc)
@@ -164,11 +216,7 @@ static uint8_t screencode(char asc)
 
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
-    // clear the screen (0x1B0000)
-    VERA.control = 0x00;
-    VERA.address = 0xB000 + cy*64*2 + cx*2;
-    VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
-
+    verawrite0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
     const char* p = txt;
     while(*p) {
         VERA.data0 = screencode(*p);
