@@ -1,12 +1,9 @@
 #include <cx16.h>
 #include <stdint.h>
 
+#include "sys_cx16.h"
+
 // Platform-specifics for cx16
-
-#define SCREEN_W 320
-#define SCREEN_H 240
-
-void sys_clr();
 
 
 // irq.s, glue.s
@@ -224,4 +221,23 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
         ++p;
     }
 }
+
+void sys_spawneffect(uint16_t x, uint16_t y, uint8_t t)
+{
+    uint8_t cx = (x/8) + 12;
+    uint8_t cy = ((y/8) + 12) - 7;
+
+    // tile
+    verawrite0(VRAM_LAYER0_MAP + cy*64*2 + cx*2, VERA_INC_128);
+    for(uint8_t i = 0; i<7+1+7; ++i) {
+        VERA.data0 = 1;
+    }
+    // colour
+    verawrite0(VRAM_LAYER0_MAP + cy*64*2 + cx*2 + 1, VERA_INC_128);
+    for(uint8_t i = 0; i<7+1+7; ++i) {
+        VERA.data0 = (i+t) & 0x0f;
+    }
+}
+
+
 

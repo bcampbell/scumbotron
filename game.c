@@ -3,27 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-// from sys
-extern void sys_init();
-extern void testum();
-extern void waitvbl();
-extern void inp_tick();
-extern void sys_render_start();
-extern void sproff();
-extern void sprout(int16_t x, int16_t y, uint8_t img);
-extern void sys_render_finish();
-
-extern void sys_clr();
-extern void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
-
-extern volatile uint16_t inp_joystate;
-extern volatile uint8_t tick;
-
-
-// core game stuff.
-#define SCREEN_W 320
-#define SCREEN_H 240
-
+#include "sys_cx16.h"
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -35,13 +15,14 @@ uint8_t rnd() {
         return s;
 }
 
-
 #define DIR_UP 0x08
 #define DIR_DOWN 0x04
 #define DIR_LEFT 0x02
 #define DIR_RIGHT 0x01
 
-
+//
+// Game object (gob) Stuff
+//
 
 #define GK_NONE 0
 // Player kind
@@ -53,6 +34,7 @@ uint8_t rnd() {
 #define GK_GRUNT 0x81
 
 
+// Gob tables.
 #define MAX_PLAYERS 1
 #define MAX_SHOTS 7
 #define MAX_DUDES 40
@@ -63,7 +45,6 @@ uint8_t rnd() {
 
 #define MAX_GOBS (MAX_PLAYERS + MAX_SHOTS + MAX_DUDES)
 
-// Game objects table.
 uint8_t gobkind[MAX_GOBS];
 uint16_t gobx[MAX_GOBS];
 uint16_t goby[MAX_GOBS];
@@ -213,7 +194,7 @@ void dude_randompos(uint8_t d) {
     goby[d] = ymid + y;
 }
 
-// hackhackhack
+// hackhackhack (from cx16.h)
 #define JOY_UP_MASK 0x08
 #define JOY_DOWN_MASK 0x04
 #define JOY_LEFT_MASK 0x02
@@ -434,10 +415,10 @@ void level() {
                 if(statetimer>=2) {
                     statetimer = 0;
                     // skip empty slots.
-                    while(++spawncnt <MAX_DUDES && gobkind[spawncnt] == GK_NONE) {
+                    while(++spawncnt <MAX_GOBS && gobkind[spawncnt] == GK_NONE) {
                     }
                     // all spawned?
-                    if (spawncnt==MAX_DUDES) {
+                    if (spawncnt==MAX_GOBS) {
                         state = LEVELSTATE_PLAY;
                         sys_text(10,10,"GET READY", 0); // clear
                     }
@@ -462,7 +443,9 @@ void level() {
 
         sys_render_start();
         for (uint8_t g=spawncnt; g<MAX_GOBS; ++g) {
-            //sprout(gobx[g],goby[g], tick & 0x07);
+            if (gobkind[g] != GK_NONE) {
+                sys_spawneffect(gobx[g], goby[g], g*4 + tick);
+            }
         }
         gobs_render(spawncnt);
         sys_render_finish();

@@ -1,6 +1,6 @@
-game.prg: game.c sys_cx16.c gfx.c irq.s glue.s
-	mos-cx16-clang -Os -o game.prg game.c sys_cx16.c gfx.c irq.s glue.s
 
+game.prg: game.c sys_cx16.c sys_cx16.h gfx.c irq.s glue.s
+	mos-cx16-clang -Os -o game.prg game.c sys_cx16.c gfx.c irq.s glue.s
 
 gfx.c: sprites16.png
 	echo "#include <stdint.h>" >gfx.c
