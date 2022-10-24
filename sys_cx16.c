@@ -32,6 +32,15 @@ extern uint8_t palette[16*2];   // just 16 colours
 #define VRAM_PALETTE 0x1FA00    // fixed
 
 
+#define MAX_EFFECTS 8
+static uint8_t ekind[MAX_EFFECTS];
+static uint8_t etimer[MAX_EFFECTS];
+static uint8_t ex[MAX_EFFECTS];
+static uint8_t ey[MAX_EFFECTS];
+
+static void rendereffects();
+
+
 #if 0
 #define verawrite0(addr, inc) \
     VERA.control = 0x00;\
@@ -63,6 +72,12 @@ void testum() {
         VERA.data0 = COLOR_BLACK<<4 | COLOR_GREEN;
         b = b<<1;
     }
+
+        VERA.data0 = ekind[0] + '0';
+        VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
+        VERA.data0 = etimer[0] + '0';
+        VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
+
 }
 
 void sys_render_start()
@@ -92,13 +107,14 @@ void sprout(int16_t x, int16_t y, uint8_t img) {
     VERA.data1 = (x>>8) & 0x03;  // x hi
     VERA.data1 = y & 0xff;  // y lo
     VERA.data1 = (y>>8) & 0x03;  // y hi
-    VERA.data1 = 3<<2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = 1<<2; // collmask(4),z(2),vflip,hflip
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
 void sys_render_finish()
 {
     // todo: clear unused sprites...
+    rendereffects();
 }
 
 void sys_clr()
@@ -116,8 +132,8 @@ void sys_clr()
     verawrite0(VRAM_LAYER0_MAP, VERA_INC_1);
     for (uint8_t y = 0; y < 64; ++y) {
         for (uint8_t x = 0; x < 64; ++x) {
-            VERA.data0 = (x&1) ^ (y&1);
-            VERA.data0 = x & 15;
+            VERA.data0 = 1; //(x&1) ^ (y&1);
+            VERA.data0 = 0; //x & 15;
         }
     }
 
@@ -193,11 +209,17 @@ void sys_init()
             VERA.data0 = 0;
         }
         for (int i=0; i<4; ++i) {
-            VERA.data0 = 0b10101010;
-            VERA.data0 = 0b01010101;
+            VERA.data0 = 0xff;
+            VERA.data0 = 0x00;
+            //VERA.data0 = 0b10101010;
+            //VERA.data0 = 0b01010101;
         }
     }
 
+    // clear effect table
+    for( uint8_t i=0; i<MAX_EFFECTS; ++i) {
+        ekind[i] = EK_NONE;
+    }
 
     // clear the tile layers
     sys_clr();
@@ -222,22 +244,79 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
     }
 }
 
-void sys_spawneffect(uint16_t x, uint16_t y, uint8_t t)
+void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind)
 {
-    uint8_t cx = (x/8) + 12;
-    uint8_t cy = ((y/8) + 12) - 7;
+    // find free one
+    uint8_t e = 0;
+    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
+        ++e;
+    }
+    if (e==MAX_EFFECTS) {
+        return; // none free
+    }
 
-    // tile
-    verawrite0(VRAM_LAYER0_MAP + cy*64*2 + cx*2, VERA_INC_128);
-    for(uint8_t i = 0; i<7+1+7; ++i) {
-        VERA.data0 = 1;
-    }
-    // colour
-    verawrite0(VRAM_LAYER0_MAP + cy*64*2 + cx*2 + 1, VERA_INC_128);
-    for(uint8_t i = 0; i<7+1+7; ++i) {
-        VERA.data0 = (i+t) & 0x0f;
-    }
+    ex[e] = (x/8) + 12;
+    ey[e] = (y/8) + 12;
+    ekind[e] = kind;
+    etimer[e] = 0;
 }
 
 
+static uint8_t spawnanim[8*16] = {
+    1,0,0,0,0,0,0,0,
+    2,1,0,0,0,0,0,0,
+    3,2,1,0,0,0,0,0,
+    4,3,2,1,0,0,0,0,
+
+    5,4,3,2,1,0,0,0,
+    6,5,4,3,2,1,0,0,
+    7,6,5,4,3,2,1,0,
+    8,7,6,5,4,3,2,1,
+
+    0,7,6,5,4,3,2,1,
+    0,0,6,5,4,3,2,1,
+    0,0,0,5,4,3,2,1,
+    0,0,0,0,4,3,2,1,
+
+    0,0,0,0,0,3,2,1,
+    0,0,0,0,0,0,2,1,
+    0,0,0,0,0,0,0,1,
+    0,0,0,0,0,0,0,0,
+};
+
+
+static void do_spawneffect(uint8_t e) {
+    uint8_t t = etimer[e];
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+
+    for( uint8_t j=0; j<2; ++j) {
+        // just going for the colour byte
+        verawrite0(VRAM_LAYER0_MAP + (cy-8)*64*2 + ((cx+j)*2)+1, VERA_INC_128);
+        uint8_t start = t*8;
+        for (uint8_t i = 0; i < 8; ++i) {
+            VERA.data0 = spawnanim[start+i];
+        }
+        // mirror
+        for (uint8_t i = 8; i > 0; --i) {
+            VERA.data0 = spawnanim[start+(i-1)];
+        }
+
+        if(++etimer[e] == 16) {
+            ekind[e] = EK_NONE;
+        }
+    }
+}
+
+static void rendereffects()
+{
+    for(uint8_t e = 0; e < MAX_EFFECTS; ++e) {
+        if (ekind[e] == EK_NONE) {
+            continue;
+        }
+        if (ekind[e] == EK_SPAWN) {
+            do_spawneffect(e);
+        }
+    }
+}
 

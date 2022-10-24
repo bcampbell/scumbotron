@@ -421,6 +421,8 @@ void level() {
                     if (spawncnt==MAX_GOBS) {
                         state = LEVELSTATE_PLAY;
                         sys_text(10,10,"GET READY", 0); // clear
+                    } else {
+                        sys_addeffect(gobx[spawncnt],goby[spawncnt], EK_SPAWN);
                     }
                 };
                 break;
@@ -442,11 +444,6 @@ void level() {
 
 
         sys_render_start();
-        for (uint8_t g=spawncnt; g<MAX_GOBS; ++g) {
-            if (gobkind[g] != GK_NONE) {
-                sys_spawneffect(gobx[g], goby[g], g*4 + tick);
-            }
-        }
         gobs_render(spawncnt);
         sys_render_finish();
 
