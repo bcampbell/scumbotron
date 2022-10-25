@@ -115,6 +115,7 @@ void sys_render_finish()
 {
     // todo: clear unused sprites...
     rendereffects();
+    testum();
 }
 
 void sys_clr()
@@ -209,7 +210,8 @@ void sys_init()
             VERA.data0 = 0;
         }
         for (int i=0; i<4; ++i) {
-            VERA.data0 = 0xff;
+            //VERA.data0 = 0xff;
+            VERA.data0 = 0b10101010;
             VERA.data0 = 0x00;
             //VERA.data0 = 0b10101010;
             //VERA.data0 = 0b01010101;

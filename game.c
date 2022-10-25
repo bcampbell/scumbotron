@@ -24,15 +24,14 @@ uint8_t rnd() {
 // Game object (gob) Stuff
 //
 
+// Kinds
 #define GK_NONE 0
-// Player kind
-#define GK_PLAYER 0x10
-// Shot kinds
-#define GK_SHOT 0x20
-// Dude kinds
-#define GK_BLOCK 0x80
-#define GK_GRUNT 0x81
+#define GK_PLAYER 1
+#define GK_SHOT 2
+#define GK_BLOCK 32
+#define GK_GRUNT 33
 
+#define GK_SPAWNFLAG 0x80
 
 // Gob tables.
 #define MAX_PLAYERS 1
@@ -46,11 +45,15 @@ uint8_t rnd() {
 #define MAX_GOBS (MAX_PLAYERS + MAX_SHOTS + MAX_DUDES)
 
 uint8_t gobkind[MAX_GOBS];
+uint8_t gobflags[MAX_GOBS];
 uint16_t gobx[MAX_GOBS];
 uint16_t goby[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
+// these two set by gobs_tick()
+uint8_t gobs_lockcnt;   // num dudes holding level open.
+uint8_t gobs_spawncnt;  // num dudes spawning.
 
 uint8_t dude_alloc();
 uint8_t shot_alloc();
@@ -67,11 +70,33 @@ void gobs_init()
     for (uint8_t i = 0; i < MAX_GOBS; ++i) {
         gobkind[i] = GK_NONE;
     }
+    gobs_lockcnt = 0;
+    gobs_spawncnt = 0;
 }
 
-void gobs_tick()
+void gobs_tick(bool spawnphase)
 {
+    gobs_lockcnt = 0;
+    gobs_spawncnt = 0;
     for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+        // Is gob playing its spawning-in effect?
+        if (gobkind[i] & GK_SPAWNFLAG) {
+            ++gobs_spawncnt;
+            ++gobs_lockcnt;
+            if( gobtimer[i] == 8) {
+                sys_addeffect(gobx[i], goby[i], EK_SPAWN);
+            } else if( gobtimer[i] == 0) {
+                // done spawning.
+                gobkind[i] &= ~GK_SPAWNFLAG;
+                gobtimer[i] = 1;
+            }
+            --gobtimer[i];
+            continue;
+        }
+        // If in spawn phase, keep everything frozen until we finish.
+        if (spawnphase) {
+            continue;
+        }
         switch(gobkind[i]) {
             case GK_NONE:
                 break;
@@ -84,6 +109,7 @@ void gobs_tick()
             case GK_BLOCK:
                 break;
             case GK_GRUNT:
+                ++gobs_lockcnt;
                 grunt_tick(i);
                 break;
             default:
@@ -92,9 +118,9 @@ void gobs_tick()
     }
 }
 
-void gobs_render(uint8_t nspawned)
+void gobs_render()
 {
-    for (uint8_t d = 0; d < nspawned; ++d) {
+    for (uint8_t d = 0; d < MAX_GOBS; ++d) {
         switch(gobkind[d]) {
             case GK_NONE:
                 sproff();
@@ -111,7 +137,7 @@ void gobs_render(uint8_t nspawned)
             case GK_GRUNT:
                 sprout(gobx[d], goby[d],  3 + ((tick >> 5) & 0x01));
                 break;
-            default:
+            default: // includes spawning GK_SPAWNFLAG dudes
                 sproff();
                 break;
         }
@@ -125,34 +151,32 @@ void dudes_spawn(uint8_t kind, uint8_t n)
         if (!g) {
             return;
         }
+        // dude creation
         gobkind[g] = kind;
         gobdat[g] = 0;
         gobtimer[g] = 0;
-        dude_randompos(g);
+        // position set by respawn
     }
 }
 
 
 
-void dudes_respawn() {
+// for all dudes:
+// - set to new random position.
+// - put into spawning mode.
+void dudes_reset() {
+    uint8_t t=0;
     for (uint8_t g = FIRST_DUDE; g < FIRST_DUDE+MAX_DUDES; ++g) {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
-        gobtimer[g] = 0;
         dude_randompos(g);
+        gobkind[g] |= GK_SPAWNFLAG;
+        gobtimer[g] = t + 8;
+        t += 2;
     }
 }
 
-
-
-void gob_init(uint8_t d, uint8_t kind, int x, int y) {
-    gobkind[d] = kind;
-    gobx[d] = x;
-    goby[d] = y;
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
-}
 
 // returns 0 if none free.
 uint8_t shot_alloc() {
@@ -204,6 +228,15 @@ void dude_randompos(uint8_t d) {
 
 // player
 #define PLAYER_SPD 1
+
+
+void player_create(uint8_t d, int x, int y) {
+    gobkind[d] = GK_PLAYER;
+    gobx[d] = x;
+    goby[d] = y;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
 
 void player_tick(uint8_t d) {
     uint8_t dir = 0;
@@ -298,7 +331,7 @@ static inline bool overlap(uint16_t amin, uint16_t amax, uint16_t bmin, uint16_t
     return (amin <= bmax) && (amax >= bmin);
 }
 
-void player_collisions()
+bool player_collisions()
 {
     for (uint8_t p = FIRST_PLAYER; p < (FIRST_PLAYER + MAX_PLAYERS); ++p) {
         if (gobkind[p] != GK_PLAYER) {
@@ -310,30 +343,18 @@ void player_collisions()
             }
             if (overlap(gobx[p]+4, gobx[p]+12, gobx[d], gobx[d]+16) &&
                 overlap(goby[p]+4, goby[p]+12, goby[d], goby[d]+16)) {
+                gobkind[p] = GK_NONE;
                 // boom
-                //gobkind[d] = GK_NONE;
-                dudes_respawn();
-                return;
-                //gamestate = 0;
+                return true;
             }
         }
     }
+    return false;
 }
 
 
 
-// spawning-in effect
-
-void spawning_tick(uint8_t g)
-{
-    if(--gobtimer[g] == 0) {
-        // Turn it into real dude.
-        gobkind[g] = gobdat[g];
-        gobdat[g] = 0;
-        gobtimer[g] = 0;
-    }
-}
-
+// block has no tick fn
 
 // grunt
 void grunt_tick(uint8_t d)
@@ -360,6 +381,8 @@ void grunt_tick(uint8_t d)
     }
 }
 
+//
+
 void titlescreen()
 {
     sys_clr();
@@ -370,7 +393,6 @@ void titlescreen()
         for (uint8_t i=0; i<20; ++i) {
             sys_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
         }
-        //testum();
         sys_render_finish();
 
         if ((inp_joystate & 0x80) == 0) {
@@ -385,6 +407,7 @@ void testlevel()
 {
     dudes_spawn(GK_BLOCK, 5);
     dudes_spawn(GK_GRUNT, MAX_DUDES-5);
+    dudes_reset();    // position and intro
 }
 
 
@@ -400,78 +423,71 @@ void testlevel()
 void level() {
     uint8_t statetimer=0;
     uint8_t state = LEVELSTATE_GETREADY;
-    uint8_t spawncnt = 0;
-    uint8_t spawntimer = 0;
 
     sys_clr();
     gobs_init();
-    gob_init(0, GK_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
+    player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
     testlevel();
     while (1) {
-        ++statetimer;
+        if (state == LEVELSTATE_COMPLETE) {
+            return;
+        }
+        if (state == LEVELSTATE_GAMEOVER) {
+            return;
+        }
+
+        sys_render_start();
+        gobs_render();
+        sys_render_finish();
+
+        inp_tick();
+
+        gobs_tick(state == LEVELSTATE_GETREADY);    // spawnphase?
+        shot_collisions();
+        bool playerkilled = player_collisions();
+
+        if (playerkilled) {
+            state = LEVELSTATE_KILLED;
+            statetimer = 0;
+        }
+
+        // update levelstate
         switch (state) {
             case LEVELSTATE_GETREADY:
                 sys_text(10,10,"GET READY", tick & 0x07);
-                if(statetimer>=2) {
-                    statetimer = 0;
-                    // skip empty slots.
-                    while(++spawncnt <MAX_GOBS && gobkind[spawncnt] == GK_NONE) {
-                    }
-                    // all spawned?
-                    if (spawncnt==MAX_GOBS) {
-                        state = LEVELSTATE_PLAY;
+                if(gobs_spawncnt == 0) {
+                    //if (++statetimer >= 16) {
                         sys_text(10,10,"GET READY", 0); // clear
-                    } else {
-                        sys_addeffect(gobx[spawncnt],goby[spawncnt], EK_SPAWN);
-                    }
+                        state = LEVELSTATE_PLAY;
+                    //}
                 };
                 break;
             case LEVELSTATE_PLAY:
+                if (gobs_lockcnt == 0) {
+                    state = LEVELSTATE_CLEARED;
+                    statetimer = 0;
+                }
                 break;
             case LEVELSTATE_CLEARED:
-                if (statetimer > 30) {
+                sys_text(10,10,"CLEAR!", tick & 0x07);
+                if (++statetimer > 60) {
+                    sys_text(10,10,"CLEAR!", 0);
                     state = LEVELSTATE_COMPLETE;
                     statetimer = 0;
                 }
                 break;
             case LEVELSTATE_KILLED:
-                if (statetimer > 30) {
+                sys_text(10,10,"OWWWWWWWW!", tick & 0x07);
+                if (++statetimer > 60) {
+                    sys_text(10,10,"OWWWWWWWW!", 0);
                     state = LEVELSTATE_GETREADY;
+
+                    player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
+                    dudes_reset();
                     statetimer = 0;
                 }
                 break;
         }
-
-
-        sys_render_start();
-        gobs_render(spawncnt);
-        sys_render_finish();
-
-        testum();
-
-        inp_tick();
-
-        if (state != LEVELSTATE_GETREADY) {
-            gobs_tick();
-            shot_collisions();
-            player_collisions();
-
-            // count remaining dudes
-            uint8_t cnt = 0;
-            for (uint8_t i = FIRST_DUDE; i<FIRST_DUDE+MAX_DUDES; ++i ) {
-                if (gobkind[i] != GK_NONE) {
-                    ++cnt;
-                }
-            }
-            if (cnt==0) {
-                break;
-            }
-
-            char foo[2] = {'A'+cnt, '\0'};
-            sys_text(0,1,foo, tick&0x0f);
-        }
-
-        //VERA.display.border = 0;
         waitvbl();
     }
 }

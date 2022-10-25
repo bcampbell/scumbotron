@@ -3,7 +3,6 @@
 
 
 extern void sys_init();
-extern void testum();
 extern void waitvbl();
 extern void inp_tick();
 
