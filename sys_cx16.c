@@ -100,14 +100,14 @@ void sproff() {
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
-void sprout(int16_t x, int16_t y, uint8_t img) {
+void sprout(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = ((VRAM_SPRITES+256*img)>>5) & 0xFF;
     VERA.data1 = (1 << 7) | ((VRAM_SPRITES+256*img)>>13);
     VERA.data1 = x & 0xff;  // x lo
     VERA.data1 = (x>>8) & 0x03;  // x hi
     VERA.data1 = y & 0xff;  // y lo
     VERA.data1 = (y>>8) & 0x03;  // y hi
-    VERA.data1 = 1<<2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2)<<2; // collmask(4),z(2),vflip,hflip
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
@@ -115,7 +115,7 @@ void sys_render_finish()
 {
     // todo: clear unused sprites...
     rendereffects();
-    testum();
+    //testum();
 }
 
 void sys_clr()
@@ -211,10 +211,11 @@ void sys_init()
         }
         for (int i=0; i<4; ++i) {
             //VERA.data0 = 0xff;
-            VERA.data0 = 0b10101010;
-            VERA.data0 = 0x00;
+            //VERA.data0 = 0xff;
             //VERA.data0 = 0b10101010;
-            //VERA.data0 = 0b01010101;
+            //VERA.data0 = 0x00;
+            VERA.data0 = 0b10101010;
+            VERA.data0 = 0b01010101;
         }
     }
 
@@ -257,8 +258,8 @@ void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind)
         return; // none free
     }
 
-    ex[e] = (x/8) + 12;
-    ey[e] = (y/8) + 12;
+    ex[e] = ((x+4)/8) + 12;
+    ey[e] = ((y+12)/8) + 12;
     ekind[e] = kind;
     etimer[e] = 0;
 }
@@ -292,10 +293,10 @@ static void do_spawneffect(uint8_t e) {
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
 
+    uint8_t start = t*8;
     for( uint8_t j=0; j<2; ++j) {
         // just going for the colour byte
         verawrite0(VRAM_LAYER0_MAP + (cy-8)*64*2 + ((cx+j)*2)+1, VERA_INC_128);
-        uint8_t start = t*8;
         for (uint8_t i = 0; i < 8; ++i) {
             VERA.data0 = spawnanim[start+i];
         }
@@ -304,9 +305,9 @@ static void do_spawneffect(uint8_t e) {
             VERA.data0 = spawnanim[start+(i-1)];
         }
 
-        if(++etimer[e] == 16) {
-            ekind[e] = EK_NONE;
-        }
+    }
+    if(++etimer[e] == 16) {
+        ekind[e] = EK_NONE;
     }
 }
 
