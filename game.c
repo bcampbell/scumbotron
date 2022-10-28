@@ -60,12 +60,12 @@ uint8_t level_run(uint8_t level) {
 
     sys_clr();
     gobs_init();
-    player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
+    player_create(FIRST_PLAYER, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
     level_init(level);
     while (1) {
         sys_render_start();
         gobs_render();
-
+        player_score += 1000;
         sys_hud(level, player_lives, player_score);
 
         sys_render_finish();

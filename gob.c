@@ -177,8 +177,8 @@ void dude_randompos(uint8_t d) {
         }
     }
 
-    gobx[d] = xmid + x;
-    goby[d] = ymid + y;
+    gobx[d] = (xmid + x) << FX;
+    goby[d] = (ymid + y) << FX;
 }
 
 // hackhackhack (from cx16.h)
@@ -190,7 +190,7 @@ void dude_randompos(uint8_t d) {
 
 
 // player
-#define PLAYER_SPD 1
+#define PLAYER_SPD FX_ONE
 
 
 void player_create(uint8_t d, int x, int y) {
@@ -242,7 +242,7 @@ void player_tick(uint8_t d) {
 // dat: dir
 // timer: dies at 0
 
-#define SHOT_SPD 8
+#define SHOT_SPD (8<<FX)
 void shot_tick(uint8_t s)
 {
     if (--gobtimer[s] == 0) {
@@ -269,8 +269,8 @@ void shot_collisions()
             continue;
         }
         // Take centre point of shot.
-        int16_t sx = gobx[s] + 8;
-        int16_t sy = goby[s] + 8;
+        int16_t sx = gobx[s] + (8<<FX);
+        int16_t sy = goby[s] + (8<<FX);
 
         for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
             if (gobkind[d]==GK_NONE) {
@@ -278,7 +278,7 @@ void shot_collisions()
             }
             int16_t dx = gobx[d];
             int16_t dy = goby[d];
-            if (sx >= dx && sx < (dx + 16) && sy >= dy && sy < (dy + 16)) {
+            if (sx >= dx && sx < (dx + (16<<FX)) && sy >= dy && sy < (dy + (16<<FX))) {
                 // boom.
                 gobkind[d] = GK_NONE;
                 gobkind[s] = GK_NONE;
@@ -304,8 +304,8 @@ bool player_collisions()
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
-            if (overlap(gobx[p]+4, gobx[p]+12, gobx[d], gobx[d]+16) &&
-                overlap(goby[p]+4, goby[p]+12, goby[d], goby[d]+16)) {
+            if (overlap(gobx[p] + (4 << FX), gobx[p] + (12 << FX), gobx[d], gobx[d] + (16 << FX)) &&
+                overlap(goby[p] + (4 << FX), goby[p] + (12 << FX), goby[d], goby[d] + (16 << FX))) {
                 gobkind[p] = GK_NONE;
                 // boom
                 return true;
@@ -322,24 +322,21 @@ bool player_collisions()
 // grunt
 void grunt_tick(uint8_t d)
 {
+    const int16_t GRUNT_SPD = 2 << FX;
     gobdat[d]++;
     if (gobdat[d]>13) {
         gobdat[d] = 0;
         int16_t px = gobx[0];
         if (px < gobx[d]) {
-            --gobx[d];
-            --gobx[d];
+            gobx[d] -= GRUNT_SPD;
         } else if (px > gobx[d]) {
-            ++gobx[d];
-            ++gobx[d];
+            gobx[d] += GRUNT_SPD;
         }
         int16_t py = goby[0];
         if (py < goby[d]) {
-            --goby[d];
-            --goby[d];
+            goby[d] -= GRUNT_SPD;
         } else if (py > goby[d]) {
-            ++goby[d];
-            ++goby[d];
+            goby[d] += GRUNT_SPD;
         }
     }
 }

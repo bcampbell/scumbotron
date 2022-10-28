@@ -31,7 +31,6 @@ extern uint8_t palette[16*2];   // just 16 colours
 // hardwired:
 #define VRAM_PALETTE 0x1FA00    // fixed
 
-
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
 static uint8_t etimer[MAX_EFFECTS];
@@ -40,13 +39,6 @@ static uint8_t ey[MAX_EFFECTS];
 
 static void rendereffects();
 
-
-#if 0
-#define verawrite0(addr, inc) \
-    VERA.control = 0x00;\
-    VERA.address = ((addr)&0xffff); \
-    VERA.address_hi = (inc) | (((addr)>>16)&1);
-#endif
 
 static inline void verawrite0(uint32_t addr, uint8_t inc) {
     VERA.control = 0x00;
@@ -102,12 +94,12 @@ void sproff() {
 
 void sprout(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = ((VRAM_SPRITES+256*img)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES+256*img)>>13);
-    VERA.data1 = x & 0xff;  // x lo
-    VERA.data1 = (x>>8) & 0x03;  // x hi
-    VERA.data1 = y & 0xff;  // y lo
-    VERA.data1 = (y>>8) & 0x03;  // y hi
-    VERA.data1 = (2)<<2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES + 256 * img)>>13);
+    VERA.data1 = (x >> FX) & 0xff;  // x lo
+    VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    VERA.data1 = (y >> FX) & 0xff;  // y lo
+    VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
@@ -248,6 +240,25 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 }
 
 
+// double dabble: 8 decimal digits in 32 bits BCD
+// from https://stackoverflow.com/a/64955167
+uint32_t bin2bcd(uint32_t in) {
+  if (!in) return 0;
+  uint32_t bit = 0x4000000; //  99999999 max binary
+  while (!(in & bit)) bit >>= 1;  // skip to MSB
+
+  uint32_t bcd = 0;
+  uint32_t carry = 0;
+  while (1) {
+    bcd <<= 1;
+    bcd += carry; // carry 6s to next BCD digits (10 + 6 = 0x10 = LSB of next BCD digit)
+    if (bit & in) bcd |= 1;
+    if (!(bit >>= 1)) return bcd;
+    carry = ((bcd + 0x33333333) & 0x88888888) >> 1; // carrys: 8s -> 4s
+    carry += carry >> 1; // carrys 6s  
+  }
+}
+
 static const char* hexdigits = "0123456789ABCDEF";
 static void hex8(uint8_t v, char *dest) {
     dest[0] = hexdigits[v >> 4];
@@ -283,14 +294,24 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = c;
 
     // Score
-    VERA.data0 = screencode(hexdigits[(score >> 12)&0x0f]);
+    uint32_t bcd = bin2bcd(score);
+    VERA.data0 = screencode(hexdigits[(bcd >> 28)&0x0f]);
     VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(score >> 8)&0x0f]);
+    VERA.data0 = screencode(hexdigits[(bcd >> 24)&0x0f]);
     VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(score >> 4)&0x0f]);
+    VERA.data0 = screencode(hexdigits[(bcd >> 20)&0x0f]);
     VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(score >> 0)&0x0f]);
+    VERA.data0 = screencode(hexdigits[(bcd >> 16)&0x0f]);
     VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(bcd >> 12)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(bcd >> 8)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(bcd >> 4)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(bcd >> 0)&0x0f]);
+    VERA.data0 = c;
+
 
     VERA.data0 = screencode(' ');
     VERA.data0 = c;
@@ -318,8 +339,8 @@ void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind)
         return; // none free
     }
 
-    ex[e] = ((x+4)/8) + 12;
-    ey[e] = ((y+12)/8) + 12;
+    ex[e] = (((x >> FX) + 4) / 8) + 12;
+    ey[e] = (((y >> FX) + 12) / 8) + 12;
     ekind[e] = kind;
     etimer[e] = 0;
 }

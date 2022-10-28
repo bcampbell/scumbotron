@@ -1,7 +1,6 @@
 #ifndef SYS_CX16_H
 #define SYS_CX16_H
 
-
 extern void sys_init();
 extern void waitvbl();
 extern void inp_tick();
@@ -28,5 +27,9 @@ extern volatile uint8_t tick;
 // core game stuff.
 #define SCREEN_W 320
 #define SCREEN_H 240
+
+// fixed-point: 6 fractional bits.
+#define FX 6
+#define FX_ONE (1<<FX)
 
 #endif // SYS_CX16_H
