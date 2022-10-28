@@ -6,7 +6,8 @@
 #include "sys_cx16.h"
 #include "gob.h"
 
-void titlescreen()
+
+void titlescreen_run()
 {
     sys_clr();
     while(1)
@@ -26,10 +27,24 @@ void titlescreen()
     }
 }
 
-void testlevel()
-{
-    dudes_spawn(GK_BLOCK, 5);
-    dudes_spawn(GK_GRUNT, MAX_DUDES-5);
+
+
+#define LEVELRESULT_QUIT 0
+#define LEVELRESULT_COMPLETED 1
+#define LEVELRESULT_GAMEOVER 2
+
+static void level_init(uint8_t level) {
+    switch(level & 1) {
+        case 0:
+            dudes_spawn(GK_BLOCK, 5);
+            dudes_spawn(GK_GRUNT, MAX_DUDES-5);
+            break;
+        case 1:
+            dudes_spawn(GK_GRUNT, 5);
+            dudes_spawn(GK_BLOCK, MAX_DUDES-5);
+            break;
+    }
+
     dudes_reset();    // position and intro
 }
 
@@ -37,30 +52,22 @@ void testlevel()
 #define LEVELSTATE_GETREADY 0   // pause, get ready
 #define LEVELSTATE_PLAY 1       // main gameplay
 #define LEVELSTATE_CLEARED 2    // all dudes clear
-#define LEVELSTATE_COMPLETE 4   // level was completed
-#define LEVELSTATE_KILLED 5     // player just died
-#define LEVELSTATE_GAMEOVER 6   // all lives lost
+#define LEVELSTATE_KILLED 3     // player just died
 
-
-
-void level() {
+uint8_t level_run(uint8_t level) {
     uint8_t statetimer=0;
     uint8_t state = LEVELSTATE_GETREADY;
 
     sys_clr();
     gobs_init();
     player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
-    testlevel();
+    level_init(level);
     while (1) {
-        if (state == LEVELSTATE_COMPLETE) {
-            return;
-        }
-        if (state == LEVELSTATE_GAMEOVER) {
-            return;
-        }
-
         sys_render_start();
         gobs_render();
+
+        sys_hud(level, player_lives, player_score);
+
         sys_render_finish();
 
         inp_tick();
@@ -70,6 +77,7 @@ void level() {
         bool playerkilled = player_collisions();
 
         if (playerkilled) {
+            --player_lives;
             state = LEVELSTATE_KILLED;
             statetimer = 0;
         }
@@ -95,19 +103,27 @@ void level() {
                 sys_text(10,10,"CLEAR!", tick & 0x07);
                 if (++statetimer > 60) {
                     sys_text(10,10,"CLEAR!", 0);
-                    state = LEVELSTATE_COMPLETE;
-                    statetimer = 0;
+                    return LEVELRESULT_COMPLETED;
                 }
                 break;
             case LEVELSTATE_KILLED:
-                sys_text(10,10,"OWWWWWWWW!", tick & 0x07);
+                if (player_lives > 0) {
+                    sys_text(10,10,"OWWWWWWWW!", tick & 0x07);
+                } else {
+                    sys_text(10,10,"GAME OVER!", tick & 0x07);
+                }
                 if (++statetimer > 60) {
                     sys_text(10,10,"OWWWWWWWW!", 0);
-                    state = LEVELSTATE_GETREADY;
 
-                    player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
-                    dudes_reset();
-                    statetimer = 0;
+                    if (player_lives > 0) {
+                        state = LEVELSTATE_GETREADY;
+
+                        player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
+                        dudes_reset();
+                        statetimer = 0;
+                    } else {
+                        return LEVELRESULT_GAMEOVER;
+                    }
                 }
                 break;
         }
@@ -116,10 +132,32 @@ void level() {
 }
 
 
+void game_run()
+{
+    // init new game
+    player_lives = 3;
+    player_score = 0;
+
+    uint8_t level = 0;
+
+    while(1) {
+        switch(level_run(level)) {
+            case LEVELRESULT_COMPLETED:
+                ++level;
+                break;
+            case LEVELRESULT_GAMEOVER:
+            case LEVELRESULT_QUIT:
+                return;
+        }
+    }
+}
+
+
+
 int main(void) {
     sys_init();
     while(1) {
-        titlescreen();
-        level();
+        titlescreen_run();
+        game_run();
     }
 }

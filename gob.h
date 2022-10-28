@@ -47,6 +47,10 @@ extern uint8_t gobtimer[MAX_GOBS];
 extern uint8_t gobs_lockcnt;   // num dudes holding level open.
 extern uint8_t gobs_spawncnt;  // num dudes spawning.
 
+
+extern uint8_t player_lives;
+extern uint32_t player_score;
+
 // gob functions
 void gobs_init();
 void gobs_tick(bool spawnphase);

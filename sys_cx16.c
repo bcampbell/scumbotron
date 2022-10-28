@@ -247,6 +247,66 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
     }
 }
 
+
+static const char* hexdigits = "0123456789ABCDEF";
+static void hex8(uint8_t v, char *dest) {
+    dest[0] = hexdigits[v >> 4];
+    dest[1] = hexdigits[v & 0xf];
+}
+
+
+
+void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
+{
+    const uint8_t cx = 0;
+    const uint8_t cy = 0;
+    verawrite0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
+
+    uint8_t c = 1;
+
+    // Level
+    VERA.data0 = screencode('L');
+    VERA.data0 = c;
+    VERA.data0 = screencode('V');
+    VERA.data0 = c;
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+
+    VERA.data0 = screencode(hexdigits[level >> 4]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[level & 0x0f]);
+    VERA.data0 = c;
+
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+
+    // Score
+    VERA.data0 = screencode(hexdigits[(score >> 12)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(score >> 8)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(score >> 4)&0x0f]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[(score >> 0)&0x0f]);
+    VERA.data0 = c;
+
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+
+    // Lives
+    c = 2;
+    for(uint8_t i=0; i<7 && i<lives; ++i) {
+        VERA.data0 = 0x53;  // heart
+        VERA.data0 = c;
+    }
+    VERA.data0 = screencode((lives>7) ? '+' : ' ');
+    VERA.data0 = c;
+}
+
 void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind)
 {
     // find free one

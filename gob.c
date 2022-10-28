@@ -14,6 +14,9 @@ uint8_t gobs_lockcnt;   // num dudes holding level open.
 uint8_t gobs_spawncnt;  // num dudes spawning.
 
 
+uint8_t player_lives;
+uint32_t player_score;
+
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
