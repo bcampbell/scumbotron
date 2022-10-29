@@ -37,7 +37,7 @@ static void level_init(uint8_t level) {
     switch(level & 1) {
         case 0:
             dudes_spawn(GK_BLOCK, 5);
-            dudes_spawn(GK_GRUNT, MAX_DUDES-5);
+            dudes_spawn(GK_BAITER, 5);
             break;
         case 1:
             dudes_spawn(GK_GRUNT, 5);
@@ -118,7 +118,7 @@ uint8_t level_run(uint8_t level) {
                     if (player_lives > 0) {
                         state = LEVELSTATE_GETREADY;
 
-                        player_create(FIRST_PLAYER, (SCREEN_W/2) - 8, (SCREEN_H/2)-8);
+                        player_create(FIRST_PLAYER, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
                         dudes_reset();
                         statetimer = 0;
                     } else {

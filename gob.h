@@ -20,6 +20,7 @@
 #define GK_SHOT 2
 #define GK_BLOCK 32
 #define GK_GRUNT 33
+#define GK_BAITER 34
 
 #define GK_SPAWNFLAG 0x80
 
@@ -38,8 +39,10 @@
 
 extern uint8_t gobkind[MAX_GOBS];
 extern uint8_t gobflags[MAX_GOBS];
-extern uint16_t gobx[MAX_GOBS];
-extern uint16_t goby[MAX_GOBS];
+extern int16_t gobx[MAX_GOBS];
+extern int16_t goby[MAX_GOBS];
+extern int16_t gobvx[MAX_GOBS];
+extern int16_t gobvy[MAX_GOBS];
 extern uint8_t gobdat[MAX_GOBS];
 extern uint8_t gobtimer[MAX_GOBS];
 
@@ -71,6 +74,7 @@ void spawning_tick(uint8_t g);
 void player_tick(uint8_t d);
 void shot_tick(uint8_t d);
 void grunt_tick(uint8_t d);
+void baiter_tick(uint8_t d);
 
 
 #endif // GOB_H

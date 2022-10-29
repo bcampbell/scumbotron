@@ -4,8 +4,10 @@
 // gob tables
 uint8_t gobkind[MAX_GOBS];
 uint8_t gobflags[MAX_GOBS];
-uint16_t gobx[MAX_GOBS];
-uint16_t goby[MAX_GOBS];
+int16_t gobx[MAX_GOBS];
+int16_t goby[MAX_GOBS];
+int16_t gobvx[MAX_GOBS];   // SHOULD BE BYTES?
+int16_t gobvy[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
@@ -75,6 +77,10 @@ void gobs_tick(bool spawnphase)
                 ++gobs_lockcnt;
                 grunt_tick(i);
                 break;
+            case GK_BAITER:
+                ++gobs_lockcnt;
+                baiter_tick(i);
+                break;
             default:
                 break;
         }
@@ -99,6 +105,9 @@ void gobs_render()
                 break;
             case GK_GRUNT:
                 sprout(gobx[d], goby[d],  3 + ((tick >> 5) & 0x01));
+                break;
+            case GK_BAITER:
+                sprout(gobx[d], goby[d],  2 + ((tick >> 5) & 0x03));
                 break;
             default: // includes spawning GK_SPAWNFLAG dudes
                 sproff();
@@ -134,6 +143,8 @@ void dudes_reset() {
             continue;
         }
         dude_randompos(g);
+        gobvx[g] = 0;
+        gobvy[g] = 0;
         gobkind[g] |= GK_SPAWNFLAG;
         gobtimer[g] = t + 8;
         t += 2;
@@ -341,5 +352,27 @@ void grunt_tick(uint8_t d)
     }
 }
 
-//
+
+// baiter
+void baiter_tick(uint8_t d)
+{
+    const int16_t BAITER_MAX_SPD = 4 << FX;
+    const int16_t BAITER_ACCEL = 2;
+    int16_t px = gobx[0];
+    if (px < gobx[d] && gobvx[d] > -BAITER_MAX_SPD) {
+        gobvx[d] -= BAITER_ACCEL;
+    } else if (px > gobx[d] && gobvx[d] < BAITER_MAX_SPD) {
+        gobvx[d] += BAITER_ACCEL;
+    }
+    gobx[d] += gobvx[d];
+
+    int16_t py = goby[0];
+    if (py < goby[d] && gobvy[d] > -BAITER_MAX_SPD) {
+        gobvy[d] -= BAITER_ACCEL;
+    } else if (py > goby[d] && gobvy[d] < BAITER_MAX_SPD) {
+        gobvy[d] += BAITER_ACCEL;
+    }
+    goby[d] += gobvy[d];
+
+}
 
