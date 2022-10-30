@@ -247,6 +247,20 @@ void player_tick(uint8_t d) {
             gobdat[d] = dir;
         }
     }
+
+    // keep player on screen
+    const int16_t xmax = (SCREEN_W - 16) << FX;
+    if (gobx[d] < 0<<FX) {
+        gobx[d] = 0;
+    } else if (gobx[d] > xmax) {
+        gobx[d] = xmax;
+    }
+    const int16_t ymax = (SCREEN_H - 16) << FX;
+    if (goby[d] < 0<<FX) {
+        goby[d] = 0;
+    } else if (goby[d] > ymax) {
+        goby[d] = ymax;
+    }
 }
 
 // shot
