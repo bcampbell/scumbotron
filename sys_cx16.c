@@ -17,7 +17,7 @@ extern void irq_init();
 extern volatile uint16_t inp_joystate;
 
 // gfx.c
-extern uint8_t sprites[16*16*16];
+extern uint8_t sprites[64*16*16];   // 64 16x16 sprites
 extern uint8_t palette[16*2];   // just 16 colours
 
 
@@ -115,7 +115,6 @@ void sys_clr()
     // text layer
     // 64x32*2 (w*h*(char+colour))
     verawrite0(VRAM_LAYER1_MAP, VERA_INC_1);
-    const uint8_t* src = sprites;
     for (int i=0; i<64*32*2; ++i) {
         VERA.data0 = ' '; // tile
         VERA.data0 = 0; // colour
@@ -188,9 +187,9 @@ void sys_init()
     // load the sprite images to vram (0x10000 onward)
     {
         verawrite0(VRAM_SPRITES, VERA_INC_1);
-        // 16 16*16 images
+        // 64 16x16 images
         const uint8_t* src = sprites;
-        for (int i=0; i<16*16*16; ++i) {
+        for (int i=0; i<64*16*16; ++i) {
             VERA.data0 = *src++;
         }
     }

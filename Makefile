@@ -7,8 +7,8 @@ gfx.c: sprites16.png
 	echo "uint8_t palette[16*2] = {" >>gfx.c
 	tools/png2sprites -p sprites16.png >>gfx.c
 	echo "};" >>gfx.c
-	echo "uint8_t sprites[16*16*16] = {" >>gfx.c
-	tools/png2sprites -n 16 -w 16 -h 16 sprites16.png >>gfx.c
+	echo "uint8_t sprites[64*16*16] = {" >>gfx.c
+	tools/png2sprites -n 64 -w 16 -h 16 sprites16.png >>gfx.c
 	echo "};" >>gfx.c
 
 run: game.prg

@@ -32,4 +32,10 @@ extern volatile uint8_t tick;
 #define FX 6
 #define FX_ONE (1<<FX)
 
+
+// sprite image defs
+#define IMG_BAITER 16
+#define IMG_AMOEBA 20
+
+
 #endif // SYS_CX16_H

@@ -104,10 +104,10 @@ void gobs_render()
                 sprout(gobx[d], goby[d], 2);
                 break;
             case GK_GRUNT:
-                sprout(gobx[d], goby[d],  3 + ((tick >> 5) & 0x01));
+                sprout(gobx[d], goby[d],  IMG_AMOEBA + ((tick >> 3) & 0x03));
                 break;
             case GK_BAITER:
-                sprout(gobx[d], goby[d],  2 + ((tick >> 5) & 0x03));
+                sprout(gobx[d], goby[d],  IMG_BAITER + ((tick >> 2) & 0x03));
                 break;
             default: // includes spawning GK_SPAWNFLAG dudes
                 sproff();
