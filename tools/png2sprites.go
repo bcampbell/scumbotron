@@ -131,7 +131,7 @@ func dumpImages(img *image.Paletted, out io.Writer) error {
 
 		// next
 		x += w
-		if x+w >= img.Bounds().Dx() {
+		if x+w > img.Bounds().Dx() {
 			x = 0
 			y += h
 		}
