@@ -16,13 +16,14 @@ extern void irq_init();
 //              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 extern volatile uint16_t inp_joystate;
 
-// gfx.c
-extern uint8_t sprites[64*16*16];   // 64 16x16 sprites
+// exported data: _palette.c, _sprites16.c, _sprites32.c
 extern uint8_t palette[16*2];   // just 16 colours
-
+extern uint8_t sprites16[64*16*16];   // 64 16x16 sprites
+extern uint8_t sprites32[8*32*32];   // 16 32x32 sprites
 
 // Our VERA memory map
-#define VRAM_SPRITES 0x10000    // sprite images
+#define VRAM_SPRITES16 0x10000
+#define VRAM_SPRITES32 (VRAM_SPRITES16+64*16*16)
 #define VRAM_LAYER1_MAP 0x1b000
 #define VRAM_LAYER1_TILES 0x1F000
 #define VRAM_LAYER0_MAP  0x00000    //64x64
@@ -82,8 +83,8 @@ void sys_render_start()
 void sproff() {
     const int16_t x = -16;
     const int16_t y = -16;
-    VERA.data1 = ((VRAM_SPRITES)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES)>>13);
+    VERA.data1 = ((VRAM_SPRITES16)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16)>>13);
     VERA.data1 = x & 0xff;  // x lo
     VERA.data1 = (x>>8) & 0x03;  // x hi
     VERA.data1 = y & 0xff;  // y lo
@@ -93,14 +94,26 @@ void sproff() {
 }
 
 void sprout(int16_t x, int16_t y, uint8_t img ) {
-    VERA.data1 = ((VRAM_SPRITES+256*img)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES + 256 * img)>>13);
+    VERA.data1 = ((VRAM_SPRITES16+16*16*img)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16 + 16*16 * img)>>13);
     VERA.data1 = (x >> FX) & 0xff;  // x lo
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
     VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
+}
+void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
+    VERA.data1 = ((VRAM_SPRITES32 + 32 * 32 * img)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES32 + 32 * 32 * img)>>13);
+    VERA.data1 = (x >> FX) & 0xff;  // x lo
+    VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    VERA.data1 = (y >> FX) & 0xff;  // y lo
+    VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    // wwhhpppp
+    VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
 }
 
 void sys_render_finish()
@@ -186,10 +199,18 @@ void sys_init()
 
     // load the sprite images to vram (0x10000 onward)
     {
-        verawrite0(VRAM_SPRITES, VERA_INC_1);
+        verawrite0(VRAM_SPRITES16, VERA_INC_1);
         // 64 16x16 images
-        const uint8_t* src = sprites;
+        const uint8_t* src = sprites16;
         for (int i=0; i<64*16*16; ++i) {
+            VERA.data0 = *src++;
+        }
+    }
+    {
+        verawrite0(VRAM_SPRITES32, VERA_INC_1);
+        // 16 32x32 images
+        const uint8_t* src = sprites32;
+        for (int i=0; i<16*32*32; ++i) {
             VERA.data0 = *src++;
         }
     }

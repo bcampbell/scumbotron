@@ -21,6 +21,9 @@
 #define GK_BLOCK 32
 #define GK_GRUNT 33
 #define GK_BAITER 34
+#define GK_AMOEBA_BIG 35
+#define GK_AMOEBA_MED 36
+#define GK_AMOEBA_SMALL 37
 
 #define GK_SPAWNFLAG 0x80
 

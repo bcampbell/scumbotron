@@ -8,6 +8,7 @@ extern void inp_tick();
 extern void sys_render_start();
 extern void sproff();
 extern void sprout(int16_t x, int16_t y, uint8_t img);
+extern void sys_spr32(int16_t x, int16_t y, uint8_t img);
 extern void sys_render_finish();
 
 extern void sys_clr();
