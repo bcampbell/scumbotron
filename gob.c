@@ -175,8 +175,6 @@ void dudes_reset() {
             continue;
         }
         dude_randompos(g);
-        gobvx[g] = 0;
-        gobvy[g] = 0;
         gobflags[g] |= GF_SPAWNING;
         gobtimer[g] = t + 8;
         t += 2;
@@ -421,8 +419,8 @@ void grunt_init(uint8_t d)
     gobflags[d] = 0;
     gobx[d] = 0;
     goby[d] = 0;
-    gobvx[d] = 0;
-    gobvy[d] = 0;
+    gobvx[d] = (2 << FX) + (rnd() & 0x7f);
+    gobvy[d] = (2 << FX) + (rnd() & 0x7f);
     gobdat[d] = 0;
     gobtimer[d] = 0;
 }
@@ -430,22 +428,21 @@ void grunt_init(uint8_t d)
 
 void grunt_tick(uint8_t d)
 {
-    const int16_t GRUNT_SPD = 2 << FX;
-    gobdat[d]++;
-    if (gobdat[d]>13) {
-        gobdat[d] = 0;
-        int16_t px = gobx[0];
-        if (px < gobx[d]) {
-            gobx[d] -= GRUNT_SPD;
-        } else if (px > gobx[d]) {
-            gobx[d] += GRUNT_SPD;
-        }
-        int16_t py = goby[0];
-        if (py < goby[d]) {
-            goby[d] -= GRUNT_SPD;
-        } else if (py > goby[d]) {
-            goby[d] += GRUNT_SPD;
-        }
+    // update every 16 frames
+    if (((tick+d) & 0x0f) != 0x00) {
+       return;
+    }
+    int16_t px = gobx[0];
+    if (px < gobx[d]) {
+        gobx[d] -= gobvx[d];
+    } else if (px > gobx[d]) {
+        gobx[d] += gobvx[d];
+    }
+    int16_t py = goby[0];
+    if (py < goby[d]) {
+        goby[d] -= gobvy[d];
+    } else if (py > goby[d]) {
+        goby[d] += gobvy[d];
     }
 }
 
@@ -500,8 +497,12 @@ void amoeba_init(uint8_t d)
 
 void amoeba_tick(uint8_t d)
 {
-    const int16_t AMOEBA_MAX_SPD = FX/2;
-    const int16_t AMOEBA_ACCEL = 1;
+    // update every 16 frames
+    if (((tick+d) & 0x0f) != 0x00) {
+       return;
+    }
+    const int16_t AMOEBA_MAX_SPD = 1<<FX;
+    const int16_t AMOEBA_ACCEL = 1<<FX;
     int16_t px = gobx[0];
     if (px < gobx[d] && gobvx[d] > -AMOEBA_MAX_SPD) {
         gobvx[d] -= AMOEBA_ACCEL;
