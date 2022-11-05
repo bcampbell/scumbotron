@@ -3,7 +3,6 @@
 
 // gob tables
 uint8_t gobkind[MAX_GOBS];
-uint8_t gobflags[MAX_GOBS];
 int16_t gobx[MAX_GOBS];
 int16_t goby[MAX_GOBS];
 int16_t gobvx[MAX_GOBS];   // SHOULD BE BYTES?
@@ -81,6 +80,12 @@ void gobs_tick(bool spawnphase)
                 ++gobs_lockcnt;
                 baiter_tick(i);
                 break;
+            case GK_AMOEBA_BIG:
+            case GK_AMOEBA_MED:
+            case GK_AMOEBA_SMALL:
+                ++gobs_lockcnt;
+                amoeba_tick(i);
+                break;
             default:
                 break;
         }
@@ -104,10 +109,19 @@ void gobs_render()
                 sprout(gobx[d], goby[d], 2);
                 break;
             case GK_GRUNT:
-                sprout(gobx[d], goby[d],  IMG_AMOEBA + ((tick >> 3) & 0x03));
+                sprout(gobx[d], goby[d],  SPR16_GRUNT + ((tick >> 5) & 0x01));
                 break;
             case GK_BAITER:
-                sprout(gobx[d], goby[d],  IMG_BAITER + ((tick >> 2) & 0x03));
+                sprout(gobx[d], goby[d],  SPR16_BAITER + ((tick >> 2) & 0x03));
+                break;
+            case GK_AMOEBA_BIG:
+                sys_spr32(gobx[d], goby[d],  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
+                break;
+            case GK_AMOEBA_MED:
+                sprout(gobx[d], goby[d],  SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
+                break;
+            case GK_AMOEBA_SMALL:
+                sprout(gobx[d], goby[d],  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
                 break;
             default: // includes spawning GK_SPAWNFLAG dudes
                 sproff();
@@ -287,6 +301,15 @@ void shot_tick(uint8_t s)
     }
 }
 
+
+static inline int16_t gob_size(uint8_t d) {
+    switch (gobkind[d]) {
+        case GK_AMOEBA_BIG: return 32<<FX;
+        case GK_AMOEBA_SMALL: return 12<<FX;
+        default: return 16<<FX;
+    }
+}
+
 void shot_collisions()
 {
     for (uint8_t s = FIRST_SHOT; s < (FIRST_SHOT + MAX_SHOTS); ++s) {
@@ -301,13 +324,27 @@ void shot_collisions()
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
-            int16_t dx = gobx[d];
-            int16_t dy = goby[d];
-            if (sx >= dx && sx < (dx + (16<<FX)) && sy >= dy && sy < (dy + (16<<FX))) {
-                // boom.
-                gobkind[d] = GK_NONE;
-                gobkind[s] = GK_NONE;
-                break;  // next shot.
+            int16_t dy0 = goby[d];
+            int16_t dy1 = goby[d] + gob_size(d);
+            if (sy >= dy0 && sy < dy1) {
+                int16_t dx0 = gobx[d];
+                int16_t dx1 = gobx[d] + gob_size(d);
+                if (sx >= dx0 && sx < dx1) {
+                    // boom.
+                    switch (gobkind[d]) {
+                        case GK_AMOEBA_BIG:
+                        case GK_AMOEBA_MED:
+                        case GK_AMOEBA_SMALL:
+                            amoeba_shot(d);
+                            break;
+                        default:
+                            gobkind[d] = GK_NONE;
+                            break;
+                    }
+
+                    gobkind[s] = GK_NONE;
+                    break;  // next shot.
+                }
             }
         }
     }
@@ -390,3 +427,63 @@ void baiter_tick(uint8_t d)
 
 }
 
+//
+void amoeba_tick(uint8_t d)
+{
+    const int16_t AMOEBA_MAX_SPD = FX/2;
+    const int16_t AMOEBA_ACCEL = 1;
+    int16_t px = gobx[0];
+    if (px < gobx[d] && gobvx[d] > -AMOEBA_MAX_SPD) {
+        gobvx[d] -= AMOEBA_ACCEL;
+    } else if (px > gobx[d] && gobvx[d] < AMOEBA_MAX_SPD) {
+        gobvx[d] += AMOEBA_ACCEL;
+    }
+    gobx[d] += gobvx[d];
+
+    int16_t py = goby[0];
+    if (py < goby[d] && gobvy[d] > -AMOEBA_MAX_SPD) {
+        gobvy[d] -= AMOEBA_ACCEL;
+    } else if (py > goby[d] && gobvy[d] < AMOEBA_MAX_SPD) {
+        gobvy[d] += AMOEBA_ACCEL;
+    }
+    goby[d] += gobvy[d];
+
+}
+
+void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
+    uint8_t d = dude_alloc();
+    if (!d) {
+        return;
+    }
+    gobkind[d] = kind;
+    gobx[d] = x;
+    goby[d] = y;
+    gobvx[d] = vx;
+    gobvy[d] = vy;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
+void amoeba_shot(uint8_t d)
+{
+    if (gobkind[d] == GK_AMOEBA_SMALL) {
+        gobkind[d] = GK_NONE;
+        return;
+    }
+
+    if (gobkind[d] == GK_AMOEBA_MED) {
+        gobkind[d] = GK_NONE;
+        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], -(FX/2), FX/2);
+        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], FX/2, FX/2);
+        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], 0, -(FX/2));
+        return;
+    }
+
+    if (gobkind[d] == GK_AMOEBA_BIG) {
+        gobkind[d] = GK_NONE;
+        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], -(FX/2), FX/2);
+        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], FX/2, FX/2);
+        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], 0, -(FX/2));
+        return;
+    }
+}

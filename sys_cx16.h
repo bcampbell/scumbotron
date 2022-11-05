@@ -35,8 +35,11 @@ extern volatile uint8_t tick;
 
 
 // sprite image defs
-#define IMG_BAITER 16
-#define IMG_AMOEBA 20
+#define SPR16_BAITER 16
+#define SPR16_AMOEBA_MED 20
+#define SPR16_AMOEBA_SMALL 24
+#define SPR16_GRUNT 28
 
+#define SPR32_AMOEBA_BIG 0
 
 #endif // SYS_CX16_H

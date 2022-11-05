@@ -18,12 +18,13 @@
 #define GK_NONE 0
 #define GK_PLAYER 1
 #define GK_SHOT 2
-#define GK_BLOCK 32
-#define GK_GRUNT 33
-#define GK_BAITER 34
-#define GK_AMOEBA_BIG 35
-#define GK_AMOEBA_MED 36
-#define GK_AMOEBA_SMALL 37
+#define GK_BLOCK 3
+#define GK_GRUNT 4
+#define GK_BAITER 5
+#define GK_AMOEBA_BIG 6
+#define GK_AMOEBA_MED 7
+#define GK_AMOEBA_SMALL 8
+#define GK_NUM_KINDS 9
 
 #define GK_SPAWNFLAG 0x80
 
@@ -41,7 +42,6 @@
 // Vars
 
 extern uint8_t gobkind[MAX_GOBS];
-extern uint8_t gobflags[MAX_GOBS];
 extern int16_t gobx[MAX_GOBS];
 extern int16_t goby[MAX_GOBS];
 extern int16_t gobvx[MAX_GOBS];
@@ -78,6 +78,8 @@ void player_tick(uint8_t d);
 void shot_tick(uint8_t d);
 void grunt_tick(uint8_t d);
 void baiter_tick(uint8_t d);
+void amoeba_tick(uint8_t d);
+void amoeba_shot(uint8_t d);
 
 
 #endif // GOB_H
