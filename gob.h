@@ -26,7 +26,10 @@
 #define GK_AMOEBA_SMALL 8
 #define GK_NUM_KINDS 9
 
-#define GK_SPAWNFLAG 0x80
+// Flags
+#define GF_SPAWNING 0x01
+// bits for update phases...
+
 
 // Gob tables.
 #define MAX_PLAYERS 1
@@ -42,6 +45,7 @@
 // Vars
 
 extern uint8_t gobkind[MAX_GOBS];
+extern uint8_t gobflags[MAX_GOBS];
 extern int16_t gobx[MAX_GOBS];
 extern int16_t goby[MAX_GOBS];
 extern int16_t gobvx[MAX_GOBS];
@@ -67,13 +71,17 @@ uint8_t dude_alloc();
 uint8_t shot_alloc();
 void dude_randompos(uint8_t d);
 void dudes_reset();
-
-// create fns
-void player_create(uint8_t d, int x, int y);
 void dudes_spawn(uint8_t kind, uint8_t n);
 
+// create fns
+void player_create(uint8_t d, int16_t x, int16_t y);
+
+void amoeba_init(uint8_t d);
+void grunt_init(uint8_t d);
+void baiter_init(uint8_t d);
+void block_init(uint8_t d);
+
 // tick fns
-void spawning_tick(uint8_t g);
 void player_tick(uint8_t d);
 void shot_tick(uint8_t d);
 void grunt_tick(uint8_t d);

@@ -3,6 +3,7 @@
 
 // gob tables
 uint8_t gobkind[MAX_GOBS];
+uint8_t gobflags[MAX_GOBS];
 int16_t gobx[MAX_GOBS];
 int16_t goby[MAX_GOBS];
 int16_t gobvx[MAX_GOBS];   // SHOULD BE BYTES?
@@ -44,14 +45,14 @@ void gobs_tick(bool spawnphase)
     gobs_spawncnt = 0;
     for (uint8_t i = 0; i < MAX_GOBS; ++i) {
         // Is gob playing its spawning-in effect?
-        if (gobkind[i] & GK_SPAWNFLAG) {
+        if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
             ++gobs_lockcnt;
             if( gobtimer[i] == 8) {
                 sys_addeffect(gobx[i], goby[i], EK_SPAWN);
             } else if( gobtimer[i] == 0) {
                 // done spawning.
-                gobkind[i] &= ~GK_SPAWNFLAG;
+                gobflags[i] &= ~GF_SPAWNING;
                 gobtimer[i] = 1;
             }
             --gobtimer[i];
@@ -95,6 +96,9 @@ void gobs_tick(bool spawnphase)
 void gobs_render()
 {
     for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+        if (gobflags[d] & GF_SPAWNING) {
+            continue;
+        }
         switch(gobkind[d]) {
             case GK_NONE:
                 sproff();
@@ -123,7 +127,7 @@ void gobs_render()
             case GK_AMOEBA_SMALL:
                 sprout(gobx[d], goby[d],  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
                 break;
-            default: // includes spawning GK_SPAWNFLAG dudes
+            default:
                 sproff();
                 break;
         }
@@ -133,14 +137,28 @@ void gobs_render()
 void dudes_spawn(uint8_t kind, uint8_t n)
 {
     while(n--) {
-        uint8_t g = dude_alloc();
-        if (!g) {
+        uint8_t d = dude_alloc();
+        if (!d) {
             return;
         }
-        // dude creation
-        gobkind[g] = kind;
-        gobdat[g] = 0;
-        gobtimer[g] = 0;
+        switch (kind) {
+            case GK_BLOCK:
+                block_init(d);
+                break;
+            case GK_GRUNT:
+                grunt_init(d);
+                break;
+            case GK_BAITER:
+                block_init(d);
+                break;
+            case GK_AMOEBA_BIG:
+            case GK_AMOEBA_MED:
+            case GK_AMOEBA_SMALL:
+                amoeba_init(d);
+                break;
+            default:
+                break;
+        }
         // position set by respawn
     }
 }
@@ -159,7 +177,7 @@ void dudes_reset() {
         dude_randompos(g);
         gobvx[g] = 0;
         gobvy[g] = 0;
-        gobkind[g] |= GK_SPAWNFLAG;
+        gobflags[g] |= GF_SPAWNING;
         gobtimer[g] = t + 8;
         t += 2;
     }
@@ -218,8 +236,9 @@ void dude_randompos(uint8_t d) {
 #define PLAYER_SPD FX_ONE
 
 
-void player_create(uint8_t d, int x, int y) {
+void player_create(uint8_t d, int16_t x, int16_t y) {
     gobkind[d] = GK_PLAYER;
+    gobflags[d] = 0;
     gobx[d] = x;
     goby[d] = y;
     gobdat[d] = 0;
@@ -379,9 +398,36 @@ bool player_collisions()
 
 
 
-// block has no tick fn
+// block
+
+void block_init(uint8_t d)
+{
+    gobkind[d] = GK_BLOCK;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
 
 // grunt
+
+void grunt_init(uint8_t d)
+{
+    gobkind[d] = GK_GRUNT;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
+
 void grunt_tick(uint8_t d)
 {
     const int16_t GRUNT_SPD = 2 << FX;
@@ -405,6 +451,18 @@ void grunt_tick(uint8_t d)
 
 
 // baiter
+void baiter_init(uint8_t d)
+{
+    gobkind[d] = GK_BAITER;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
 void baiter_tick(uint8_t d)
 {
     const int16_t BAITER_MAX_SPD = 4 << FX;
@@ -427,7 +485,19 @@ void baiter_tick(uint8_t d)
 
 }
 
-//
+// amoeba
+void amoeba_init(uint8_t d)
+{
+    gobkind[d] = GK_AMOEBA_BIG;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
 void amoeba_tick(uint8_t d)
 {
     const int16_t AMOEBA_MAX_SPD = FX/2;
