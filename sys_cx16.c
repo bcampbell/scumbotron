@@ -208,9 +208,9 @@ void sys_init()
     }
     {
         verawrite0(VRAM_SPRITES32, VERA_INC_1);
-        // 16 32x32 images
+        // 8 32x32 images
         const uint8_t* src = sprites32;
-        for (int i=0; i<16*32*32; ++i) {
+        for (int i=0; i<8*32*32; ++i) {
             VERA.data0 = *src++;
         }
     }
