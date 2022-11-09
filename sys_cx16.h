@@ -40,6 +40,7 @@ extern volatile uint8_t tick;
 #define SPR16_AMOEBA_SMALL 24
 #define SPR16_TANK 28
 #define SPR16_GRUNT 30
+#define SPR16_SHOT 4
 
 #define SPR32_AMOEBA_BIG 0
 

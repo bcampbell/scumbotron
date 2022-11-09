@@ -19,6 +19,26 @@ uint8_t gobs_spawncnt;  // num dudes spawning.
 uint8_t player_lives;
 uint32_t player_score;
 
+const uint8_t shot_spr[16] = {
+    0,              // 0000
+    SPR16_SHOT+2,   // 0001 DIR_RIGHT
+    SPR16_SHOT+2,   // 0010 DIR_LEFT
+    0,              // 0011
+    SPR16_SHOT+0,   // 0100 DIR_DOWN
+    SPR16_SHOT+3,   // 0101 down+right           
+    SPR16_SHOT+1,   // 0110 down+left           
+    0,              // 0111
+
+    SPR16_SHOT+0,   // 1000 up
+    SPR16_SHOT+1,   // 1001 up+right
+    SPR16_SHOT+3,   // 1010 up+left
+    0,              // 1011
+    0,              // 1100 up+down
+    0,              // 1101 up+down+right           
+    0,              // 1110 up+down+left           
+    0,              // 1111
+};
+
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -107,7 +127,7 @@ void gobs_render()
                 sprout(gobx[d], goby[d], 0);
                 break;
             case GK_SHOT:
-                sprout(gobx[d], goby[d], 1);
+                sprout(gobx[d], goby[d], shot_spr[gobdat[d]]);
                 break;
             case GK_BLOCK:
                 sprout(gobx[d], goby[d], 2);
@@ -297,7 +317,6 @@ void player_tick(uint8_t d) {
 // shot
 // dat: dir
 // timer: dies at 0
-
 #define SHOT_SPD (8<<FX)
 void shot_tick(uint8_t s)
 {
