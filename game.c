@@ -6,8 +6,6 @@
 #include "sys_cx16.h"
 #include "gob.h"
 #include "player.h"
-#include "dudes.h"
-
 
 void titlescreen_run()
 {

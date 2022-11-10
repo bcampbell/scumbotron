@@ -82,4 +82,9 @@ static inline int16_t gob_size(uint8_t d) {
 }
 
 
+void amoeba_init(uint8_t d);
+void grunt_init(uint8_t d);
+void baiter_init(uint8_t d);
+void block_init(uint8_t d);
+
 #endif // GOB_H
