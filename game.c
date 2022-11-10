@@ -5,6 +5,8 @@
 
 #include "sys_cx16.h"
 #include "gob.h"
+#include "player.h"
+#include "dudes.h"
 
 
 void titlescreen_run()
@@ -37,6 +39,7 @@ static void level_init(uint8_t level) {
     switch(level & 1) {
         case 0:
             dudes_spawn(GK_AMOEBA_BIG, 4);
+            dudes_spawn(GK_GRUNT, 20);
 //            dudes_spawn(GK_AMOEBA_BIG, 5);
 //            dudes_spawn(GK_AMOEBA_MED, 5);
 //            dudes_spawn(GK_AMOEBA_SMALL, 10);

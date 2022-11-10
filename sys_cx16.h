@@ -1,6 +1,8 @@
 #ifndef SYS_CX16_H
 #define SYS_CX16_H
 
+#include <stdint.h>
+
 extern void sys_init();
 extern void waitvbl();
 extern void inp_tick();

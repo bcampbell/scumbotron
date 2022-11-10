@@ -5,6 +5,8 @@
 uint8_t player_lives;
 uint32_t player_score;
 
+static uint8_t shot_alloc();
+
 const uint8_t shot_spr[16] = {
     0,              // 0000
     SPR16_SHOT+2,   // 0001 DIR_RIGHT
@@ -47,6 +49,8 @@ void player_create(uint8_t d, int16_t x, int16_t y) {
 }
 
 void player_tick(uint8_t d) {
+    ++gobtimer[d];
+
     uint8_t dir = 0;
     if ((inp_joystate & JOY_UP_MASK) ==0) {
         dir |= DIR_UP;
@@ -68,13 +72,16 @@ void player_tick(uint8_t d) {
             gobdat[d] = dir;
         }
 
-        uint8_t shot = shot_alloc();
-        if (shot) {
-            gobkind[shot] = GK_SHOT;
-            gobx[shot] = gobx[d];
-            goby[shot] = goby[d];
-            gobdat[shot] = gobdat[d];   // direction
-            gobtimer[shot] = 16;
+        if (gobtimer[d]>8) {
+            gobtimer[d] = 0;
+            uint8_t shot = shot_alloc();
+            if (shot) {
+                gobkind[shot] = GK_SHOT;
+                gobx[shot] = gobx[d];
+                goby[shot] = goby[d];
+                gobdat[shot] = gobdat[d];   // direction
+                gobtimer[shot] = 16;
+            }
         }
     } else {
         if (dir) {
@@ -95,6 +102,18 @@ void player_tick(uint8_t d) {
     } else if (goby[d] > ymax) {
         goby[d] = ymax;
     }
+}
+
+
+// returns 0 if none free.
+static uint8_t shot_alloc()
+{
+    for(uint8_t d = MAX_PLAYERS; d < MAX_PLAYERS + MAX_SHOTS; ++d) {
+        if(gobkind[d] == GK_NONE) {
+            return d;
+        }
+    }
+    return 0;
 }
 
 // shot
@@ -118,74 +137,6 @@ void shot_tick(uint8_t s)
     } else if (dir & DIR_RIGHT) {
         gobx[s] += SHOT_SPD;
     }
-}
-
-
-void shot_collisions()
-{
-    for (uint8_t s = FIRST_SHOT; s < (FIRST_SHOT + MAX_SHOTS); ++s) {
-        if (gobkind[s] == GK_NONE) {
-            continue;
-        }
-        // Take centre point of shot.
-        int16_t sx = gobx[s] + (8<<FX);
-        int16_t sy = goby[s] + (8<<FX);
-
-        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
-            if (gobkind[d]==GK_NONE) {
-                continue;
-            }
-            int16_t dy0 = goby[d];
-            int16_t dy1 = goby[d] + gob_size(d);
-            if (sy >= dy0 && sy < dy1) {
-                int16_t dx0 = gobx[d];
-                int16_t dx1 = gobx[d] + gob_size(d);
-                if (sx >= dx0 && sx < dx1) {
-                    // boom.
-                    switch (gobkind[d]) {
-                        case GK_AMOEBA_BIG:
-                        case GK_AMOEBA_MED:
-                        case GK_AMOEBA_SMALL:
-                            amoeba_shot(d);
-                            break;
-                        default:
-                            gobkind[d] = GK_NONE;
-                            break;
-                    }
-
-                    gobkind[s] = GK_NONE;
-                    break;  // next shot.
-                }
-            }
-        }
-    }
-}
-
-
-static inline bool overlap(uint16_t amin, uint16_t amax, uint16_t bmin, uint16_t bmax)
-{
-    return (amin <= bmax) && (amax >= bmin);
-}
-
-bool player_collisions()
-{
-    for (uint8_t p = FIRST_PLAYER; p < (FIRST_PLAYER + MAX_PLAYERS); ++p) {
-        if (gobkind[p] != GK_PLAYER) {
-            continue;
-        }
-        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
-            if (gobkind[d]==GK_NONE) {
-                continue;
-            }
-            if (overlap(gobx[p] + (4 << FX), gobx[p] + (12 << FX), gobx[d], gobx[d] + (16 << FX)) &&
-                overlap(goby[p] + (4 << FX), goby[p] + (12 << FX), goby[d], goby[d] + (16 << FX))) {
-                gobkind[p] = GK_NONE;
-                // boom
-                return true;
-            }
-        }
-    }
-    return false;
 }
 
 

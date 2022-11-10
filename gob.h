@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "sys_cx16.h"
+
 //
 // Game object (gob) Stuff
 //
@@ -58,9 +60,6 @@ extern uint8_t gobs_lockcnt;   // num dudes holding level open.
 extern uint8_t gobs_spawncnt;  // num dudes spawning.
 
 
-extern uint8_t player_lives;
-extern uint32_t player_score;
-
 // gob functions
 void gobs_init();
 void gobs_tick(bool spawnphase);
@@ -68,26 +67,19 @@ void gobs_render();
 void shot_collisions();
 bool player_collisions();
 uint8_t dude_alloc();
-uint8_t shot_alloc();
 void dude_randompos(uint8_t d);
 void dudes_reset();
 void dudes_spawn(uint8_t kind, uint8_t n);
 
-// create fns
-void player_create(uint8_t d, int16_t x, int16_t y);
+uint8_t rnd();
 
-void amoeba_init(uint8_t d);
-void grunt_init(uint8_t d);
-void baiter_init(uint8_t d);
-void block_init(uint8_t d);
-
-// tick fns
-void player_tick(uint8_t d);
-void shot_tick(uint8_t d);
-void grunt_tick(uint8_t d);
-void baiter_tick(uint8_t d);
-void amoeba_tick(uint8_t d);
-void amoeba_shot(uint8_t d);
+static inline int16_t gob_size(uint8_t d) {
+    switch (gobkind[d]) {
+        case GK_AMOEBA_BIG: return 32<<FX;
+        case GK_AMOEBA_SMALL: return 12<<FX;
+        default: return 16<<FX;
+    }
+}
 
 
 #endif // GOB_H

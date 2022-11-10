@@ -1,5 +1,5 @@
-SRCS=game.c gob.c sys_cx16.c irq.s glue.s _palette.c _sprites16.c _sprites32.c
-INCS=gob.h sys_cx16.h
+SRCS=game.c gob.c player.c dudes.c sys_cx16.c irq.s glue.s _palette.c _sprites16.c _sprites32.c
+INCS=gob.h player.h dudes.h sys_cx16.h
 
 game.prg: $(SRCS) $(INCS)
 	mos-cx16-clang -Os -o game.prg $(SRCS)
