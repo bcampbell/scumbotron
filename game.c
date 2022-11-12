@@ -44,7 +44,7 @@ static void level_init(uint8_t level) {
             break;
         case 1:
             dudes_spawn(GK_AMOEBA_BIG, 5);
-            dudes_spawn(GK_BLOCK, MAX_DUDES-5);
+            dudes_spawn(GK_BLOCK, MAX_GOBS-5);
             break;
     }
 

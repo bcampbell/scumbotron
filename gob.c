@@ -21,7 +21,7 @@ uint8_t gobs_spawncnt;  // num dudes spawning.
 void grunt_tick(uint8_t d);
 void baiter_tick(uint8_t d);
 void amoeba_tick(uint8_t d);
-void amoeba_shot(uint8_t d);
+void amoeba_shot(uint8_t d, uint8_t shot);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -68,9 +68,6 @@ void gobs_tick(bool spawnphase)
         switch(gobkind[i]) {
             case GK_NONE:
                 break;
-            case GK_SHOT:
-                shot_tick(i);
-                break;
             case GK_BLOCK:
                 break;
             case GK_GRUNT:
@@ -103,9 +100,6 @@ void gobs_render()
             case GK_NONE:
                 sproff();
                 break;
-            case GK_SHOT:
-                sprout(gobx[d], goby[d], shot_spr[gobdat[d]]);
-                break;
             case GK_BLOCK:
                 sprout(gobx[d], goby[d], 2);
                 break;
@@ -135,7 +129,7 @@ void dudes_spawn(uint8_t kind, uint8_t n)
 {
     while(n--) {
         uint8_t d = dude_alloc();
-        if (!d) {
+        if (d >= MAX_GOBS) {
             return;
         }
         switch (kind) {
@@ -167,7 +161,7 @@ void dudes_spawn(uint8_t kind, uint8_t n)
 // - put into spawning mode.
 void dudes_reset() {
     uint8_t t=0;
-    for (uint8_t g = FIRST_DUDE; g < FIRST_DUDE+MAX_DUDES; ++g) {
+    for (uint8_t g = 0; g < MAX_GOBS; ++g) {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
@@ -180,12 +174,12 @@ void dudes_reset() {
 
 // returns 0 if none free.
 uint8_t dude_alloc() {
-    for(uint8_t d = FIRST_DUDE; d < FIRST_DUDE + MAX_DUDES; ++d) {
+    for(uint8_t d = 0; d < MAX_GOBS; ++d) {
         if(gobkind[d] == GK_NONE) {
             return d;
         }
     }
-    return 0;
+    return MAX_GOBS;
 }
 
 void dude_randompos(uint8_t d) {
@@ -206,46 +200,6 @@ void dude_randompos(uint8_t d) {
 
     gobx[d] = (xmid + x) << FX;
     goby[d] = (ymid + y) << FX;
-}
-
-void shot_collisions()
-{
-    for (uint8_t s = FIRST_SHOT; s < (FIRST_SHOT + MAX_SHOTS); ++s) {
-        if (gobkind[s] == GK_NONE) {
-            continue;
-        }
-        // Take centre point of shot.
-        int16_t sx = gobx[s] + (8<<FX);
-        int16_t sy = goby[s] + (8<<FX);
-
-        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
-            if (gobkind[d]==GK_NONE) {
-                continue;
-            }
-            int16_t dy0 = goby[d];
-            int16_t dy1 = goby[d] + gob_size(d);
-            if (sy >= dy0 && sy < dy1) {
-                int16_t dx0 = gobx[d];
-                int16_t dx1 = gobx[d] + gob_size(d);
-                if (sx >= dx0 && sx < dx1) {
-                    // boom.
-                    switch (gobkind[d]) {
-                        case GK_AMOEBA_BIG:
-                        case GK_AMOEBA_MED:
-                        case GK_AMOEBA_SMALL:
-                            amoeba_shot(d);
-                            break;
-                        default:
-                            gobkind[d] = GK_NONE;
-                            break;
-                    }
-
-                    gobkind[s] = GK_NONE;
-                    break;  // next shot.
-                }
-            }
-        }
-    }
 }
 
 
@@ -391,7 +345,7 @@ void amoeba_tick(uint8_t d)
 
 void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
     uint8_t d = dude_alloc();
-    if (!d) {
+    if (d >= MAX_GOBS) {
         return;
     }
     gobkind[d] = kind;
@@ -403,7 +357,7 @@ void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
     gobtimer[d] = 0;
 }
 
-void amoeba_shot(uint8_t d)
+void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
         gobkind[d] = GK_NONE;

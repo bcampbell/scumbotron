@@ -9,15 +9,13 @@ uint32_t player_score;
 int16_t plrx[MAX_PLAYERS];
 int16_t plry[MAX_PLAYERS];
 uint8_t plrtimer[MAX_PLAYERS];
-uint8_t plrfacing[MAX_PLAYERS];
+uint8_t plrfacing[MAX_PLAYERS]; // 0xff = dead, else DIR_ bits
 
-#if 0
 // shot vars
 int16_t shotx[MAX_SHOTS];
 int16_t shoty[MAX_SHOTS];
 uint8_t shotdir[MAX_SHOTS];
 uint8_t shottimer[MAX_SHOTS];
-#endif
 
 static uint8_t shot_alloc();
 
@@ -62,23 +60,38 @@ void player_create(uint8_t p, int16_t x, int16_t y) {
 
 void player_renderall()
 {
-    for (uint8_t p=0; p<MAX_PLAYERS; ++p) {
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
         if (plrfacing[p] == 0xff) {
             // dead.
             continue;
         }
         sprout(plrx[p], plry[p], 0);
     }
+
+    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
+        if (!shotdir[s]) {
+            // inactive.
+            continue;
+        }
+        sprout(shotx[s], shoty[s], shot_spr[shotdir[s]]);
+    }
 }
 
 void player_tickall()
 {
-    for (uint8_t p=0; p<MAX_PLAYERS; ++p) {
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
         if (plrfacing[p] == 0xff) {
             // dead.
             continue;
         }
         player_tick(p);
+    }
+    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
+        if (!shotdir[s]) {
+            // inactive.
+            continue;
+        }
+        shot_tick(s);
     }
 }
 
@@ -97,7 +110,7 @@ bool player_collisions()
         int16_t py0 = plry[p] + (4 << FX);
         int16_t px1 = plrx[p] + (12 << FX);
         int16_t py1 = plry[p] + (12 << FX);
-        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); ++d) {
+        for (uint8_t d = 0; d < MAX_GOBS; ++d) {
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
@@ -139,14 +152,14 @@ void player_tick(uint8_t d) {
         }
 
         if (plrtimer[d]>8) {
+            // FIRE!
             plrtimer[d] = 0;
             uint8_t shot = shot_alloc();
-            if (shot) {
-                gobkind[shot] = GK_SHOT;
-                gobx[shot] = plrx[d];
-                goby[shot] = plry[d];
-                gobdat[shot] = plrfacing[d];   // direction
-                gobtimer[shot] = 16;
+            if (shot < MAX_SHOTS) {
+                shotx[shot] = plrx[d];
+                shoty[shot] = plry[d];
+                shotdir[shot] = plrfacing[d];   // direction
+                shottimer[shot] = 16;
             }
         }
     } else {
@@ -174,12 +187,12 @@ void player_tick(uint8_t d) {
 // returns 0 if none free.
 static uint8_t shot_alloc()
 {
-    for(uint8_t d = MAX_PLAYERS; d < MAX_PLAYERS + MAX_SHOTS; ++d) {
-        if(gobkind[d] == GK_NONE) {
-            return d;
+    for(uint8_t s = 0; s < MAX_SHOTS; ++s) {
+        if(shotdir[s] == 0) {
+            return s;
         }
     }
-    return 0;
+    return MAX_SHOTS;
 }
 
 // shot
@@ -188,21 +201,61 @@ static uint8_t shot_alloc()
 #define SHOT_SPD (8<<FX)
 void shot_tick(uint8_t s)
 {
-    if (--gobtimer[s] == 0) {
-        gobkind[s] = GK_NONE;
+    if (--shottimer[s] == 0) {
+        shotdir[s] = 0; // inactive.
         return;
     }
-    uint8_t dir = gobdat[s];
+    uint8_t dir = shotdir[s];
     if (dir & DIR_UP) {
-        goby[s] -= SHOT_SPD;
+        shoty[s] -= SHOT_SPD;
     } else if (dir & DIR_DOWN) {
-        goby[s] += SHOT_SPD;
+        shoty[s] += SHOT_SPD;
     }
     if (dir & DIR_LEFT) {
-        gobx[s] -= SHOT_SPD;
+        shotx[s] -= SHOT_SPD;
     } else if (dir & DIR_RIGHT) {
-        gobx[s] += SHOT_SPD;
+        shotx[s] += SHOT_SPD;
     }
 }
 
+
+void shot_collisions()
+{
+    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
+        if (shotdir[s] == 0) {
+            continue;   // inactive
+        }
+        // Take centre point of shot.
+        int16_t sx = shotx[s] + (8<<FX);
+        int16_t sy = shoty[s] + (8<<FX);
+
+        for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+            if (gobkind[d]==GK_NONE) {
+                continue;
+            }
+            int16_t dy0 = goby[d];
+            int16_t dy1 = goby[d] + gob_size(d);
+            if (sy >= dy0 && sy < dy1) {
+                int16_t dx0 = gobx[d];
+                int16_t dx1 = gobx[d] + gob_size(d);
+                if (sx >= dx0 && sx < dx1) {
+                    // boom.
+                    switch (gobkind[d]) {
+                        case GK_AMOEBA_BIG:
+                        case GK_AMOEBA_MED:
+                        case GK_AMOEBA_SMALL:
+                            amoeba_shot(d, s);
+                            break;
+                        default:
+                            gobkind[d] = GK_NONE;
+                            break;
+                    }
+
+                    shotdir[s] = 0; // turn off shot.
+                    break;  // next shot.
+                }
+            }
+        }
+    }
+}
 

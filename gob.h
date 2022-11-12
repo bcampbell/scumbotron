@@ -18,7 +18,6 @@
 
 // Kinds
 #define GK_NONE 0
-#define GK_SHOT 2
 #define GK_BLOCK 3
 #define GK_GRUNT 4
 #define GK_BAITER 5
@@ -33,13 +32,7 @@
 
 
 // Gob tables.
-#define MAX_SHOTS 7
-#define MAX_DUDES 40
-
-#define FIRST_SHOT 0
-#define FIRST_DUDE (FIRST_SHOT + MAX_SHOTS)
-
-#define MAX_GOBS (MAX_SHOTS + MAX_DUDES)
+#define MAX_GOBS 40
 
 // Vars
 
@@ -79,6 +72,7 @@ static inline int16_t gob_size(uint8_t d) {
 
 
 void amoeba_init(uint8_t d);
+void amoeba_shot(uint8_t d, uint8_t shot);
 void grunt_init(uint8_t d);
 void baiter_init(uint8_t d);
 void block_init(uint8_t d);
