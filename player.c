@@ -5,6 +5,20 @@
 uint8_t player_lives;
 uint32_t player_score;
 
+// player vars
+int16_t plrx[MAX_PLAYERS];
+int16_t plry[MAX_PLAYERS];
+uint8_t plrtimer[MAX_PLAYERS];
+uint8_t plrfacing[MAX_PLAYERS];
+
+#if 0
+// shot vars
+int16_t shotx[MAX_SHOTS];
+int16_t shoty[MAX_SHOTS];
+uint8_t shotdir[MAX_SHOTS];
+uint8_t shottimer[MAX_SHOTS];
+#endif
+
 static uint8_t shot_alloc();
 
 const uint8_t shot_spr[16] = {
@@ -39,68 +53,120 @@ const uint8_t shot_spr[16] = {
 #define PLAYER_SPD FX_ONE
 
 
-void player_create(uint8_t d, int16_t x, int16_t y) {
-    gobkind[d] = GK_PLAYER;
-    gobflags[d] = 0;
-    gobx[d] = x;
-    goby[d] = y;
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
+void player_create(uint8_t p, int16_t x, int16_t y) {
+    plrx[p] = x;
+    plry[p] = y;
+    plrfacing[p] = 0;
+    plrtimer[p] = 0;
 }
 
+void player_renderall()
+{
+    for (uint8_t p=0; p<MAX_PLAYERS; ++p) {
+        if (plrfacing[p] == 0xff) {
+            // dead.
+            continue;
+        }
+        sprout(plrx[p], plry[p], 0);
+    }
+}
+
+void player_tickall()
+{
+    for (uint8_t p=0; p<MAX_PLAYERS; ++p) {
+        if (plrfacing[p] == 0xff) {
+            // dead.
+            continue;
+        }
+        player_tick(p);
+    }
+}
+
+
+static inline bool overlap(int16_t amin, int16_t amax, int16_t bmin, int16_t bmax)
+{
+    return (amin <= bmax) && (amax >= bmin);
+}
+
+
+// returns true if player killed.
+bool player_collisions()
+{
+    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+        int16_t px0 = plrx[p] + (4 << FX);
+        int16_t py0 = plry[p] + (4 << FX);
+        int16_t px1 = plrx[p] + (12 << FX);
+        int16_t py1 = plry[p] + (12 << FX);
+        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); ++d) {
+            if (gobkind[d]==GK_NONE) {
+                continue;
+            }
+            if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
+                overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
+                plrfacing[p] = 0xff;    // dead
+                // boom
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+
+
 void player_tick(uint8_t d) {
-    ++gobtimer[d];
+    ++plrtimer[d];
 
     uint8_t dir = 0;
     if ((inp_joystate & JOY_UP_MASK) ==0) {
         dir |= DIR_UP;
-        goby[d] -= PLAYER_SPD;
+        plry[d] -= PLAYER_SPD;
     } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
         dir |= DIR_DOWN;
-        goby[d] += PLAYER_SPD;
+        plry[d] += PLAYER_SPD;
     }
     if ((inp_joystate & JOY_LEFT_MASK) ==0) {
         dir |= DIR_LEFT;
-        gobx[d] -= PLAYER_SPD;
+        plrx[d] -= PLAYER_SPD;
     } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
         dir |= DIR_RIGHT;
-        gobx[d] += PLAYER_SPD;
+        plrx[d] += PLAYER_SPD;
     }
 
     if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
-        if (!gobdat[d]) {
-            gobdat[d] = dir;
+        if (!plrfacing[d]) {
+            plrfacing[d] = dir;
         }
 
-        if (gobtimer[d]>8) {
-            gobtimer[d] = 0;
+        if (plrtimer[d]>8) {
+            plrtimer[d] = 0;
             uint8_t shot = shot_alloc();
             if (shot) {
                 gobkind[shot] = GK_SHOT;
-                gobx[shot] = gobx[d];
-                goby[shot] = goby[d];
-                gobdat[shot] = gobdat[d];   // direction
+                gobx[shot] = plrx[d];
+                goby[shot] = plry[d];
+                gobdat[shot] = plrfacing[d];   // direction
                 gobtimer[shot] = 16;
             }
         }
     } else {
         if (dir) {
-            gobdat[d] = dir;
+            plrfacing[d] = dir;
         }
     }
 
     // keep player on screen
     const int16_t xmax = (SCREEN_W - 16) << FX;
-    if (gobx[d] < 0<<FX) {
-        gobx[d] = 0;
-    } else if (gobx[d] > xmax) {
-        gobx[d] = xmax;
+    if (plrx[d] < 0<<FX) {
+        plrx[d] = 0;
+    } else if (plrx[d] > xmax) {
+        plrx[d] = xmax;
     }
     const int16_t ymax = (SCREEN_H - 16) << FX;
-    if (goby[d] < 0<<FX) {
-        goby[d] = 0;
-    } else if (goby[d] > ymax) {
-        goby[d] = ymax;
+    if (plry[d] < 0<<FX) {
+        plry[d] = 0;
+    } else if (plry[d] > ymax) {
+        plry[d] = ymax;
     }
 }
 

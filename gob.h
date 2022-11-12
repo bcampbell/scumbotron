@@ -18,7 +18,6 @@
 
 // Kinds
 #define GK_NONE 0
-#define GK_PLAYER 1
 #define GK_SHOT 2
 #define GK_BLOCK 3
 #define GK_GRUNT 4
@@ -34,15 +33,13 @@
 
 
 // Gob tables.
-#define MAX_PLAYERS 1
 #define MAX_SHOTS 7
 #define MAX_DUDES 40
 
-#define FIRST_PLAYER 0
-#define FIRST_SHOT (FIRST_PLAYER + MAX_PLAYERS)
+#define FIRST_SHOT 0
 #define FIRST_DUDE (FIRST_SHOT + MAX_SHOTS)
 
-#define MAX_GOBS (MAX_PLAYERS + MAX_SHOTS + MAX_DUDES)
+#define MAX_GOBS (MAX_SHOTS + MAX_DUDES)
 
 // Vars
 
@@ -65,7 +62,6 @@ void gobs_init();
 void gobs_tick(bool spawnphase);
 void gobs_render();
 void shot_collisions();
-bool player_collisions();
 uint8_t dude_alloc();
 void dude_randompos(uint8_t d);
 void dudes_reset();

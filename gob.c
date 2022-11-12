@@ -68,9 +68,6 @@ void gobs_tick(bool spawnphase)
         switch(gobkind[i]) {
             case GK_NONE:
                 break;
-            case GK_PLAYER:
-                player_tick(i);
-                break;
             case GK_SHOT:
                 shot_tick(i);
                 break;
@@ -105,9 +102,6 @@ void gobs_render()
         switch(gobkind[d]) {
             case GK_NONE:
                 sproff();
-                break;
-            case GK_PLAYER:
-                sprout(gobx[d], goby[d], 0);
                 break;
             case GK_SHOT:
                 sprout(gobx[d], goby[d], shot_spr[gobdat[d]]);
@@ -186,7 +180,7 @@ void dudes_reset() {
 
 // returns 0 if none free.
 uint8_t dude_alloc() {
-    for(uint8_t d = MAX_PLAYERS+MAX_SHOTS; d < MAX_GOBS; ++d) {
+    for(uint8_t d = FIRST_DUDE; d < FIRST_DUDE + MAX_DUDES; ++d) {
         if(gobkind[d] == GK_NONE) {
             return d;
         }
@@ -255,34 +249,6 @@ void shot_collisions()
 }
 
 
-static inline bool overlap(uint16_t amin, uint16_t amax, uint16_t bmin, uint16_t bmax)
-{
-    return (amin <= bmax) && (amax >= bmin);
-}
-
-bool player_collisions()
-{
-    for (uint8_t p = FIRST_PLAYER; p < (FIRST_PLAYER + MAX_PLAYERS); ++p) {
-        if (gobkind[p] != GK_PLAYER) {
-            continue;
-        }
-        for (uint8_t d = FIRST_DUDE; d < (FIRST_DUDE + MAX_DUDES); d=d+1) {
-            if (gobkind[d]==GK_NONE) {
-                continue;
-            }
-            if (overlap(gobx[p] + (4 << FX), gobx[p] + (12 << FX), gobx[d], gobx[d] + (16 << FX)) &&
-                overlap(goby[p] + (4 << FX), goby[p] + (12 << FX), goby[d], goby[d] + (16 << FX))) {
-                gobkind[p] = GK_NONE;
-                // boom
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-
 // block
 
 void block_init(uint8_t d)
@@ -319,13 +285,13 @@ void grunt_tick(uint8_t d)
     if (((tick+d) & 0x0f) != 0x00) {
        return;
     }
-    int16_t px = gobx[0];
+    int16_t px = plrx[0];
     if (px < gobx[d]) {
         gobx[d] -= gobvx[d];
     } else if (px > gobx[d]) {
         gobx[d] += gobvx[d];
     }
-    int16_t py = goby[0];
+    int16_t py = plry[0];
     if (py < goby[d]) {
         goby[d] -= gobvy[d];
     } else if (py > goby[d]) {
@@ -351,7 +317,7 @@ void baiter_tick(uint8_t d)
 {
     const int16_t BAITER_MAX_SPD = 4 << FX;
     const int16_t BAITER_ACCEL = 2;
-    int16_t px = gobx[0];
+    int16_t px = plrx[0];
     if (px < gobx[d] && gobvx[d] > -BAITER_MAX_SPD) {
         gobvx[d] -= BAITER_ACCEL;
     } else if (px > gobx[d] && gobvx[d] < BAITER_MAX_SPD) {
@@ -359,7 +325,7 @@ void baiter_tick(uint8_t d)
     }
     gobx[d] += gobvx[d];
 
-    int16_t py = goby[0];
+    int16_t py = plry[0];
     if (py < goby[d] && gobvy[d] > -BAITER_MAX_SPD) {
         gobvy[d] -= BAITER_ACCEL;
     } else if (py > goby[d] && gobvy[d] < BAITER_MAX_SPD) {
@@ -405,14 +371,14 @@ void amoeba_tick(uint8_t d)
     if (((tick+d) & 0x0f) != 0x00) {
        return;
     }
-    int16_t px = gobx[0];
+    int16_t px = plrx[0];
     if (px < gobx[d] && gobvx[d] > -AMOEBA_MAX_SPD) {
         gobvx[d] -= AMOEBA_ACCEL;
     } else if (px > gobx[d] && gobvx[d] < AMOEBA_MAX_SPD) {
         gobvx[d] += AMOEBA_ACCEL;
     }
 
-    int16_t py = goby[0];
+    int16_t py = plry[0];
     if (py < goby[d] && gobvy[d] > -AMOEBA_MAX_SPD) {
         gobvy[d] -= AMOEBA_ACCEL;
     } else if (py > goby[d] && gobvy[d] < AMOEBA_MAX_SPD) {

@@ -63,10 +63,11 @@ uint8_t level_run(uint8_t level) {
 
     sys_clr();
     gobs_init();
-    player_create(FIRST_PLAYER, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
+    player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
     level_init(level);
     while (1) {
         sys_render_start();
+        player_renderall();
         gobs_render();
         player_score += 1000;
         sys_hud(level, player_lives, player_score);
@@ -76,13 +77,15 @@ uint8_t level_run(uint8_t level) {
         inp_tick();
 
         gobs_tick(state == LEVELSTATE_GETREADY);    // spawnphase?
+        player_tickall();
         shot_collisions();
-        bool playerkilled = player_collisions();
-
-        if (playerkilled) {
-            --player_lives;
-            state = LEVELSTATE_KILLED;
-            statetimer = 0;
+        if (state == LEVELSTATE_PLAY) {
+            bool playerkilled = player_collisions();
+            if (playerkilled) {
+                --player_lives;
+                state = LEVELSTATE_KILLED;
+                statetimer = 0;
+            }
         }
 
         // update levelstate
@@ -121,7 +124,7 @@ uint8_t level_run(uint8_t level) {
                     if (player_lives > 0) {
                         state = LEVELSTATE_GETREADY;
 
-                        player_create(FIRST_PLAYER, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
+                        player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
                         dudes_reset();
                         statetimer = 0;
                     } else {
