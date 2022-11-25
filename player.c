@@ -198,26 +198,15 @@ static uint8_t shot_alloc()
 // shot
 // dat: dir
 // timer: dies at 0
-#define SHOT_SPD (8<<FX)
 void shot_tick(uint8_t s)
 {
     if (--shottimer[s] == 0) {
         shotdir[s] = 0; // inactive.
         return;
     }
-    uint8_t dir = shotdir[s];
-    if (dir & DIR_UP) {
-        shoty[s] -= SHOT_SPD;
-    } else if (dir & DIR_DOWN) {
-        shoty[s] += SHOT_SPD;
-    }
-    if (dir & DIR_LEFT) {
-        shotx[s] -= SHOT_SPD;
-    } else if (dir & DIR_RIGHT) {
-        shotx[s] += SHOT_SPD;
-    }
+    shotx[s] += shot_xvel(s);
+    shoty[s] += shot_yvel(s);
 }
-
 
 void shot_collisions()
 {
@@ -245,6 +234,9 @@ void shot_collisions()
                         case GK_AMOEBA_MED:
                         case GK_AMOEBA_SMALL:
                             amoeba_shot(d, s);
+                            break;
+                        case GK_TANK:
+                            tank_shot(d, s);
                             break;
                         default:
                             gobkind[d] = GK_NONE;

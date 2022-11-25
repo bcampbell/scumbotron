@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "gob.h"
 
 extern uint8_t player_lives;
 extern uint32_t player_score;
@@ -28,5 +29,29 @@ void player_create(uint8_t d, int16_t x, int16_t y);
 void player_tick(uint8_t d);
 void shot_tick(uint8_t s);
 void shot_collisions();
+
+
+#define SHOT_SPD (8<<FX)
+
+static inline int16_t shot_yvel(uint8_t s) {
+    uint8_t dir = shotdir[s];
+    if (dir & DIR_UP) {
+       return -SHOT_SPD;
+    } else if (dir & DIR_DOWN) {
+       return SHOT_SPD;
+    }
+    return 0;
+}
+
+static inline int16_t shot_xvel(uint8_t s) {
+    uint8_t dir = shotdir[s];
+    if (dir & DIR_LEFT) {
+       return -SHOT_SPD;
+    } else if (dir & DIR_RIGHT) {
+       return SHOT_SPD;
+    }
+    return 0;
+}
+
 
 #endif // PLAYER_H

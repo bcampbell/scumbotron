@@ -21,7 +21,7 @@ uint8_t gobs_spawncnt;  // num dudes spawning.
 void grunt_tick(uint8_t d);
 void baiter_tick(uint8_t d);
 void amoeba_tick(uint8_t d);
-void amoeba_shot(uint8_t d, uint8_t shot);
+void tank_tick(uint8_t d);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -84,6 +84,10 @@ void gobs_tick(bool spawnphase)
                 ++gobs_lockcnt;
                 amoeba_tick(i);
                 break;
+            case GK_TANK:
+                ++gobs_lockcnt;
+                tank_tick(i);
+                break;
             default:
                 break;
         }
@@ -118,6 +122,9 @@ void gobs_render()
             case GK_AMOEBA_SMALL:
                 sprout(gobx[d], goby[d],  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
                 break;
+            case GK_TANK:
+                sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
+                break;
             default:
                 sproff();
                 break;
@@ -146,6 +153,9 @@ void dudes_spawn(uint8_t kind, uint8_t n)
             case GK_AMOEBA_MED:
             case GK_AMOEBA_SMALL:
                 amoeba_init(d);
+                break;
+            case GK_TANK:
+                tank_init(d);
                 break;
             default:
                 break;
@@ -382,3 +392,60 @@ void amoeba_shot(uint8_t d, uint8_t shot)
         return;
     }
 }
+
+
+// tank
+
+void tank_init(uint8_t d)
+{
+    gobkind[d] = GK_TANK;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    gobdat[d] = 8;  // life
+    gobtimer[d] = 0;    // highlight timer
+}
+
+
+void tank_tick(uint8_t d)
+{
+    if (gobtimer[d] > 0) {
+        --gobtimer[d];
+    }
+    // update every 32 frames
+    if (((tick+d) & 0x1f) != 0x00) {
+       return;
+    }
+    const int16_t vx = (5<<FX);
+    const int16_t vy = (5<<FX);
+    int16_t px = plrx[0];
+    if (px < gobx[d]) {
+        gobx[d] -= vx;
+    } else if (px > gobx[d]) {
+        gobx[d] += vx;
+    }
+    int16_t py = plry[0];
+    if (py < goby[d]) {
+        goby[d] -= vy;
+    } else if (py > goby[d]) {
+        goby[d] += vy;
+    }
+}
+
+void tank_shot(uint8_t d, uint8_t s)
+{
+    --gobdat[d];
+    if (gobdat[d]==0) {
+        // boom.
+        gobkind[d] = GK_NONE;
+    } else {
+        // knockback
+        gobx[d] += (shot_xvel(s) >> 0);
+        goby[d] += (shot_yvel(s) >> 0);
+        gobtimer[d] = 8;
+    }
+
+}
+

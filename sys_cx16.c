@@ -104,6 +104,19 @@ void sprout(int16_t x, int16_t y, uint8_t img ) {
     // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
+
+void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
+    VERA.data1 = ((VRAM_SPRITES16+16*16*img)>>5) & 0xFF;
+    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16 + 16*16 * img)>>13);
+    VERA.data1 = (x >> FX) & 0xff;  // x lo
+    VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    VERA.data1 = (y >> FX) & 0xff;  // y lo
+    VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    // wwhhpppp
+    VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
+}
+
 void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = ((VRAM_SPRITES32 + 32 * 32 * img)>>5) & 0xFF;
     VERA.data1 = (1 << 7) | ((VRAM_SPRITES32 + 32 * 32 * img)>>13);
@@ -192,8 +205,14 @@ void sys_init()
         VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
         const uint8_t* src = palette;
         // just 16 colours
-        for (int i=0; i<16*2; ++i) {
+        for (uint8_t i=0; i<16*2; ++i) {
             VERA.data0 = *src++;
+        }
+
+        // then a set of 16 whites for highlight flashing
+        for (uint8_t i=0; i<16; ++i) {
+            VERA.data0 = 0xff;
+            VERA.data0 = 0x0f;
         }
     }
 
