@@ -102,7 +102,6 @@ void gobs_render()
         }
         switch(gobkind[d]) {
             case GK_NONE:
-                sproff();
                 break;
             case GK_BLOCK:
                 sprout(gobx[d], goby[d], 2);
@@ -126,7 +125,6 @@ void gobs_render()
                 sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
                 break;
             default:
-                sproff();
                 break;
         }
     }

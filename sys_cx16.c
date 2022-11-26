@@ -30,7 +30,8 @@ extern uint8_t sprites32[8*32*32];   // 16 32x32 sprites
 #define VRAM_LAYER0_TILES  0x08000
 
 // hardwired:
-#define VRAM_PALETTE 0x1FA00    // fixed
+#define VRAM_PALETTE 0x1FA00
+#define VRAM_SPRITE_ATTRS 0x1FC00
 
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
@@ -39,6 +40,11 @@ static uint8_t ex[MAX_EFFECTS];
 static uint8_t ey[MAX_EFFECTS];
 
 static void rendereffects();
+
+// Number of sprites used so far in current frame
+static uint8_t sprcnt;
+// ...and previous frame.
+static uint8_t sprcntprev;
 
 
 static inline void verawrite0(uint32_t addr, uint8_t inc) {
@@ -83,32 +89,54 @@ void sys_render_start()
 
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
-    verawrite1(0x1FC00, VERA_INC_1);
+    sprcnt = 0;
+    verawrite1(VRAM_SPRITE_ATTRS, VERA_INC_1);
 }
 
-void sproff() {
-    const int16_t x = -16;
-    const int16_t y = -16;
-    VERA.data1 = ((VRAM_SPRITES16)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16)>>13);
-    VERA.data1 = x & 0xff;  // x lo
-    VERA.data1 = (x>>8) & 0x03;  // x hi
-    VERA.data1 = y & 0xff;  // y lo
-    VERA.data1 = (y>>8) & 0x03;  // y hi
-    VERA.data1 = 3<<2; // collmask(4),z(2),vflip,hflip
-    VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
+void sys_render_finish()
+{
+    rendereffects();
+
+    // clear sprites which were used last frame, but not in this one.
+    for(uint8_t cnt = sprcnt; cnt<sprcntprev; ++cnt) {
+        for (uint8_t i=0; i<8; ++i) {
+            VERA.data1 = 0x00;
+        }
+    }
+    sprcntprev = sprcnt;
+
+    //testum();
 }
 
 void sprout(int16_t x, int16_t y, uint8_t img ) {
+    // 0: aaaaaaaa
+    //    a: img address (bits 12:5) so always 16-byte aligned.
     VERA.data1 = ((VRAM_SPRITES16+16*16*img)>>5) & 0xFF;
+    // 1: m---aaaa
+    //    a: img address (bits 16:15)
+    //    m: mode (0: 4bpp 1: 8bpp)
     VERA.data1 = (1 << 7) | ((VRAM_SPRITES16 + 16*16 * img)>>13);
+    // 2: xxxxxxxx
+    //    x: xpos (bits 0:7)
     VERA.data1 = (x >> FX) & 0xff;  // x lo
+    // 3: ------xx
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    // 4: yyyyyyyy
+    //    x: xpos (bits 0:7)
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    // 6: cccczzvh
+    //    c: collisionmask
+    //    z: zdepth (0=sprite off)
+    //    v: vflip
+    //    h: hflip
     VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
-    // wwhhpppp
+    // 7: hhwwpppp
+    //    h: height
+    //    w: width
+    //    p: palette offset
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
+    ++sprcnt;
 }
 
 void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
@@ -121,6 +149,7 @@ void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
+    ++sprcnt;
 }
 
 void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
@@ -133,13 +162,7 @@ void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
-}
-
-void sys_render_finish()
-{
-    // todo: clear unused sprites...
-    rendereffects();
-    //testum();
+    ++sprcnt;
 }
 
 void sys_clr()
@@ -255,6 +278,16 @@ void sys_init()
             VERA.data0 = 0b01010101;
         }
     }
+
+    // Clear the VERA sprite attr table.
+    verawrite0(VRAM_SPRITE_ATTRS, VERA_INC_1);
+    for( uint8_t i=0; i<128; ++i) {
+        for( uint8_t j=0; j<8; ++j) {
+            VERA.data0 = 0x00;
+        }
+    }
+    sprcnt = 0;
+    sprcntprev = 0;
 
     // clear effect table
     for( uint8_t i=0; i<MAX_EFFECTS; ++i) {
