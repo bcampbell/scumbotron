@@ -16,7 +16,7 @@ extern void sys_render_finish();
 
 extern void sys_clr();
 extern void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
-extern void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind);
+extern void sys_addeffect(int16_t x, int16_t y, uint8_t kind);
 
 extern void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
 extern volatile uint16_t inp_joystate;
@@ -25,6 +25,7 @@ extern volatile uint8_t tick;
 // effect kinds
 #define EK_NONE 0
 #define EK_SPAWN 1
+#define EK_KABOOM EK_SPAWN
 
 // core game stuff.
 #define SCREEN_W 320

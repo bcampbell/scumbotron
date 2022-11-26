@@ -406,7 +406,7 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = c;
 }
 
-void sys_addeffect(uint16_t x, uint16_t y, uint8_t kind)
+void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
 {
     // find free one
     uint8_t e = 0;

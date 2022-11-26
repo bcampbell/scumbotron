@@ -369,6 +369,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
         gobkind[d] = GK_NONE;
+        sys_addeffect(gobx[d], goby[d], EK_KABOOM);
         return;
     }
 
@@ -438,6 +439,7 @@ void tank_shot(uint8_t d, uint8_t s)
     if (gobdat[d]==0) {
         // boom.
         gobkind[d] = GK_NONE;
+        sys_addeffect(gobx[d], goby[d], EK_KABOOM);
     } else {
         // knockback
         gobx[d] += (shot_xvel(s) >> 0);

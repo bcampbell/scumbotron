@@ -117,6 +117,7 @@ bool player_collisions()
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
                 overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
                 plrfacing[p] = 0xff;    // dead
+                sys_addeffect(gobx[d], goby[d], EK_KABOOM);
                 // boom
                 return true;
             }
@@ -239,6 +240,7 @@ void shot_collisions()
                             tank_shot(d, s);
                             break;
                         default:
+                            sys_addeffect(gobx[d], goby[d], EK_KABOOM);
                             gobkind[d] = GK_NONE;
                             break;
                     }
