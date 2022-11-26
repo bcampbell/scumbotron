@@ -75,8 +75,14 @@ void testum() {
 
 void sys_render_start()
 {
-    // use channel 1 exclusively for writing sprite attrs,
-    // use channel 0 for effects.
+    // cycle colour 15
+    uint8_t i = (((tick >> 1)) & 0x7) + 2;
+    verawrite0(VRAM_PALETTE + (15*2), VERA_INC_1);
+    VERA.data0 = palette[i<<1];
+    VERA.data0 = palette[(i<<1) + 1];
+
+    // Set up for writing sprites.
+    // Use vera channel 1 exclusively for writing sprite attrs,
     verawrite1(0x1FC00, VERA_INC_1);
 }
 

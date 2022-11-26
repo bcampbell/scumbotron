@@ -38,9 +38,6 @@ static void level_init(uint8_t level) {
         case 0:
             dudes_spawn(GK_GRUNT, 15);
             dudes_spawn(GK_TANK, 3);
-//            dudes_spawn(GK_AMOEBA_BIG, 5);
-//            dudes_spawn(GK_AMOEBA_MED, 5);
-//            dudes_spawn(GK_AMOEBA_SMALL, 10);
             break;
         case 1:
             dudes_spawn(GK_AMOEBA_BIG, 5);

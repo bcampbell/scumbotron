@@ -147,7 +147,7 @@ void dudes_spawn(uint8_t kind, uint8_t n)
                 grunt_init(d);
                 break;
             case GK_BAITER:
-                block_init(d);
+                baiter_init(d);
                 break;
             case GK_AMOEBA_BIG:
             case GK_AMOEBA_MED:
