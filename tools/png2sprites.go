@@ -18,6 +18,8 @@ var opts struct {
 	height       int
 	numFrames    int
 	bitsPerPixel int
+	fmt          string
+	outFile      string
 }
 
 func main() {
@@ -32,11 +34,13 @@ Flags:
 		flag.PrintDefaults()
 	}
 
-	flag.BoolVar(&opts.paletteOnly, "p", false, "Output palette only")
-	flag.IntVar(&opts.width, "w", 8, "width")
-	flag.IntVar(&opts.height, "h", 8, "width")
-	flag.IntVar(&opts.numFrames, "n", 1, "number of frames")
-	flag.IntVar(&opts.bitsPerPixel, "b", 1, "Bits per pixel (8,4,2,1)")
+	flag.BoolVar(&opts.paletteOnly, "palette", false, "Output palette only")
+	flag.IntVar(&opts.width, "w", 8, "sprite width")
+	flag.IntVar(&opts.height, "h", 8, "sprite height")
+	flag.IntVar(&opts.numFrames, "num", 1, "number of sprites to export")
+	flag.IntVar(&opts.bitsPerPixel, "bpp", 8, "Bits per pixel (8,4,2,1)")
+	flag.StringVar(&opts.fmt, "fmt", "c", "Output format ('c', 'bin')")
+	flag.StringVar(&opts.outFile, "out", "-", "Output file ('-' for stdout)")
 	flag.Parse()
 
 	if len(flag.Args()) < 1 {
@@ -46,23 +50,53 @@ Flags:
 
 	img, err := loadImg(flag.Arg(0))
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "ERR: %s\n", err)
+		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 		os.Exit(1)
 	}
 
+	dumper, err := initDumper()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
+		os.Exit(1)
+	}
+	defer dumper.Close()
+
 	if opts.paletteOnly {
-		err := dumpPalette(img, os.Stdout)
+		err := dumpPalette(img, dumper)
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "ERR: %s\n", err)
+			fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 			os.Exit(1)
 		}
 		return
 	}
 
-	err = dumpImages(img, os.Stdout)
+	err = dumpImages(img, dumper)
 	if err != nil {
-		fmt.Fprintf(os.Stdout, "ERR: %s\n", err)
+		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 		os.Exit(1)
+	}
+}
+
+func initDumper() (Dumper, error) {
+	var f *os.File
+
+	if opts.outFile == "-" {
+		f = os.Stdout
+	} else {
+		var err error
+		f, err = os.Create(opts.outFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	switch opts.fmt {
+	case "c":
+		return &SrcDumper{NumPerRow: 8, Out: f, Indent: "\t"}, nil
+	case "bin":
+		return &BinDumper{f}, nil
+	default:
+		return nil, fmt.Errorf("Unknown format '%s'", opts.fmt)
 	}
 }
 
@@ -86,11 +120,11 @@ func loadImg(infilename string) (*image.Paletted, error) {
 	return p, nil
 }
 
-func dumpPalette(m *image.Paletted, out io.Writer) error {
+func dumpPalette(m *image.Paletted, dumper Dumper) error {
 	var pal color.Palette
 	pal = m.ColorModel().(color.Palette)
 
-	fmt.Fprintf(out, "// Palette (%d colours)\n", len(pal))
+	dumper.Commentf("Palette (%d colours)\n", len(pal))
 	for i := 0; i < len(pal); i++ {
 		c := pal[i].(color.RGBA)
 		// output format is
@@ -98,19 +132,18 @@ func dumpPalette(m *image.Paletted, out io.Writer) error {
 
 		lo := uint8((c.G & 0xf0) | (c.B >> 4))
 		hi := uint8(c.R >> 4)
-		fmt.Fprintf(out, "\t0x%02x, 0x%02x,\n", lo, hi)
-		//	fmt.Printf("%d,%d,%d => 0x%02x\n", c.R, c.G, c.B, buf[i])
+		_, err := dumper.Write([]byte{lo, hi})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func dumpImages(img *image.Paletted, out io.Writer) error {
+func dumpImages(img *image.Paletted, writer Dumper) error {
 
 	w := opts.width
 	h := opts.height
-
-	writer := SrcDumper{NumPerRow: 8, Out: out, Indent: "\t"}
-	defer writer.Close()
 
 	x := 0
 	y := 0
@@ -121,7 +154,7 @@ func dumpImages(img *image.Paletted, out io.Writer) error {
 		}
 		frame, _ := img.SubImage(rect).(*image.Paletted)
 		dat := cook(frame)
-		err := writer.WriteRaw(fmt.Sprintf("\t// img %d (%dx%d)\n", i, w, h))
+		err := writer.Commentf("img %d (%dx%d)\n", i, w, h)
 		if err != nil {
 			return err
 		}
@@ -174,11 +207,23 @@ func cook4bpp(img *image.Paletted) []uint8 {
 	return out
 }
 
-// helper to write bytes out as C source code
-// implements io.WriteCloser
+type Dumper interface {
+	io.WriteCloser
+	Commentf(format string, args ...interface{}) error
+}
+
+// BinDumper adds a do-nothing Commentf() to a writer.
+type BinDumper struct {
+	io.WriteCloser
+}
+
+func (b *BinDumper) Commentf(format string, args ...interface{}) error { return nil }
+
+// SrcDumper writes bytes out as C source code.
+// implements io.WriteCloser and Commenter
 type SrcDumper struct {
 	NumPerRow int
-	Out       io.Writer
+	Out       io.WriteCloser
 	Indent    string
 	parts     []string
 }
@@ -196,17 +241,23 @@ func (d *SrcDumper) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func (d *SrcDumper) WriteRaw(s string) error {
+func (d *SrcDumper) Commentf(format string, args ...interface{}) error {
 	err := d.flush()
 	if err != nil {
 		return err
 	}
+	s := d.Indent + "// " + fmt.Sprintf(format, args...)
 	_, err = io.WriteString(d.Out, s)
 	return err
 }
 
 func (d *SrcDumper) Close() error {
-	return d.flush()
+	err := d.flush()
+	err2 := d.Out.Close()
+	if err != nil {
+		return err
+	}
+	return err2
 }
 
 func (d *SrcDumper) flush() error {
