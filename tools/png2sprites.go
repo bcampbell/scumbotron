@@ -13,10 +13,11 @@ import (
 )
 
 var opts struct {
-	paletteOnly bool
-	width       int
-	height      int
-	numFrames   int
+	paletteOnly  bool
+	width        int
+	height       int
+	numFrames    int
+	bitsPerPixel int
 }
 
 func main() {
@@ -31,11 +32,11 @@ Flags:
 		flag.PrintDefaults()
 	}
 
-	flag.BoolVar(&opts.paletteOnly, "p", false, "Just output palette")
+	flag.BoolVar(&opts.paletteOnly, "p", false, "Output palette only")
 	flag.IntVar(&opts.width, "w", 8, "width")
 	flag.IntVar(&opts.height, "h", 8, "width")
 	flag.IntVar(&opts.numFrames, "n", 1, "number of frames")
-
+	flag.IntVar(&opts.bitsPerPixel, "b", 1, "Bits per pixel (8,4,2,1)")
 	flag.Parse()
 
 	if len(flag.Args()) < 1 {
@@ -140,11 +141,35 @@ func dumpImages(img *image.Paletted, out io.Writer) error {
 }
 
 func cook(img *image.Paletted) []uint8 {
+	switch opts.bitsPerPixel {
+	case 8:
+		return cook8bpp(img)
+	case 4:
+		return cook4bpp(img)
+	}
+	return []uint8{}
+}
+
+func cook8bpp(img *image.Paletted) []uint8 {
 	out := []uint8{}
 	r := img.Bounds()
 	for y := 0; y < img.Bounds().Dy(); y++ {
 		idx := img.PixOffset(r.Min.X, r.Min.Y+y)
 		out = append(out, img.Pix[idx:idx+r.Dx()]...)
+	}
+	return out
+}
+
+func cook4bpp(img *image.Paletted) []uint8 {
+	out := []uint8{}
+	r := img.Bounds()
+	for y := 0; y < r.Dy(); y++ {
+		idx := img.PixOffset(r.Min.X, r.Min.Y+y)
+		for x := 0; x < r.Dx(); x += 2 {
+			b := (img.Pix[idx]&0x0f)<<4 | (img.Pix[idx+1] & 0x0f)
+			idx += 2
+			out = append(out, b)
+		}
 	}
 	return out
 }

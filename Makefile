@@ -13,13 +13,13 @@ _palette.c: sprites16.png
 _sprites16.c: sprites16.png
 	echo "#include <stdint.h>" >$@
 	echo "uint8_t sprites16[64*16*16] = {" >>$@
-	tools/png2sprites -n 64 -w 16 -h 16 $< >>$@
+	tools/png2sprites -b 4 -n 64 -w 16 -h 16 $< >>$@
 	echo "};" >>$@
 
 _sprites32.c: sprites32.png
 	echo "#include <stdint.h>" >$@
 	echo "uint8_t sprites32[8*32*32] = {" >>$@
-	tools/png2sprites -n 8 -w 32 -h 32 $< >>$@
+	tools/png2sprites -b 4 -n 8 -w 32 -h 32 $< >>$@
 	echo "};" >>$@
 
 

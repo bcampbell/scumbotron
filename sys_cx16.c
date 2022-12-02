@@ -16,14 +16,16 @@ extern void irq_init();
 //              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 extern volatile uint16_t inp_joystate;
 
+#define SPR16_SIZE (8*16)   // 16x16, 4 bpp
+#define SPR32_SIZE (16*32)   // 16x32, 4 bpp
 // exported data: _palette.c, _sprites16.c, _sprites32.c
 extern uint8_t palette[16*2];   // just 16 colours
-extern uint8_t sprites16[64*16*16];   // 64 16x16 sprites
-extern uint8_t sprites32[8*32*32];   // 16 32x32 sprites
+extern uint8_t sprites16[64*SPR16_SIZE];   // 64 16x16 sprites
+extern uint8_t sprites32[8*SPR32_SIZE];   // 16 32x32 sprites
 
 // Our VERA memory map
 #define VRAM_SPRITES16 0x10000
-#define VRAM_SPRITES32 (VRAM_SPRITES16+64*16*16)
+#define VRAM_SPRITES32 (VRAM_SPRITES16 + (64 * SPR16_SIZE))
 #define VRAM_LAYER1_MAP 0x1b000
 #define VRAM_LAYER1_TILES 0x1F000
 #define VRAM_LAYER0_MAP  0x00000    //64x64
@@ -109,13 +111,14 @@ void sys_render_finish()
 }
 
 void sprout(int16_t x, int16_t y, uint8_t img ) {
+    const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     // 0: aaaaaaaa
     //    a: img address (bits 12:5) so always 16-byte aligned.
-    VERA.data1 = ((VRAM_SPRITES16+16*16*img)>>5) & 0xFF;
+    VERA.data1 = (addr>>5) & 0xFF;
     // 1: m---aaaa
     //    a: img address (bits 16:15)
     //    m: mode (0: 4bpp 1: 8bpp)
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16 + 16*16 * img)>>13);
+    VERA.data1 = (0 << 7) | (addr>>13);
     // 2: xxxxxxxx
     //    x: xpos (bits 0:7)
     VERA.data1 = (x >> FX) & 0xff;  // x lo
@@ -130,7 +133,7 @@ void sprout(int16_t x, int16_t y, uint8_t img ) {
     //    z: zdepth (0=sprite off)
     //    v: vflip
     //    h: hflip
-    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (1) << 2; // collmask(4),z(2),vflip,hflip
     // 7: hhwwpppp
     //    h: height
     //    w: width
@@ -140,8 +143,9 @@ void sprout(int16_t x, int16_t y, uint8_t img ) {
 }
 
 void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
-    VERA.data1 = ((VRAM_SPRITES16+16*16*img)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES16 + 16*16 * img)>>13);
+    const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
+    VERA.data1 = (addr>>5) & 0xFF;
+    VERA.data1 = (0 << 7) | (addr>>13);
     VERA.data1 = (x >> FX) & 0xff;  // x lo
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
@@ -153,8 +157,9 @@ void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
 }
 
 void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
-    VERA.data1 = ((VRAM_SPRITES32 + 32 * 32 * img)>>5) & 0xFF;
-    VERA.data1 = (1 << 7) | ((VRAM_SPRITES32 + 32 * 32 * img)>>13);
+    const uint32_t addr = VRAM_SPRITES32 + (SPR32_SIZE * img);
+    VERA.data1 = (addr>>5) & 0xFF;
+    VERA.data1 = (0 << 7) | (addr>>13);
     VERA.data1 = (x >> FX) & 0xff;  // x lo
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
@@ -250,7 +255,7 @@ void sys_init()
         verawrite0(VRAM_SPRITES16, VERA_INC_1);
         // 64 16x16 images
         const uint8_t* src = sprites16;
-        for (int i=0; i<64*16*16; ++i) {
+        for (int i = 0; i < 64 * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
@@ -258,7 +263,7 @@ void sys_init()
         verawrite0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
         const uint8_t* src = sprites32;
-        for (int i=0; i<8*32*32; ++i) {
+        for (int i = 0; i < 8 * SPR32_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
@@ -269,6 +274,17 @@ void sys_init()
         for (int i=0; i<8; ++i) {
             VERA.data0 = 0;
         }
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            //VERA.data0 = 0b10101010;
+            VERA.data0 = 0;
+            VERA.data0 = 255;
+            //VERA.data0 = 0b01010101;
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+        /*
         for (int i=0; i<4; ++i) {
             //VERA.data0 = 0xff;
             //VERA.data0 = 0xff;
@@ -277,6 +293,7 @@ void sys_init()
             VERA.data0 = 0b10101010;
             VERA.data0 = 0b01010101;
         }
+        */
     }
 
     // Clear the VERA sprite attr table.
@@ -456,12 +473,12 @@ static void do_spawneffect(uint8_t e) {
     for( uint8_t j=0; j<2; ++j) {
         // just going for the colour byte
         verawrite0(VRAM_LAYER0_MAP + (cy-8)*64*2 + ((cx+j)*2)+1, VERA_INC_128);
-        for (uint8_t i = 0; i < 8; ++i) {
-            VERA.data0 = spawnanim[start+i];
-        }
         // mirror
         for (uint8_t i = 8; i > 0; --i) {
             VERA.data0 = spawnanim[start+(i-1)];
+        }
+        for (uint8_t i = 0; i < 8; ++i) {
+            VERA.data0 = spawnanim[start+i];
         }
 
     }
