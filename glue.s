@@ -17,4 +17,32 @@ inp_tick:
 	rts
 
 
+; uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
+;
+; Kernel signature: void memory_decompress(word input: r0, inout word output: r1);
+; Purpose: Decompress an LZSA2 block
+; Call address: $FEED
+
+__memory_decompress = $FEED
+
+.global cx16_k_memory_decompress
+cx16_k_memory_decompress:
+	lda mos8(__rc5) // desthi
+	pha
+	lda mos8(__rc4) // destlo
+	pha
+	lda mos8(__rc3) // srchi
+	pha
+	lda mos8(__rc2)	// srclo
+
+	sta $02	// srclo
+	pla
+	sta $03	// srchi
+	pla
+	sta $04	// destlo
+	pla
+	sta $05	// desthi
+
+	jmp __memory_decompress
+
 

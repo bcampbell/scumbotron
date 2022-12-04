@@ -15,13 +15,20 @@ extern void irq_init();
 //  .X, byte 1:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 //              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 extern volatile uint16_t inp_joystate;
+uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
-#define SPR32_SIZE (16*32)   // 16x32, 4 bpp
-// exported data: _palette.c, _sprites16.c, _sprites32.c
-extern uint8_t palette[16*2];   // just 16 colours
-extern uint8_t sprites16[64*SPR16_SIZE];   // 64 16x16 sprites
-extern uint8_t sprites32[8*SPR32_SIZE];   // 16 32x32 sprites
+#define SPR32_SIZE (16*32)   // 32x32, 4 bpp
+
+//extern uint8_t palette[16*2];   // just 16 colours
+//extern uint8_t sprites16[64*SPR16_SIZE];   // 64 16x16 sprites
+//extern uint8_t sprites32[8*SPR32_SIZE];   // 16 32x32 sprites
+extern unsigned char export_palette_bin[];
+extern unsigned int export_palette_bin_len;
+extern unsigned char export_spr16_bin[];
+extern unsigned int export_spr16_bin_len;
+extern unsigned char export_spr32_bin[];
+extern unsigned int export_spr32_bin_len;
 
 // Our VERA memory map
 #define VRAM_SPRITES16 0x10000
@@ -86,8 +93,8 @@ void sys_render_start()
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
     verawrite0(VRAM_PALETTE + (15*2), VERA_INC_1);
-    VERA.data0 = palette[i<<1];
-    VERA.data0 = palette[(i<<1) + 1];
+    VERA.data0 = export_palette_bin[i<<1];
+    VERA.data0 = export_palette_bin[(i<<1) + 1];
 
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
@@ -237,7 +244,7 @@ void sys_init()
         VERA.control = 0x00;
         VERA.address = 0xFA00;
         VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
-        const uint8_t* src = palette;
+        const uint8_t* src = export_palette_bin;
         // just 16 colours
         for (uint8_t i=0; i<16*2; ++i) {
             VERA.data0 = *src++;
@@ -254,16 +261,18 @@ void sys_init()
     {
         verawrite0(VRAM_SPRITES16, VERA_INC_1);
         // 64 16x16 images
-        const uint8_t* src = sprites16;
-        for (int i = 0; i < 64 * SPR16_SIZE; ++i) {
+        const uint8_t* src = export_spr16_bin;
+        for (int i = 0; i < export_spr16_bin_len; ++i) {
             VERA.data0 = *src++;
         }
+        // TODO: compress the graphics!
+        // cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)0x9F23);  // VERA DATA0
     }
     {
         verawrite0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
-        const uint8_t* src = sprites32;
-        for (int i = 0; i < 8 * SPR32_SIZE; ++i) {
+        const uint8_t* src = export_spr32_bin;
+        for (int i = 0; i < export_spr32_bin_len; ++i) {
             VERA.data0 = *src++;
         }
     }
