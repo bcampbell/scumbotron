@@ -265,7 +265,8 @@ void sys_init()
         for (int i = 0; i < export_spr16_bin_len; ++i) {
             VERA.data0 = *src++;
         }
-        // TODO: compress the graphics!
+        // TODO: compress the graphics
+        // see https://www.commanderx16.com/forum/index.php?/topic/4931-memory_decompress-not-working/
         // cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)0x9F23);  // VERA DATA0
     }
     {
