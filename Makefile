@@ -14,10 +14,13 @@ export/spr16.bin: sprites16.png
 export/spr32.bin: sprites32.png
 	tools/png2sprites -w 32 -h 32 -bpp 4 -num 8 -out $@ -fmt bin $<
 
+# These two rules compress .bin files then convert them to .c source.
+# NOTE: Make seems to be clever/tricksy here, and treats .zbin as a temp file,
+# clearing it away when finished, leaving just the .bin and .c!
 %.zbin: %.bin
 	lzsa -f2 -r $< $@
 
-%.c: %.bin
+%.c: %.zbin
 	xxd -i $< $@
 
 run: game.prg

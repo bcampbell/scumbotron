@@ -23,12 +23,12 @@ uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 //extern uint8_t palette[16*2];   // just 16 colours
 //extern uint8_t sprites16[64*SPR16_SIZE];   // 64 16x16 sprites
 //extern uint8_t sprites32[8*SPR32_SIZE];   // 16 32x32 sprites
-extern unsigned char export_palette_bin[];
-extern unsigned int export_palette_bin_len;
-extern unsigned char export_spr16_bin[];
-extern unsigned int export_spr16_bin_len;
-extern unsigned char export_spr32_bin[];
-extern unsigned int export_spr32_bin_len;
+extern unsigned char export_palette_zbin[];
+extern unsigned int export_palette_zbin_len;
+extern unsigned char export_spr16_zbin[];
+extern unsigned int export_spr16_zbin_len;
+extern unsigned char export_spr32_zbin[];
+extern unsigned int export_spr32_zbin_len;
 
 // Our VERA memory map
 #define VRAM_SPRITES16 0x10000
@@ -92,9 +92,10 @@ void sys_render_start()
 {
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
-    verawrite0(VRAM_PALETTE + (15*2), VERA_INC_1);
-    VERA.data0 = export_palette_bin[i<<1];
-    VERA.data0 = export_palette_bin[(i<<1) + 1];
+    verawrite0(VRAM_PALETTE + (i*2), VERA_INC_1);
+    verawrite1(VRAM_PALETTE + (15*2), VERA_INC_1);
+    VERA.data1 = VERA.data0;
+    VERA.data1 = VERA.data0;
 
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
@@ -239,12 +240,17 @@ void sys_init()
     VERA.layer0.vscroll = 12*8; // 16bit
 
 
-    // load the palette to vram (fixed at 0x1FA00 onward)
+    // Load compressed data into vram.
+    // Use the $A000 bank ram as a decompression buffer. So the uncompressed
+    // chunks need to be <8KB.
+    // Would be nice to decompress directly to VERA, but see:
+    // https://www.commanderx16.com/forum/index.php?/topic/4931-memory_decompress-not-working/
+
     {
-        VERA.control = 0x00;
-        VERA.address = 0xFA00;
-        VERA.address_hi = VERA_INC_1 | 0x01; // hi bit = 1
-        const uint8_t* src = export_palette_bin;
+        // The palette
+        cx16_k_memory_decompress(export_palette_zbin, (uint8_t*)BANK_RAM);
+        verawrite0(VRAM_PALETTE, VERA_INC_1);
+        const volatile uint8_t* src = BANK_RAM;
         // just 16 colours
         for (uint8_t i=0; i<16*2; ++i) {
             VERA.data0 = *src++;
@@ -257,23 +263,22 @@ void sys_init()
         }
     }
 
-    // load the sprite images to vram (0x10000 onward)
     {
-        verawrite0(VRAM_SPRITES16, VERA_INC_1);
         // 64 16x16 images
-        const uint8_t* src = export_spr16_bin;
-        for (int i = 0; i < export_spr16_bin_len; ++i) {
+        cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)BANK_RAM);
+        verawrite0(VRAM_SPRITES16, VERA_INC_1);
+        const volatile uint8_t* src = BANK_RAM;
+        for (int i = 0; i < 64 * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
         }
-        // TODO: compress the graphics
-        // see https://www.commanderx16.com/forum/index.php?/topic/4931-memory_decompress-not-working/
-        // cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)0x9F23);  // VERA DATA0
     }
     {
+        // Uncompress 8 32x32 sprites
+        cx16_k_memory_decompress(export_spr32_zbin, (uint8_t*)BANK_RAM);
         verawrite0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
-        const uint8_t* src = export_spr32_bin;
-        for (int i = 0; i < export_spr32_bin_len; ++i) {
+        const volatile uint8_t* src = BANK_RAM;
+        for (int i = 0; i < 8 * SPR32_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
