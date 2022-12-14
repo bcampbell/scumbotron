@@ -6,6 +6,7 @@
 // Platform-specifics for cx16
 
 
+
 // irq.s, glue.s
 extern void inp_tick();
 extern void irq_init();
@@ -41,6 +42,7 @@ extern unsigned int export_spr32_zbin_len;
 // hardwired:
 #define VRAM_PALETTE 0x1FA00
 #define VRAM_SPRITE_ATTRS 0x1FC00
+#define VRAM_PSG 0x1F9C0
 
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
@@ -55,6 +57,8 @@ static uint8_t sprcnt;
 // ...and previous frame.
 static uint8_t sprcntprev;
 
+static void sfx_init();
+static void sfx_tick();
 
 static inline void verawrite0(uint32_t addr, uint8_t inc) {
     VERA.control = 0x00;
@@ -115,6 +119,8 @@ void sys_render_finish()
     }
     sprcntprev = sprcnt;
 
+
+    sfx_tick();
     //testum();
 }
 
@@ -203,6 +209,7 @@ void sys_clr()
 void sys_init()
 {
     irq_init();
+    sfx_init();
 
     // screen mode 40x30
     VERA.control = 0x00;    //DCSEL=0
@@ -247,7 +254,8 @@ void sys_init()
     // https://www.commanderx16.com/forum/index.php?/topic/4931-memory_decompress-not-working/
 
     {
-        // The palette
+        // The palette (actually, the compressing the palette likely adds a
+        // few bytes, but simpler to handle all exported data the same).
         cx16_k_memory_decompress(export_palette_zbin, (uint8_t*)BANK_RAM);
         verawrite0(VRAM_PALETTE, VERA_INC_1);
         const volatile uint8_t* src = BANK_RAM;
@@ -514,3 +522,67 @@ static void rendereffects()
     }
 }
 
+
+#define MAX_SFX 4
+
+uint8_t sfx_effect[MAX_SFX];
+uint8_t sfx_timer[MAX_SFX];
+uint8_t sfx_next;
+
+static void sfx_init()
+{
+    sfx_next = 0;
+    for (uint8_t ch = 0; ch < MAX_SFX; ++ch) {
+        sfx_effect[ch] = SFX_NONE;
+    }
+}
+
+void sys_sfx_play(uint8_t effect)
+{
+    uint8_t ch = sfx_next++;
+    if (sfx_next >= MAX_SFX) {
+        sfx_next = 0;
+    }
+
+    sfx_effect[ch] = effect;
+    sfx_timer[ch] = 0;
+}
+
+
+static inline void psg(uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
+{
+    VERA.data0 = freq & 0xff;
+    VERA.data0 = freq >> 8;
+    VERA.data0 = (3 << 6) | vol;  // lrvvvvvv
+    VERA.data0 = (waveform << 6) | pulsewidth;         // wwpppppp
+}
+
+
+static void sfx_tick()
+{
+    verawrite0(VRAM_PSG, VERA_INC_1);
+    for (uint8_t ch=0; ch < MAX_SFX; ++ch) {
+        uint8_t t = sfx_timer[ch]++;
+        switch (sfx_effect[ch]) {
+        case SFX_LASER:
+            psg(2000 - (t<<6), (63-t)/4, 0, t);
+            if (t>=63) {
+                sfx_effect[ch] = SFX_NONE;
+            }
+            break;
+        case SFX_KABOOM:
+            psg(300, 63-t, t&3, 0);
+            if (t>=63) {
+                sfx_effect[ch] = SFX_NONE;
+            }
+            break;
+        default:
+            // off.
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            VERA.data0 = 0;
+            break;
+        }
+    }
+}

@@ -154,6 +154,7 @@ void player_tick(uint8_t d) {
 
         if (plrtimer[d]>8) {
             // FIRE!
+            sys_sfx_play(SFX_LASER);
             plrtimer[d] = 0;
             uint8_t shot = shot_alloc();
             if (shot < MAX_SHOTS) {

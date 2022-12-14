@@ -369,6 +369,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
         gobkind[d] = GK_NONE;
+        sys_sfx_play(SFX_KABOOM);
         sys_addeffect(gobx[d], goby[d], EK_KABOOM);
         return;
     }
@@ -376,6 +377,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
     if (gobkind[d] == GK_AMOEBA_MED) {
         const int16_t v = FX<<5;
         gobkind[d] = GK_NONE;
+        sys_sfx_play(SFX_KABOOM);
         amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], -v, v);
         amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], v, v);
         amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], 0, -v);
@@ -385,6 +387,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
     if (gobkind[d] == GK_AMOEBA_BIG) {
         const int16_t v = FX<<5;
         gobkind[d] = GK_NONE;
+        sys_sfx_play(SFX_KABOOM);
         amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], -v, v);
         amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], v, v);
         amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], 0, -v);
@@ -439,6 +442,7 @@ void tank_shot(uint8_t d, uint8_t s)
     if (gobdat[d]==0) {
         // boom.
         gobkind[d] = GK_NONE;
+        sys_sfx_play(SFX_KABOOM);
         sys_addeffect(gobx[d], goby[d], EK_KABOOM);
     } else {
         // knockback

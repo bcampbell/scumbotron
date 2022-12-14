@@ -22,7 +22,14 @@ extern void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
 extern volatile uint16_t inp_joystate;
 extern volatile uint8_t tick;
 
-// effect kinds
+// sfx
+#define SFX_NONE 0
+#define SFX_LASER 1
+#define SFX_KABOOM 2
+
+extern void sys_sfx_play(uint8_t effect);
+
+// (visual) effect kinds
 #define EK_NONE 0
 #define EK_SPAWN 1
 #define EK_KABOOM EK_SPAWN
