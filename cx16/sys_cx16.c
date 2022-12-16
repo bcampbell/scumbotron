@@ -9,7 +9,12 @@
 
 // irq.s, glue.s
 extern void inp_tick();
+
+// irq.s
 extern void irq_init();
+extern void keyhandler_init();
+extern uint16_t inp_virtpad;
+
 //  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 //              SNES | B | Y |SEL|STA|UP |DN |LT |RT |
 //
@@ -444,6 +449,19 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     }
     VERA.data0 = screencode((lives>7) ? '+' : ' ');
     VERA.data0 = c;
+
+    //inp_virtpad = tick;
+    // debug cruft
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+    VERA.data0 = screencode(' ');
+    VERA.data0 = c;
+    uint16_t p = inp_virtpad;
+    for (int8_t i = 0; i<16; ++i) {
+        VERA.data0 = screencode((p & 0x8000) ? 'O' : '.');
+        VERA.data0 = c;
+        p = p<<1;
+    }
 }
 
 void sys_addeffect(int16_t x, int16_t y, uint8_t kind)

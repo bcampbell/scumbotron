@@ -22,6 +22,29 @@ extern void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
 extern volatile uint16_t inp_joystate;
 extern volatile uint8_t tick;
 
+//https://www.nesdev.org/wiki/SNES_controller
+/* serial order is:
+ 0 - B
+ 1 - Y
+ 2 - Select
+ 3 - Start
+ 4 - Up
+ 5 - Down
+ 6 - Left
+ 7 - Right
+
+ 8 - A
+ 9 - X
+10 - L
+11 - R
+12 - 0
+13 - 0
+14 - 0
+15 - 0
+*/
+
+
+
 // sfx
 #define SFX_NONE 0
 #define SFX_LASER 1
