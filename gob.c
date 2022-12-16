@@ -1,5 +1,4 @@
 #include "gob.h"
-#include "sys_cx16.h"
 #include "player.h"
 
 // gob tables

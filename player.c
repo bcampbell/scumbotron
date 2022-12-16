@@ -1,5 +1,5 @@
 #include "player.h"
-#include "sys_cx16.h"
+#include "sys.h"
 #include "gob.h"
 
 uint8_t player_lives;

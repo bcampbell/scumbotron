@@ -1,7 +1,7 @@
 #include <cx16.h>
 #include <stdint.h>
 
-#include "sys_cx16.h"
+#include "sys.h"
 
 // Platform-specifics for cx16
 

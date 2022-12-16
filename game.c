@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "sys_cx16.h"
+#include "sys.h"
 #include "gob.h"
 #include "player.h"
 

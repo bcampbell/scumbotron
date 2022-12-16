@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "sys_cx16.h"
+#include "sys.h"
 
 //
 // Game object (gob) Stuff
