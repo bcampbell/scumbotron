@@ -1,0 +1,12 @@
+*.swp
+*.bak
+Makefile
+cx16/export
+sdl2/export
+game
+game.prg
+game.prg.elf
+log
+tools/png2sprites
+todo.txt
+done.txt
