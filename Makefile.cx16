@@ -6,15 +6,25 @@
 
 EXPORT=cx16/export
 SRCS_COMMON = game.c gob.c player.c
-SRCS_SYS = cx16/sys_cx16.c cx16/irq.s cx16/glue.s
+SRCS_SYS = cx16/sys_cx16.c
+SRCS_ASM = cx16/irq.s cx16/glue.s 
 SRCS_EXPORT = $(EXPORT)/palette.c $(EXPORT)/spr16.c $(EXPORT)/spr32.c
 INCS = gob.h player.h cx16/sys.h
 
+CC := mos-cx16-clang
+CFLAGS = -Icx16 -g -Os
 SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
+OBJS = $(patsubst %.c,%.o,$(SRCS) )
+OBJS += $(patsubst %.s,%.o,$(SRCS_ASM) )
 
-game.prg: $(SRCS) $(INCS)
-	mos-cx16-clang -g -Icx16 -Os -o game.prg $(SRCS)
-	# mos-cx16-clang -Icx16 -Os -o game.prg $(SRCS)
+game.prg: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
+
+%.o : %.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+
+%.o : %.s
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 # graphics exporting
 $(EXPORT)/palette.bin: sprites16.png
@@ -39,5 +49,5 @@ run: game.prg
 .PHONY: clean
 
 clean:
-	rm game.prg game.prg.elf
+	rm game.prg game.prg.elf $(OBJS)
 

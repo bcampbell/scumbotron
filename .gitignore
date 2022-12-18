@@ -1,5 +1,6 @@
 *.swp
 *.bak
+*.o
 Makefile
 cx16/export
 sdl2/export
