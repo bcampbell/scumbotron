@@ -116,33 +116,6 @@ void sys_render_finish()
     SDL_RenderPresent(renderer);
 }
 
-void sprout(int16_t x, int16_t y, uint8_t img)
-{
-    x = x >> FX;
-    y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
-}
-
-void sprout_highlight(int16_t x, int16_t y, uint8_t img)
-{
-    x = x >> FX;
-    y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
-}
-
-void sys_spr32(int16_t x, int16_t y, uint8_t img)
-{
-    x = x >> FX;
-    y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 32, 32};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
-}
-
 void sys_clr()
 {
 }
@@ -168,6 +141,48 @@ void sys_sfx_play(uint8_t effect)
 }
 
 
+static void sprout(int16_t x, int16_t y, uint8_t img)
+{
+    x = x >> FX;
+    y = y >> FX;
+    SDL_Rect rect = {(int)x, (int)y, 16, 16};
+    SDL_SetRenderDrawColor(renderer,128,128,128,255);
+    SDL_RenderDrawRect(renderer, &rect);
+}
+
+static void sys_spr32(int16_t x, int16_t y, uint8_t img)
+{
+    x = x >> FX;
+    y = y >> FX;
+    SDL_Rect rect = {(int)x, (int)y, 32, 32};
+    SDL_SetRenderDrawColor(renderer,128,128,128,255);
+    SDL_RenderDrawRect(renderer, &rect);
+}
+
+void sys_player_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
+void sys_shot_render(int16_t x, int16_t y, uint8_t direction)
+{
+    sprout(x, y, 0);
+}
+void sys_block_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
+void sys_grunt_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
+void sys_baiter_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
 void sys_tank_render(int16_t x, int16_t y, bool highlight)
 {
     x = x >> FX;
@@ -180,4 +195,21 @@ void sys_tank_render(int16_t x, int16_t y, bool highlight)
     }
     SDL_RenderDrawRect(renderer, &rect);
 }
+
+void sys_amoeba_big_render(int16_t x, int16_t y)
+{
+    sys_spr32(x, y, 0);
+}
+
+void sys_amoeba_med_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
+void sys_amoeba_small_render(int16_t x, int16_t y)
+{
+    sprout(x, y, 0);
+}
+
+
 

@@ -103,22 +103,22 @@ void gobs_render()
             case GK_NONE:
                 break;
             case GK_BLOCK:
-                sprout(gobx[d], goby[d], 2);
+                sys_block_render(gobx[d], goby[d]);
                 break;
             case GK_GRUNT:
-                sprout(gobx[d], goby[d],  SPR16_GRUNT + ((tick >> 5) & 0x01));
+                sys_grunt_render(gobx[d], goby[d]);
                 break;
             case GK_BAITER:
-                sprout(gobx[d], goby[d],  SPR16_BAITER + ((tick >> 2) & 0x03));
+                sys_baiter_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_BIG:
-                sys_spr32(gobx[d], goby[d],  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
+                sys_amoeba_big_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_MED:
-                sprout(gobx[d], goby[d],  SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
+                sys_amoeba_med_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_SMALL:
-                sprout(gobx[d], goby[d],  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
+                sys_amoeba_small_render(gobx[d], goby[d]);
                 break;
             case GK_TANK:
                 sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);

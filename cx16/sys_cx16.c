@@ -604,3 +604,25 @@ static void sfx_tick()
         }
     }
 }
+
+
+const uint8_t shot_spr[16] = {
+    0,              // 0000
+    SPR16_SHOT+2,   // 0001 DIR_RIGHT
+    SPR16_SHOT+2,   // 0010 DIR_LEFT
+    0,              // 0011
+    SPR16_SHOT+0,   // 0100 DIR_DOWN
+    SPR16_SHOT+3,   // 0101 down+right           
+    SPR16_SHOT+1,   // 0110 down+left           
+    0,              // 0111
+
+    SPR16_SHOT+0,   // 1000 up
+    SPR16_SHOT+1,   // 1001 up+right
+    SPR16_SHOT+3,   // 1010 up+left
+    0,              // 1011
+    0,              // 1100 up+down
+    0,              // 1101 up+down+right           
+    0,              // 1110 up+down+left           
+    0,              // 1111
+};
+

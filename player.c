@@ -19,26 +19,6 @@ uint8_t shottimer[MAX_SHOTS];
 
 static uint8_t shot_alloc();
 
-const uint8_t shot_spr[16] = {
-    0,              // 0000
-    SPR16_SHOT+2,   // 0001 DIR_RIGHT
-    SPR16_SHOT+2,   // 0010 DIR_LEFT
-    0,              // 0011
-    SPR16_SHOT+0,   // 0100 DIR_DOWN
-    SPR16_SHOT+3,   // 0101 down+right           
-    SPR16_SHOT+1,   // 0110 down+left           
-    0,              // 0111
-
-    SPR16_SHOT+0,   // 1000 up
-    SPR16_SHOT+1,   // 1001 up+right
-    SPR16_SHOT+3,   // 1010 up+left
-    0,              // 1011
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111
-};
-
 // hackhackhack (from cx16.h)
 #define JOY_UP_MASK 0x08
 #define JOY_DOWN_MASK 0x04
@@ -46,10 +26,8 @@ const uint8_t shot_spr[16] = {
 #define JOY_RIGHT_MASK 0x01
 #define JOY_BTN_1_MASK 0x80
 
-
 // player
 #define PLAYER_SPD FX_ONE
-
 
 void player_create(uint8_t p, int16_t x, int16_t y) {
     plrx[p] = x;
@@ -65,7 +43,7 @@ void player_renderall()
             // dead.
             continue;
         }
-        sprout(plrx[p], plry[p], 0);
+        sys_player_render(plrx[p], plry[p]);
     }
 
     for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
@@ -73,7 +51,7 @@ void player_renderall()
             // inactive.
             continue;
         }
-        sprout(shotx[s], shoty[s], shot_spr[shotdir[s]]);
+        sys_shot_render(shotx[s], shoty[s], shotdir[s]);
     }
 }
 
