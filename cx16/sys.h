@@ -9,9 +9,6 @@ extern void waitvbl();
 extern void inp_tick();
 
 extern void sys_render_start();
-extern void sprout(int16_t x, int16_t y, uint8_t img);
-extern void sprout_highlight(int16_t x, int16_t y, uint8_t img);
-extern void sys_spr32(int16_t x, int16_t y, uint8_t img);
 extern void sys_render_finish();
 
 extern void sys_clr();
@@ -75,44 +72,47 @@ extern void sys_sfx_play(uint8_t effect);
 #define SPR16_SHOT 4
 
 #define SPR32_AMOEBA_BIG 0
+extern void sprout16(int16_t x, int16_t y, uint8_t img);
+extern void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+extern void sprout32(int16_t x, int16_t y, uint8_t img);
+extern const uint8_t shot_spr[16];
 
 static inline void sys_player_render(int16_t x, int16_t y) {
-    sprout(x, y, 0);
+    sprout16(x, y, 0);
 }
 
-extern const uint8_t shot_spr[16];
 static inline void sys_shot_render(int16_t x, int16_t y, uint8_t direction) {
-    sprout(x, y, shot_spr[direction]);
+    sprout16(x, y, shot_spr[direction]);
 }
 static inline void sys_block_render(int16_t x, int16_t y) {
-    sprout(x, y, 2);
+    sprout16(x, y, 2);
 }
 
 static inline void sys_grunt_render(int16_t x, int16_t y) {
-    sprout(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
+    sprout16(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
 }
 
 static inline void sys_baiter_render(int16_t x, int16_t y) {
-    sprout(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
+    sprout16(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
 }
 
 static inline void sys_tank_render(int16_t x, int16_t y, bool highlight) {
     if (highlight) {
-        sprout_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
+        sprout16_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
     } else {
-        sprout(x, y,  SPR16_TANK + ((tick >> 5) & 0x01));
+        sprout16(x, y,  SPR16_TANK + ((tick >> 5) & 0x01));
     }
 }
 
 static inline void sys_amoeba_big_render(int16_t x, int16_t y) {
-    sys_spr32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
+    sprout32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
 }
 
 static inline void sys_amoeba_med_render(int16_t x, int16_t y) {
-    sprout(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
+    sprout16(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
 }
 
 static inline void sys_amoeba_small_render(int16_t x, int16_t y) {
-    sprout(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
+    sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
 }
 #endif // SYS_CX16_H

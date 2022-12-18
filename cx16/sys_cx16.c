@@ -129,7 +129,7 @@ void sys_render_finish()
     //testum();
 }
 
-void sprout(int16_t x, int16_t y, uint8_t img ) {
+void sprout16(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     // 0: aaaaaaaa
     //    a: img address (bits 12:5) so always 16-byte aligned.
@@ -161,7 +161,7 @@ void sprout(int16_t x, int16_t y, uint8_t img ) {
     ++sprcnt;
 }
 
-void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -175,7 +175,7 @@ void sprout_highlight(int16_t x, int16_t y, uint8_t img ) {
     ++sprcnt;
 }
 
-void sys_spr32(int16_t x, int16_t y, uint8_t img ) {
+void sprout32(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES32 + (SPR32_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);

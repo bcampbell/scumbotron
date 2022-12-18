@@ -11,6 +11,32 @@ static SDL_Renderer* renderer = NULL;
 
 static void pumpevents();
 
+
+extern unsigned char export_palette_bin[];
+extern unsigned int export_palette_bin_len;
+extern unsigned char export_spr16_bin[];
+extern unsigned int export_spr16_bin_len;
+extern unsigned char export_spr32_bin[];
+extern unsigned int export_spr32_bin_len;
+
+// sprite image defs
+#define SPR16_BAITER 16
+#define SPR16_AMOEBA_MED 20
+#define SPR16_AMOEBA_SMALL 24
+#define SPR16_TANK 28
+#define SPR16_GRUNT 30
+#define SPR16_SHOT 4
+
+#define SPR32_AMOEBA_BIG 0
+
+#define NUM_SPR16 64
+#define NUM_SPR32 8
+static SDL_Texture* spr16[NUM_SPR16] = {0};
+static SDL_Texture* spr32[NUM_SPR32] = {0};
+static SDL_Palette *palette;
+
+static SDL_Texture* raw_to_texture(const uint8_t* pixels, int w, int h);
+
 void sys_init()
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
@@ -34,6 +60,80 @@ void sys_init()
         exit(1);
     }
     SDL_RenderSetLogicalSize(renderer, SCREEN_W, SCREEN_H);
+
+    // Set up palette
+    {
+        palette = SDL_AllocPalette(16);
+
+        const uint16_t *src = (const uint16_t*)export_palette_bin;
+        SDL_Color colors[16];
+        for (int i = 0; i < 16; ++i) {
+		    // VERA format is:
+            // xxxxrrrrggggbbbb
+            uint16_t c = *src++;
+            uint8_t r = (c>>8) & 0x000f;
+            uint8_t g = (c>>4) & 0x000f;
+            uint8_t b = (c>>0) & 0x000f;
+
+            // nibble-double to get 8bit components
+            colors[i].r = (r<<4) | r;
+            colors[i].g = (g<<4) | g;
+            colors[i].b = (b<<4) | b;
+            colors[i].a = 255;  //i==0 ? 0 : 255;   // colour 0 transparent
+        }
+        SDL_SetPaletteColors(palette, colors, 0, 16);
+        /*
+        for (int i=0; i<palette->ncolors; ++i) {
+            printf("%d: %d,%d,%d,%d\n", i, palette->colors[i].r, palette->colors[i].g, palette->colors[i].b, palette->colors[i].a);
+        }
+        */
+    }
+
+    // Set up sprites
+    {
+        const uint8_t *src = export_spr16_bin;
+        for( int i = 0; i < NUM_SPR16; ++i) {
+            spr16[i] = raw_to_texture(src, 16, 16);
+            if (spr16[i] == NULL) {
+                exit(1);
+            }
+            src += 8*16;        // 16x16 4bpp
+        }
+    }
+    {
+        const uint8_t *src = export_spr32_bin;
+        for( int i = 0; i < NUM_SPR32; ++i) {
+            spr32[i] = raw_to_texture(src, 32, 32);
+            if (spr32[i] == NULL) {
+                exit(1);
+            }
+            src += 16*32;        // 32x32 4bpp
+        }
+    }
+}
+
+
+static SDL_Texture* raw_to_texture(const uint8_t* pixels, int w, int h)
+{
+    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 4,
+        SDL_PIXELFORMAT_INDEX4MSB);
+    if (surface == NULL) {
+        fprintf(stderr, "SDL_CreateRGBSurfaceWithFormat() failed: %s\n", SDL_GetError());
+        return NULL;
+    }
+    SDL_SetSurfacePalette(surface, palette);
+    SDL_SetColorKey(surface, SDL_TRUE, 0);
+    // copy in the image
+    memcpy(surface->pixels, pixels, h*surface->pitch);
+
+    SDL_Texture *t = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface);
+    if (t == NULL) {
+        fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
+        return NULL;
+    }
+
+    return t;
 }
 
 #define TICK_INTERVAL (1000/60)
@@ -109,6 +209,8 @@ void sys_render_start()
 {
     SDL_SetRenderDrawColor(renderer,0,0,0,255);
     SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 128,128,128,255);
+    SDL_RenderDrawRect(renderer, NULL);
 }
 
 void sys_render_finish()
@@ -141,75 +243,51 @@ void sys_sfx_play(uint8_t effect)
 }
 
 
-static void sprout(int16_t x, int16_t y, uint8_t img)
+void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
+    SDL_RenderCopy(renderer, spr16[img], NULL, &rect);
+//    SDL_SetRenderDrawColor(renderer, 128,128,128,255);
+//    SDL_RenderDrawRect(renderer, &rect);
 }
 
-static void sys_spr32(int16_t x, int16_t y, uint8_t img)
+void sprout32(int16_t x, int16_t y, uint8_t img)
 {
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 32, 32};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
+    SDL_RenderCopy(renderer, spr32[img], NULL, &rect);
 }
 
-void sys_player_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
-void sys_shot_render(int16_t x, int16_t y, uint8_t direction)
-{
-    sprout(x, y, 0);
-}
-void sys_block_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
-void sys_grunt_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
-void sys_baiter_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
-void sys_tank_render(int16_t x, int16_t y, bool highlight)
+// TODO
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    if (highlight) {
-        SDL_SetRenderDrawColor(renderer,255,255,255,255);
-    } else {
-        SDL_SetRenderDrawColor(renderer,128,0,0,255);
-    }
-    SDL_RenderDrawRect(renderer, &rect);
+    SDL_RenderCopy(renderer, spr16[img], NULL, &rect);
 }
 
-void sys_amoeba_big_render(int16_t x, int16_t y)
-{
-    sys_spr32(x, y, 0);
-}
+const uint8_t shot_spr[16] = {
+    0,              // 0000
+    SPR16_SHOT+2,   // 0001 DIR_RIGHT
+    SPR16_SHOT+2,   // 0010 DIR_LEFT
+    0,              // 0011
+    SPR16_SHOT+0,   // 0100 DIR_DOWN
+    SPR16_SHOT+3,   // 0101 down+right           
+    SPR16_SHOT+1,   // 0110 down+left           
+    0,              // 0111
 
-void sys_amoeba_med_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
-void sys_amoeba_small_render(int16_t x, int16_t y)
-{
-    sprout(x, y, 0);
-}
-
+    SPR16_SHOT+0,   // 1000 up
+    SPR16_SHOT+1,   // 1001 up+right
+    SPR16_SHOT+3,   // 1010 up+left
+    0,              // 1011
+    0,              // 1100 up+down
+    0,              // 1101 up+down+right           
+    0,              // 1110 up+down+left           
+    0,              // 1111
+};
 
 
