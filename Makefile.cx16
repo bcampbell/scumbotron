@@ -1,3 +1,9 @@
+# To look at asm:
+# mos-cx16-clang -Icx16 -Os -o /tmp/gob.s -Wl,--lto-emit-asm gob.c
+
+# disassemble whole lot: (compile with -g!)
+# llvm-objdump -dSr game.prg.elf >/tmp/game.s
+
 EXPORT=cx16/export
 SRCS_COMMON = game.c gob.c player.c
 SRCS_SYS = cx16/sys_cx16.c cx16/irq.s cx16/glue.s
@@ -7,7 +13,8 @@ INCS = gob.h player.h cx16/sys.h
 SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
 
 game.prg: $(SRCS) $(INCS)
-	mos-cx16-clang -Icx16 -Os -o game.prg $(SRCS)
+	mos-cx16-clang -g -Icx16 -Os -o game.prg $(SRCS)
+	# mos-cx16-clang -Icx16 -Os -o game.prg $(SRCS)
 
 # graphics exporting
 $(EXPORT)/palette.bin: sprites16.png
@@ -29,4 +36,8 @@ $(EXPORT)/spr32.bin: sprites32.png
 run: game.prg
 	x16emu -prg game.prg -run
 
+.PHONY: clean
+
+clean:
+	rm game.prg game.prg.elf
 
