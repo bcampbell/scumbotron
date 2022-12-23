@@ -34,16 +34,8 @@ void titlescreen_run()
 #define LEVELRESULT_GAMEOVER 2
 
 static void level_init(uint8_t level) {
-    switch(level & 1) {
-        case 0:
-            dudes_spawn(GK_GRUNT, 15);
-            dudes_spawn(GK_TANK, 3);
-            break;
-        case 1:
-            dudes_spawn(GK_AMOEBA_BIG, 5);
-            dudes_spawn(GK_BLOCK, MAX_GOBS-5);
-            break;
-    }
+    dudes_spawn(GK_GRUNT, 15);
+    dudes_spawn(GK_TANK, 3);
 
     dudes_reset();    // position and intro
 }

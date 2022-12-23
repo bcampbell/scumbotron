@@ -65,13 +65,13 @@ static uint8_t sprcntprev;
 static void sfx_init();
 static void sfx_tick();
 
-static inline void verawrite0(uint32_t addr, uint8_t inc) {
+static inline void veraaddr0(uint32_t addr, uint8_t inc) {
     VERA.control = 0x00;
     VERA.address = ((addr)&0xffff);
     VERA.address_hi = (inc) | (((addr)>>16)&1);
 }
 
-static inline void verawrite1(uint32_t addr, uint8_t inc) {
+static inline void veraaddr1(uint32_t addr, uint8_t inc) {
     VERA.control = 0x01;
     VERA.address = ((addr)&0xffff);
     VERA.address_hi = (inc) | (((addr)>>16)&1);
@@ -101,20 +101,22 @@ void sys_render_start()
 {
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
-    verawrite0(VRAM_PALETTE + (i*2), VERA_INC_1);
-    verawrite1(VRAM_PALETTE + (15*2), VERA_INC_1);
+    veraaddr0(VRAM_PALETTE + (i*2), VERA_INC_1);
+    veraaddr1(VRAM_PALETTE + (15*2), VERA_INC_1);
+    // 2 bytes for colour entry
     VERA.data1 = VERA.data0;
     VERA.data1 = VERA.data0;
+
+    rendereffects();
 
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
     sprcnt = 0;
-    verawrite1(VRAM_SPRITE_ATTRS, VERA_INC_1);
+    veraaddr1(VRAM_SPRITE_ATTRS, VERA_INC_1);
 }
 
 void sys_render_finish()
 {
-    rendereffects();
 
     // clear sprites which were used last frame, but not in this one.
     for(uint8_t cnt = sprcnt; cnt<sprcntprev; ++cnt) {
@@ -152,7 +154,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img ) {
     //    z: zdepth (0=sprite off)
     //    v: vflip
     //    h: hflip
-    VERA.data1 = (1) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // 7: hhwwpppp
     //    h: height
     //    w: width
@@ -169,7 +171,7 @@ void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
     ++sprcnt;
@@ -183,24 +185,45 @@ void sprout32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
     ++sprcnt;
 }
 
+const uint8_t shot_spr[16] = {
+    0,              // 0000
+    SPR16_SHOT+2,   // 0001 DIR_RIGHT
+    SPR16_SHOT+2,   // 0010 DIR_LEFT
+    0,              // 0011
+    SPR16_SHOT+0,   // 0100 DIR_DOWN
+    SPR16_SHOT+3,   // 0101 down+right           
+    SPR16_SHOT+1,   // 0110 down+left           
+    0,              // 0111
+
+    SPR16_SHOT+0,   // 1000 up
+    SPR16_SHOT+1,   // 1001 up+right
+    SPR16_SHOT+3,   // 1010 up+left
+    0,              // 1011
+    0,              // 1100 up+down
+    0,              // 1101 up+down+right           
+    0,              // 1110 up+down+left           
+    0,              // 1111
+};
+
+
 void sys_clr()
 {
     // text layer
     // 64x32*2 (w*h*(char+colour))
-    verawrite0(VRAM_LAYER1_MAP, VERA_INC_1);
+    veraaddr0(VRAM_LAYER1_MAP, VERA_INC_1);
     for (int i=0; i<64*32*2; ++i) {
         VERA.data0 = ' '; // tile
         VERA.data0 = 0; // colour
     }
 
     // effects layer
-    verawrite0(VRAM_LAYER0_MAP, VERA_INC_1);
+    veraaddr0(VRAM_LAYER0_MAP, VERA_INC_1);
     for (uint8_t y = 0; y < 64; ++y) {
         for (uint8_t x = 0; x < 64; ++x) {
             VERA.data0 = 1; //(x&1) ^ (y&1);
@@ -262,7 +285,7 @@ void sys_init()
         // The palette (actually, the compressing the palette likely adds a
         // few bytes, but simpler to handle all exported data the same).
         cx16_k_memory_decompress(export_palette_zbin, (uint8_t*)BANK_RAM);
-        verawrite0(VRAM_PALETTE, VERA_INC_1);
+        veraaddr0(VRAM_PALETTE, VERA_INC_1);
         const volatile uint8_t* src = BANK_RAM;
         // just 16 colours
         for (uint8_t i=0; i<16*2; ++i) {
@@ -279,7 +302,7 @@ void sys_init()
     {
         // 64 16x16 images
         cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)BANK_RAM);
-        verawrite0(VRAM_SPRITES16, VERA_INC_1);
+        veraaddr0(VRAM_SPRITES16, VERA_INC_1);
         const volatile uint8_t* src = BANK_RAM;
         for (int i = 0; i < 64 * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
@@ -288,7 +311,7 @@ void sys_init()
     {
         // Uncompress 8 32x32 sprites
         cx16_k_memory_decompress(export_spr32_zbin, (uint8_t*)BANK_RAM);
-        verawrite0(VRAM_SPRITES32, VERA_INC_1);
+        veraaddr0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
         const volatile uint8_t* src = BANK_RAM;
         for (int i = 0; i < 8 * SPR32_SIZE; ++i) {
@@ -298,34 +321,18 @@ void sys_init()
 
     // stand-in images for effect layers
     {
-        verawrite0(VRAM_LAYER0_TILES, VERA_INC_1);
+        veraaddr0(VRAM_LAYER0_TILES, VERA_INC_1);
         for (int i=0; i<8; ++i) {
             VERA.data0 = 0;
         }
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            //VERA.data0 = 0b10101010;
-            VERA.data0 = 0;
-            VERA.data0 = 255;
-            //VERA.data0 = 0b01010101;
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-        /*
         for (int i=0; i<4; ++i) {
-            //VERA.data0 = 0xff;
-            //VERA.data0 = 0xff;
-            //VERA.data0 = 0b10101010;
-            //VERA.data0 = 0x00;
             VERA.data0 = 0b10101010;
             VERA.data0 = 0b01010101;
         }
-        */
     }
 
     // Clear the VERA sprite attr table.
-    verawrite0(VRAM_SPRITE_ATTRS, VERA_INC_1);
+    veraaddr0(VRAM_SPRITE_ATTRS, VERA_INC_1);
     for( uint8_t i=0; i<128; ++i) {
         for( uint8_t j=0; j<8; ++j) {
             VERA.data0 = 0x00;
@@ -343,6 +350,10 @@ void sys_init()
     sys_clr();
 }
 
+/*
+ * HUD/onscreen text
+ */
+
 static uint8_t screencode(char asc)
 {
     if (asc >= 0x40 && asc < 0x60) {
@@ -353,7 +364,7 @@ static uint8_t screencode(char asc)
 
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
-    verawrite0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
+    veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
     const char* p = txt;
     while(*p) {
         VERA.data0 = screencode(*p);
@@ -394,7 +405,7 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     const uint8_t cx = 0;
     const uint8_t cy = 0;
-    verawrite0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
+    veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
 
     uint8_t c = 1;
 
@@ -464,6 +475,75 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     }
 }
 
+/*
+ * Effects
+ */
+
+
+static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
+{
+    return VRAM_LAYER0_MAP + cy*64*2 + cx*2;
+}
+
+
+static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, uint8_t colour)
+{
+    uint8_t w = (x1 - x0) + 1;
+    uint8_t h = (y1 - y0) + 1;
+
+    // top
+    veraaddr0(layer0addr(x0,y0), VERA_INC_2);
+    for (uint8_t i = w; i; --i) {
+        VERA.data0 = ch;
+    }
+    veraaddr0(layer0addr(x0,y0)+1, VERA_INC_2);
+    for (uint8_t i = w; i; --i) {
+        VERA.data0 = colour;
+    }
+
+    if (h > 1) {
+        // bottom
+        veraaddr0(layer0addr(x0,y1), VERA_INC_2);
+        for (uint8_t i = w; i; --i) {
+            VERA.data0 = ch;
+        }
+        veraaddr0(layer0addr(x0,y1)+1, VERA_INC_2);
+        for (uint8_t i = w; i; --i) {
+            VERA.data0 = colour;
+        }
+    }
+
+    // Don't need to draw top or bottom chars.
+    if (h < 2) {
+        return;
+    }
+    h -= 2;
+    ++y0;
+
+    // left side
+    veraaddr0(layer0addr(x0,y0), VERA_INC_128);
+    for (uint8_t i = h; i; --i) {
+        VERA.data0 = ch;
+    }
+    veraaddr0(layer0addr(x0,y0)+1, VERA_INC_128);
+    for (uint8_t i = h; i; --i) {
+        VERA.data0 = colour;
+    }
+    if (w > 1) {
+        // right side (but not top or bottom char)
+        veraaddr0(layer0addr(x1,y0), VERA_INC_128);
+        for (uint8_t i = h; i; --i) {
+            VERA.data0 = ch;
+        }
+        veraaddr0(layer0addr(x1,y0)+1, VERA_INC_128);
+        for (uint8_t i = h; i; --i) {
+            VERA.data0 = colour;
+        }
+    }
+
+}
+
+
 void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
 {
     // find free one
@@ -482,46 +562,17 @@ void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
 }
 
 
-static uint8_t spawnanim[8*16] = {
-    1,0,0,0,0,0,0,0,
-    2,1,0,0,0,0,0,0,
-    3,2,1,0,0,0,0,0,
-    4,3,2,1,0,0,0,0,
 
-    5,4,3,2,1,0,0,0,
-    6,5,4,3,2,1,0,0,
-    7,6,5,4,3,2,1,0,
-    8,7,6,5,4,3,2,1,
-
-    0,7,6,5,4,3,2,1,
-    0,0,6,5,4,3,2,1,
-    0,0,0,5,4,3,2,1,
-    0,0,0,0,4,3,2,1,
-
-    0,0,0,0,0,3,2,1,
-    0,0,0,0,0,0,2,1,
-    0,0,0,0,0,0,0,1,
-    0,0,0,0,0,0,0,0,
-};
-
-
-static void do_spawneffect(uint8_t e) {
+static void do_kaboomeffect(uint8_t e) {
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-
-    uint8_t start = t*8;
-    for( uint8_t j=0; j<2; ++j) {
-        // just going for the colour byte
-        verawrite0(VRAM_LAYER0_MAP + (cy-8)*64*2 + ((cx+j)*2)+1, VERA_INC_128);
-        // mirror
-        for (uint8_t i = 8; i > 0; --i) {
-            VERA.data0 = spawnanim[start+(i-1)];
-        }
-        for (uint8_t i = 0; i < 8; ++i) {
-            VERA.data0 = spawnanim[start+i];
-        }
-
+    if(t<15) {
+        drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    }
+    if(t>0) {
+        --t;
+        drawbox(cx-t, cy-t, cx+t, cy+t, 0, 0);
     }
     if(++etimer[e] == 16) {
         ekind[e] = EK_NONE;
@@ -535,11 +586,19 @@ static void rendereffects()
             continue;
         }
         if (ekind[e] == EK_SPAWN) {
-            do_spawneffect(e);
+            //do_spawneffect(e);
+            do_kaboomeffect(e);
+        }
+        if (ekind[e] == EK_KABOOM) {
+            do_kaboomeffect(e);
         }
     }
 }
 
+
+/*
+ * SFX
+ */
 
 #define MAX_SFX 4
 
@@ -578,7 +637,7 @@ static inline void psg(uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pul
 
 static void sfx_tick()
 {
-    verawrite0(VRAM_PSG, VERA_INC_1);
+    veraaddr0(VRAM_PSG, VERA_INC_1);
     for (uint8_t ch=0; ch < MAX_SFX; ++ch) {
         uint8_t t = sfx_timer[ch]++;
         switch (sfx_effect[ch]) {
@@ -604,25 +663,4 @@ static void sfx_tick()
         }
     }
 }
-
-
-const uint8_t shot_spr[16] = {
-    0,              // 0000
-    SPR16_SHOT+2,   // 0001 DIR_RIGHT
-    SPR16_SHOT+2,   // 0010 DIR_LEFT
-    0,              // 0011
-    SPR16_SHOT+0,   // 0100 DIR_DOWN
-    SPR16_SHOT+3,   // 0101 down+right           
-    SPR16_SHOT+1,   // 0110 down+left           
-    0,              // 0111
-
-    SPR16_SHOT+0,   // 1000 up
-    SPR16_SHOT+1,   // 1001 up+right
-    SPR16_SHOT+3,   // 1010 up+left
-    0,              // 1011
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111
-};
 

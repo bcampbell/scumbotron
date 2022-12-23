@@ -52,7 +52,7 @@ extern void sys_sfx_play(uint8_t effect);
 // (visual) effect kinds
 #define EK_NONE 0
 #define EK_SPAWN 1
-#define EK_KABOOM EK_SPAWN
+#define EK_KABOOM 2
 
 // core game stuff.
 #define SCREEN_W 320
