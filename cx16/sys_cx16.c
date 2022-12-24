@@ -543,6 +543,45 @@ static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, 
 
 }
 
+static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
+{
+    uint8_t w = (x1 - x0) + 1;
+    uint8_t h = (y1 - y0) + 1;
+
+    // top
+    veraaddr0(layer0addr(x0,y0), VERA_INC_2);
+    for (uint8_t i = w; i; --i) {
+        VERA.data0 = 0;
+    }
+
+    if (h > 1) {
+        // bottom
+        veraaddr0(layer0addr(x0,y1), VERA_INC_2);
+        for (uint8_t i = w; i; --i) {
+            VERA.data0 = 0;
+        }
+    }
+
+    // Don't need to draw top or bottom chars.
+    if (h < 2) {
+        return;
+    }
+    h -= 2;
+    ++y0;
+
+    // left side
+    veraaddr0(layer0addr(x0,y0), VERA_INC_128);
+    for (uint8_t i = h; i; --i) {
+        VERA.data0 = 0;
+    }
+    if (w > 1) {
+        // right side (but not top or bottom char)
+        veraaddr0(layer0addr(x1,y0), VERA_INC_128);
+        for (uint8_t i = h; i; --i) {
+            VERA.data0 = 0;
+        }
+    }
+}
 
 void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
 {
@@ -572,7 +611,7 @@ static void do_kaboomeffect(uint8_t e) {
     }
     if(t>0) {
         --t;
-        drawbox(cx-t, cy-t, cx+t, cy+t, 0, 0);
+        clrbox(cx-t, cy-t, cx+t, cy+t);
     }
     if(++etimer[e] == 16) {
         ekind[e] = EK_NONE;
