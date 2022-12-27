@@ -12,9 +12,10 @@ void titlescreen_run()
     sys_clr();
     while(1)
     {
+        uint8_t i;
         inp_tick();
         sys_render_start();
-        for (uint8_t i=0; i<20; ++i) {
+        for (i=0; i<20; ++i) {
             sys_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
         }
         sys_render_finish();
@@ -34,8 +35,8 @@ void titlescreen_run()
 #define LEVELRESULT_GAMEOVER 2
 
 static void level_init(uint8_t level) {
-    dudes_spawn(GK_GRUNT, 15);
-    dudes_spawn(GK_TANK, 3);
+    dudes_spawn(GK_AMOEBA_BIG, 10);
+    dudes_spawn(GK_GRUNT, 5);
 
     dudes_reset();    // position and intro
 }
@@ -130,10 +131,10 @@ uint8_t level_run(uint8_t level) {
 void game_run()
 {
     // init new game
+    uint8_t level = 0;
+
     player_lives = 3;
     player_score = 0;
-
-    uint8_t level = 0;
 
     while(1) {
         switch(level_run(level)) {

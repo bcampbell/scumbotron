@@ -6,7 +6,7 @@
 ; kernal
 joystick_get=$FF56
 
-inp_joystate: .short 0
+inp_joystate: .byte 0,0
 
 inp_tick:
 	; update joystate
@@ -25,23 +25,36 @@ inp_tick:
 
 __memory_decompress = $FEED
 
+__rc2 = $04
+__rc3 = $05
+__rc4 = $06
+__rc5 = $07
+
 .global cx16_k_memory_decompress
 cx16_k_memory_decompress:
-	lda mos8(__rc5) // desthi
+;	lda mos8(__rc5) ; desthi
+;	pha
+;	lda mos8(__rc4) ; destlo
+;	pha
+;	lda mos8(__rc3) ; srchi
+;	pha
+;	lda mos8(__rc2)	; srclo
+	lda __rc5 ; desthi
 	pha
-	lda mos8(__rc4) // destlo
+	lda __rc4 ; destlo
 	pha
-	lda mos8(__rc3) // srchi
+	lda __rc3 ; srchi
 	pha
-	lda mos8(__rc2)	// srclo
+	lda __rc2	; srclo
 
-	sta $02	// srclo
+
+	sta $02	; srclo
 	pla
-	sta $03	// srchi
+	sta $03	; srchi
 	pla
-	sta $04	// destlo
+	sta $04	; destlo
 	pla
-	sta $05	// desthi
+	sta $05	; desthi
 
 	jmp __memory_decompress
 

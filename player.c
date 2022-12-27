@@ -38,7 +38,9 @@ void player_create(uint8_t p, int16_t x, int16_t y) {
 
 void player_renderall()
 {
-    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+    uint8_t p;
+    uint8_t s;
+    for (p = 0; p < MAX_PLAYERS; ++p) {
         if (plrfacing[p] == 0xff) {
             // dead.
             continue;
@@ -46,7 +48,7 @@ void player_renderall()
         sys_player_render(plrx[p], plry[p]);
     }
 
-    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
+    for (s = 0; s < MAX_SHOTS; ++s) {
         if (!shotdir[s]) {
             // inactive.
             continue;
@@ -57,14 +59,16 @@ void player_renderall()
 
 void player_tickall()
 {
-    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+    uint8_t p;
+    uint8_t s;
+    for (p = 0; p < MAX_PLAYERS; ++p) {
         if (plrfacing[p] == 0xff) {
             // dead.
             continue;
         }
         player_tick(p);
     }
-    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
+    for (s = 0; s < MAX_SHOTS; ++s) {
         if (!shotdir[s]) {
             // inactive.
             continue;
@@ -83,12 +87,14 @@ static inline bool overlap(int16_t amin, int16_t amax, int16_t bmin, int16_t bma
 // returns true if player killed.
 bool player_collisions()
 {
-    for (uint8_t p = 0; p < MAX_PLAYERS; ++p) {
+    uint8_t p;
+    for (p = 0; p < MAX_PLAYERS; ++p) {
         int16_t px0 = plrx[p] + (4 << FX);
         int16_t py0 = plry[p] + (4 << FX);
         int16_t px1 = plrx[p] + (12 << FX);
         int16_t py1 = plry[p] + (12 << FX);
-        for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+uint8_t d; 
+        for (d = 0; d < MAX_GOBS; ++d) {
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
@@ -107,9 +113,9 @@ bool player_collisions()
 
 
 void player_tick(uint8_t d) {
+    uint8_t dir = 0;
     ++plrtimer[d];
 
-    uint8_t dir = 0;
     if ((inp_joystate & JOY_UP_MASK) ==0) {
         dir |= DIR_UP;
         plry[d] -= PLAYER_SPD;
@@ -131,10 +137,10 @@ void player_tick(uint8_t d) {
         }
 
         if (plrtimer[d]>8) {
+            uint8_t shot = shot_alloc();
             // FIRE!
             sys_sfx_play(SFX_LASER);
             plrtimer[d] = 0;
-            uint8_t shot = shot_alloc();
             if (shot < MAX_SHOTS) {
                 shotx[shot] = plrx[d];
                 shoty[shot] = plry[d];
@@ -148,6 +154,7 @@ void player_tick(uint8_t d) {
         }
     }
 
+    {
     // keep player on screen
     const int16_t xmax = (SCREEN_W - 16) << FX;
     if (plrx[d] < 0<<FX) {
@@ -155,11 +162,14 @@ void player_tick(uint8_t d) {
     } else if (plrx[d] > xmax) {
         plrx[d] = xmax;
     }
+    }
+    {
     const int16_t ymax = (SCREEN_H - 16) << FX;
     if (plry[d] < 0<<FX) {
         plry[d] = 0;
     } else if (plry[d] > ymax) {
         plry[d] = ymax;
+    }
     }
 }
 
@@ -167,7 +177,8 @@ void player_tick(uint8_t d) {
 // returns 0 if none free.
 static uint8_t shot_alloc()
 {
-    for(uint8_t s = 0; s < MAX_SHOTS; ++s) {
+uint8_t s;
+    for(s = 0; s < MAX_SHOTS; ++s) {
         if(shotdir[s] == 0) {
             return s;
         }
@@ -190,20 +201,21 @@ void shot_tick(uint8_t s)
 
 void shot_collisions()
 {
-    for (uint8_t s = 0; s < MAX_SHOTS; ++s) {
-        if (shotdir[s] == 0) {
-            continue;   // inactive
-        }
+uint8_t s;
+    for (s = 0; s < MAX_SHOTS; ++s) {
         // Take centre point of shot.
         int16_t sx = shotx[s] + (8<<FX);
         int16_t sy = shoty[s] + (8<<FX);
-
-        for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+uint8_t d;
+        if (shotdir[s] == 0) {
+            continue;   // inactive
+        }
+        for (d = 0; d < MAX_GOBS; ++d) {
+            int16_t dy0 = goby[d];
+            int16_t dy1 = goby[d] + gob_size(d);
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
-            int16_t dy0 = goby[d];
-            int16_t dy1 = goby[d] + gob_size(d);
             if (sy >= dy0 && sy < dy1) {
                 int16_t dx0 = gobx[d];
                 int16_t dx1 = gobx[d] + gob_size(d);

@@ -77,6 +77,8 @@ extern void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 extern void sprout32(int16_t x, int16_t y, uint8_t img);
 extern const uint8_t shot_spr[16];
 
+//#define inline
+
 static inline void sys_player_render(int16_t x, int16_t y) {
     sprout16(x, y, 0);
 }

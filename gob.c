@@ -34,7 +34,8 @@ uint8_t rnd() {
 
 void gobs_init()
 {
-    for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+    uint8_t i;
+    for (i = 0; i < MAX_GOBS; ++i) {
         gobkind[i] = GK_NONE;
     }
     gobs_lockcnt = 0;
@@ -43,9 +44,10 @@ void gobs_init()
 
 void gobs_tick(bool spawnphase)
 {
+    uint8_t i;
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
-    for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+    for (i = 0; i < MAX_GOBS; ++i) {
         // Is gob playing its spawning-in effect?
         if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
@@ -95,7 +97,8 @@ void gobs_tick(bool spawnphase)
 
 void gobs_render()
 {
-    for (uint8_t d = 0; d < MAX_GOBS; ++d) {
+    uint8_t d;
+    for (d = 0; d < MAX_GOBS; ++d) {
         if (gobflags[d] & GF_SPAWNING) {
             continue;
         }
@@ -168,7 +171,8 @@ void dudes_spawn(uint8_t kind, uint8_t n)
 // - put into spawning mode.
 void dudes_reset() {
     uint8_t t=0;
-    for (uint8_t g = 0; g < MAX_GOBS; ++g) {
+    uint8_t g;
+    for (g = 0; g < MAX_GOBS; ++g) {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
@@ -181,7 +185,8 @@ void dudes_reset() {
 
 // returns 0 if none free.
 uint8_t dude_alloc() {
-    for(uint8_t d = 0; d < MAX_GOBS; ++d) {
+    uint8_t d;
+    for(d = 0; d < MAX_GOBS; ++d) {
         if(gobkind[d] == GK_NONE) {
             return d;
         }
@@ -196,10 +201,11 @@ void dude_randompos(uint8_t d) {
     int16_t x;
     int16_t y;
     while (1) {
+        int16_t lsq; 
         x = -128 + rnd();
         y = -128 + rnd();
 
-        int16_t lsq = x*x + y*y;
+        lsq = x*x + y*y;
         if (lsq > 80*80 && lsq <100*100 ) {
             break;
         }
@@ -242,17 +248,18 @@ void grunt_init(uint8_t d)
 
 void grunt_tick(uint8_t d)
 {
+    int16_t px,py;
     // update every 16 frames
     if (((tick+d) & 0x0f) != 0x00) {
        return;
     }
-    int16_t px = plrx[0];
+    px = plrx[0];
     if (px < gobx[d]) {
         gobx[d] -= gobvx[d];
     } else if (px > gobx[d]) {
         gobx[d] += gobvx[d];
     }
-    int16_t py = plry[0];
+    py = plry[0];
     if (py < goby[d]) {
         goby[d] -= gobvy[d];
     } else if (py > goby[d]) {
@@ -278,7 +285,9 @@ void baiter_tick(uint8_t d)
 {
     const int16_t BAITER_MAX_SPD = 4 << FX;
     const int16_t BAITER_ACCEL = 2;
-    int16_t px = plrx[0];
+    int16_t px,py;
+
+    px = plrx[0];
     if (px < gobx[d] && gobvx[d] > -BAITER_MAX_SPD) {
         gobvx[d] -= BAITER_ACCEL;
     } else if (px > gobx[d] && gobvx[d] < BAITER_MAX_SPD) {
@@ -286,7 +295,7 @@ void baiter_tick(uint8_t d)
     }
     gobx[d] += gobvx[d];
 
-    int16_t py = plry[0];
+    py = plry[0];
     if (py < goby[d] && gobvy[d] > -BAITER_MAX_SPD) {
         gobvy[d] -= BAITER_ACCEL;
     } else if (py > goby[d] && gobvy[d] < BAITER_MAX_SPD) {
@@ -311,19 +320,19 @@ void amoeba_init(uint8_t d)
 
 void amoeba_tick(uint8_t d)
 {
+    const int16_t AMOEBA_MAX_SPD = (4<<FX)/3;
+    const int16_t AMOEBA_ACCEL = 2 * FX_ONE / 2;
+    int16_t px, py, vx, vy;
     // jitter acceleration
     gobvx[d] += (rnd() - 128)>>2;
     gobvy[d] += (rnd() - 128)>>2;
 
 
     // apply drag
-    int16_t vx = gobvx[d];
+    vx = gobvx[d];
     gobvx[d] = (vx >> 1) + (vx >> 2);
-    int16_t vy = gobvy[d];
+    vy = gobvy[d];
     gobvy[d] = (vy >> 1) + (vy >> 2);
-    
-    const int16_t AMOEBA_MAX_SPD = (4<<FX)/3;
-    const int16_t AMOEBA_ACCEL = 2 * FX_ONE / 2;
 
     gobx[d] += gobvx[d];
     goby[d] += gobvy[d];
@@ -332,14 +341,14 @@ void amoeba_tick(uint8_t d)
     if (((tick+d) & 0x0f) != 0x00) {
        return;
     }
-    int16_t px = plrx[0];
+    px = plrx[0];
     if (px < gobx[d] && gobvx[d] > -AMOEBA_MAX_SPD) {
         gobvx[d] -= AMOEBA_ACCEL;
     } else if (px > gobx[d] && gobvx[d] < AMOEBA_MAX_SPD) {
         gobvx[d] += AMOEBA_ACCEL;
     }
 
-    int16_t py = plry[0];
+    py = plry[0];
     if (py < goby[d] && gobvy[d] > -AMOEBA_MAX_SPD) {
         gobvy[d] -= AMOEBA_ACCEL;
     } else if (py > goby[d] && gobvy[d] < AMOEBA_MAX_SPD) {
@@ -412,6 +421,11 @@ void tank_init(uint8_t d)
 
 void tank_tick(uint8_t d)
 {
+    const int16_t vx = (5<<FX);
+    const int16_t vy = (5<<FX);
+    int16_t px = plrx[0];
+    int16_t py = plry[0];
+
     if (gobtimer[d] > 0) {
         --gobtimer[d];
     }
@@ -419,15 +433,11 @@ void tank_tick(uint8_t d)
     if (((tick+d) & 0x1f) != 0x00) {
        return;
     }
-    const int16_t vx = (5<<FX);
-    const int16_t vy = (5<<FX);
-    int16_t px = plrx[0];
     if (px < gobx[d]) {
         gobx[d] -= vx;
     } else if (px > gobx[d]) {
         gobx[d] += vx;
     }
-    int16_t py = plry[0];
     if (py < goby[d]) {
         goby[d] -= vy;
     } else if (py > goby[d]) {

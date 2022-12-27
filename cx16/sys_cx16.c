@@ -78,12 +78,15 @@ static inline void veraaddr1(uint32_t addr, uint8_t inc) {
 }
 
 void testum() {
+    uint16_t b;
+    uint8_t i;
+
     VERA.control = 0x00;
     // Writing to 0x1b000 onward.
     VERA.address = 0xB000;
     VERA.address_hi = 0x11; // increment = 1
-    uint16_t b = inp_joystate;
-    for (uint8_t i=0; i<16; ++i) {
+    b = inp_joystate;
+    for (i=0; i<16; ++i) {
         // char, then colour
         VERA.data0 = (b & 0x8000) ? '.' : 'X';
         VERA.data0 = COLOR_BLACK<<4 | COLOR_GREEN;
@@ -117,10 +120,11 @@ void sys_render_start()
 
 void sys_render_finish()
 {
-
+    uint8_t cnt;
     // clear sprites which were used last frame, but not in this one.
-    for(uint8_t cnt = sprcnt; cnt<sprcntprev; ++cnt) {
-        for (uint8_t i=0; i<8; ++i) {
+    for(cnt = sprcnt; cnt<sprcntprev; ++cnt) {
+        uint8_t i;
+        for (i=0; i<8; ++i) {
             VERA.data1 = 0x00;
         }
     }
@@ -214,18 +218,21 @@ const uint8_t shot_spr[16] = {
 
 void sys_clr()
 {
+    uint8_t y;
+    int i;
     // text layer
     // 64x32*2 (w*h*(char+colour))
     veraaddr0(VRAM_LAYER1_MAP, VERA_INC_1);
-    for (int i=0; i<64*32*2; ++i) {
+    for (i=0; i<64*32*2; ++i) {
         VERA.data0 = ' '; // tile
         VERA.data0 = 0; // colour
     }
 
     // effects layer
     veraaddr0(VRAM_LAYER0_MAP, VERA_INC_1);
-    for (uint8_t y = 0; y < 64; ++y) {
-        for (uint8_t x = 0; x < 64; ++x) {
+    for (y = 0; y < 64; ++y) {
+        uint8_t x;
+        for (x = 0; x < 64; ++x) {
             VERA.data0 = 1; //(x&1) ^ (y&1);
             VERA.data0 = 0; //x & 15;
         }
@@ -236,12 +243,13 @@ void sys_clr()
 
 void sys_init()
 {
+    uint8_t vid;
     irq_init();
     sfx_init();
 
     // screen mode 40x30
     VERA.control = 0x00;    //DCSEL=0
-    uint8_t vid = VERA.display.video;
+    vid = VERA.display.video;
     vid |= 1<<6;    // sprites on
     vid |= 1<<5;    // layer 1 on
     vid |= 1<<4;    // layer 0 on
@@ -284,16 +292,17 @@ void sys_init()
     {
         // The palette (actually, the compressing the palette likely adds a
         // few bytes, but simpler to handle all exported data the same).
+        const volatile uint8_t* src = BANK_RAM;
+        uint8_t i;
         cx16_k_memory_decompress(export_palette_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_PALETTE, VERA_INC_1);
-        const volatile uint8_t* src = BANK_RAM;
         // just 16 colours
-        for (uint8_t i=0; i<16*2; ++i) {
+        for (i=0; i<16*2; ++i) {
             VERA.data0 = *src++;
         }
 
         // then a set of 16 whites for highlight flashing
-        for (uint8_t i=0; i<16; ++i) {
+        for (i=0; i<16; ++i) {
             VERA.data0 = 0xff;
             VERA.data0 = 0x0f;
         }
@@ -301,49 +310,59 @@ void sys_init()
 
     {
         // 64 16x16 images
+        const volatile uint8_t* src = BANK_RAM;
+        int i;
         cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_SPRITES16, VERA_INC_1);
-        const volatile uint8_t* src = BANK_RAM;
-        for (int i = 0; i < 64 * SPR16_SIZE; ++i) {
+        for (i = 0; i < 64 * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
     {
         // Uncompress 8 32x32 sprites
+        const volatile uint8_t* src = BANK_RAM;
+        int i;
         cx16_k_memory_decompress(export_spr32_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
-        const volatile uint8_t* src = BANK_RAM;
-        for (int i = 0; i < 8 * SPR32_SIZE; ++i) {
+        for (i = 0; i < 8 * SPR32_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
 
     // stand-in images for effect layers
     {
+        uint8_t i;
         veraaddr0(VRAM_LAYER0_TILES, VERA_INC_1);
-        for (int i=0; i<8; ++i) {
+        for (i=0; i<8; ++i) {
             VERA.data0 = 0;
         }
-        for (int i=0; i<4; ++i) {
+        for (i=0; i<4; ++i) {
             VERA.data0 = 0b10101010;
             VERA.data0 = 0b01010101;
         }
     }
 
     // Clear the VERA sprite attr table.
-    veraaddr0(VRAM_SPRITE_ATTRS, VERA_INC_1);
-    for( uint8_t i=0; i<128; ++i) {
-        for( uint8_t j=0; j<8; ++j) {
-            VERA.data0 = 0x00;
+    {
+        uint8_t i;
+        veraaddr0(VRAM_SPRITE_ATTRS, VERA_INC_1);
+        for(i=0; i<128; ++i) {
+            uint8_t j;
+            for(j=0; j<8; ++j) {
+                VERA.data0 = 0x00;
+            }
         }
+        sprcnt = 0;
+        sprcntprev = 0;
     }
-    sprcnt = 0;
-    sprcntprev = 0;
 
     // clear effect table
-    for( uint8_t i=0; i<MAX_EFFECTS; ++i) {
-        ekind[i] = EK_NONE;
+    {
+        uint8_t i;
+        for(i=0; i<MAX_EFFECTS; ++i) {
+            ekind[i] = EK_NONE;
+        }
     }
 
     // clear the tile layers
@@ -364,8 +383,8 @@ static uint8_t screencode(char asc)
 
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
-    veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
     const char* p = txt;
+    veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
     while(*p) {
         VERA.data0 = screencode(*p);
         VERA.data0 = colour;
@@ -377,12 +396,12 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 // double dabble: 8 decimal digits in 32 bits BCD
 // from https://stackoverflow.com/a/64955167
 uint32_t bin2bcd(uint32_t in) {
-  if (!in) return 0;
   uint32_t bit = 0x4000000; //  99999999 max binary
-  while (!(in & bit)) bit >>= 1;  // skip to MSB
-
   uint32_t bcd = 0;
   uint32_t carry = 0;
+  if (!in) return 0;
+  while (!(in & bit)) bit >>= 1;  // skip to MSB
+
   while (1) {
     bcd <<= 1;
     bcd += carry; // carry 6s to next BCD digits (10 + 6 = 0x10 = LSB of next BCD digit)
@@ -405,9 +424,9 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     const uint8_t cx = 0;
     const uint8_t cy = 0;
+    uint8_t c = 1;
     veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
 
-    uint8_t c = 1;
 
     // Level
     VERA.data0 = screencode('L');
@@ -428,24 +447,25 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = c;
 
     // Score
-    uint32_t bcd = bin2bcd(score);
-    VERA.data0 = screencode(hexdigits[(bcd >> 28)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 24)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 20)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 16)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 12)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 8)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 4)&0x0f]);
-    VERA.data0 = c;
-    VERA.data0 = screencode(hexdigits[(bcd >> 0)&0x0f]);
-    VERA.data0 = c;
-
+    {
+        uint32_t bcd = bin2bcd(score);
+        VERA.data0 = screencode(hexdigits[(bcd >> 28)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 24)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 20)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 16)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 12)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 8)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 4)&0x0f]);
+        VERA.data0 = c;
+        VERA.data0 = screencode(hexdigits[(bcd >> 0)&0x0f]);
+        VERA.data0 = c;
+    }
 
     VERA.data0 = screencode(' ');
     VERA.data0 = c;
@@ -453,14 +473,17 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = c;
 
     // Lives
-    c = 2;
-    for(uint8_t i=0; i<7 && i<lives; ++i) {
-        VERA.data0 = 0x53;  // heart
+    {
+        uint8_t i;
+        c = 2;
+        for(i=0; i<7 && i<lives; ++i) {
+            VERA.data0 = 0x53;  // heart
+            VERA.data0 = c;
+        }
+        VERA.data0 = screencode((lives>7) ? '+' : ' ');
         VERA.data0 = c;
     }
-    VERA.data0 = screencode((lives>7) ? '+' : ' ');
-    VERA.data0 = c;
-
+#if 0
     //inp_virtpad = tick;
     // debug cruft
     VERA.data0 = screencode(' ');
@@ -473,6 +496,7 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
         VERA.data0 = c;
         p = p<<1;
     }
+#endif
 }
 
 /*
@@ -490,25 +514,26 @@ static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, 
 {
     uint8_t w = (x1 - x0) + 1;
     uint8_t h = (y1 - y0) + 1;
+    uint8_t i;
 
     // top
     veraaddr0(layer0addr(x0,y0), VERA_INC_2);
-    for (uint8_t i = w; i; --i) {
+    for (i = w; i; --i) {
         VERA.data0 = ch;
     }
     veraaddr0(layer0addr(x0,y0)+1, VERA_INC_2);
-    for (uint8_t i = w; i; --i) {
+    for (i = w; i; --i) {
         VERA.data0 = colour;
     }
 
     if (h > 1) {
         // bottom
         veraaddr0(layer0addr(x0,y1), VERA_INC_2);
-        for (uint8_t i = w; i; --i) {
+        for (i = w; i; --i) {
             VERA.data0 = ch;
         }
         veraaddr0(layer0addr(x0,y1)+1, VERA_INC_2);
-        for (uint8_t i = w; i; --i) {
+        for (i = w; i; --i) {
             VERA.data0 = colour;
         }
     }
@@ -522,21 +547,21 @@ static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, 
 
     // left side
     veraaddr0(layer0addr(x0,y0), VERA_INC_128);
-    for (uint8_t i = h; i; --i) {
+    for (i = h; i; --i) {
         VERA.data0 = ch;
     }
     veraaddr0(layer0addr(x0,y0)+1, VERA_INC_128);
-    for (uint8_t i = h; i; --i) {
+    for (i = h; i; --i) {
         VERA.data0 = colour;
     }
     if (w > 1) {
         // right side (but not top or bottom char)
         veraaddr0(layer0addr(x1,y0), VERA_INC_128);
-        for (uint8_t i = h; i; --i) {
+        for (i = h; i; --i) {
             VERA.data0 = ch;
         }
         veraaddr0(layer0addr(x1,y0)+1, VERA_INC_128);
-        for (uint8_t i = h; i; --i) {
+        for (i = h; i; --i) {
             VERA.data0 = colour;
         }
     }
@@ -547,17 +572,18 @@ static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
 {
     uint8_t w = (x1 - x0) + 1;
     uint8_t h = (y1 - y0) + 1;
+    uint8_t i;
 
     // top
     veraaddr0(layer0addr(x0,y0), VERA_INC_2);
-    for (uint8_t i = w; i; --i) {
+    for (i = w; i; --i) {
         VERA.data0 = 0;
     }
 
     if (h > 1) {
         // bottom
         veraaddr0(layer0addr(x0,y1), VERA_INC_2);
-        for (uint8_t i = w; i; --i) {
+        for (i = w; i; --i) {
             VERA.data0 = 0;
         }
     }
@@ -571,13 +597,13 @@ static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
 
     // left side
     veraaddr0(layer0addr(x0,y0), VERA_INC_128);
-    for (uint8_t i = h; i; --i) {
+    for (i = h; i; --i) {
         VERA.data0 = 0;
     }
     if (w > 1) {
         // right side (but not top or bottom char)
         veraaddr0(layer0addr(x1,y0), VERA_INC_128);
-        for (uint8_t i = h; i; --i) {
+        for (i = h; i; --i) {
             VERA.data0 = 0;
         }
     }
@@ -620,7 +646,8 @@ static void do_kaboomeffect(uint8_t e) {
 
 static void rendereffects()
 {
-    for(uint8_t e = 0; e < MAX_EFFECTS; ++e) {
+    uint8_t e;
+    for(e = 0; e < MAX_EFFECTS; ++e) {
         if (ekind[e] == EK_NONE) {
             continue;
         }
@@ -647,8 +674,9 @@ uint8_t sfx_next;
 
 static void sfx_init()
 {
+    uint8_t ch;
     sfx_next = 0;
-    for (uint8_t ch = 0; ch < MAX_SFX; ++ch) {
+    for (ch = 0; ch < MAX_SFX; ++ch) {
         sfx_effect[ch] = SFX_NONE;
     }
 }
@@ -676,8 +704,9 @@ static inline void psg(uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pul
 
 static void sfx_tick()
 {
+    uint8_t ch;
     veraaddr0(VRAM_PSG, VERA_INC_1);
-    for (uint8_t ch=0; ch < MAX_SFX; ++ch) {
+    for (ch=0; ch < MAX_SFX; ++ch) {
         uint8_t t = sfx_timer[ch]++;
         switch (sfx_effect[ch]) {
         case SFX_LASER:

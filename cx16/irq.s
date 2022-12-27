@@ -5,8 +5,6 @@
 
 
 VERA_L=$9f20
-
-VERA_L=$9f20
 VERA_M=$9f21
 VERA_H=$9f22
 VERA_D0=$9f23
@@ -20,7 +18,7 @@ VERA_VIDEO=$9f29
 
 tick: .byte 0
 
-old_handler: .short 0
+old_handler: .byte 0,0
 
 irq_init:
 	jsr keyhandler_init
@@ -68,17 +66,17 @@ keyhandler_init:
     rts
 
 
-// Map PS/2 scancodes to gamepad bits
+; Map PS/2 scancodes to gamepad bits
 inp_virtpad_map:			  ;x,b,y,a
 	;     up,  dn,  lf,  rt,  W,   S,   A,   D   
 inp_virtpad_map_prefix:
-	.byte $E0, $E0, $E0, $E0, $00, $00, $00, $00	// prefix
+	.byte $E0, $E0, $E0, $E0, $00, $00, $00, $00	; prefix
 inp_virtpad_map_scancode:
-	.byte $75, $72, $6B, $74, $1D, $1B, $1C, $23	// scancode
+	.byte $75, $72, $6B, $74, $1D, $1B, $1C, $23	; scancode
 inp_virtpad_map_out_hi:
-	.byte $08, $04, $02, $01, $00, $80, $40, $00	// scancode
+	.byte $08, $04, $02, $01, $00, $80, $40, $00	; scancode
 inp_virtpad_map_out_lo:
-	.byte $00, $00, $00, $00, $40, $00, $00, $80	// scancode
+	.byte $00, $00, $00, $00, $40, $00, $00, $80	; scancode
 
 ; cx16 pad bits:
 ;  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
@@ -88,7 +86,7 @@ inp_virtpad_map_out_lo:
 ;              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 
 ; the virtual gamepad, driven by keyboard.
-inp_virtpad: .short 0
+inp_virtpad: .byte 0,0
 
 keyhandler:
     ; .X: PS/2 prefix ($00, $E0 or $E1)
@@ -156,8 +154,8 @@ kh_done:
 
 waitvbl:
 	lda tick
-.loop:
+waitvbl_loop:
 	cmp tick
-	beq .loop
+	beq waitvbl_loop
 	rts
 

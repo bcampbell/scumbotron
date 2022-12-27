@@ -17,6 +17,10 @@ SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
 OBJS = $(patsubst %.c,%.o,$(SRCS) )
 OBJS += $(patsubst %.s,%.o,$(SRCS_ASM) )
 
+
+#game.prg: $(SRCS) $(SRCS_ASM)
+#	$(CC) $(CFLAGS) $(SRCS) $(SRCS_ASM) -o $@
+
 game.prg: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS)
 
