@@ -6,8 +6,6 @@ volatile uint16_t inp_joystate = 0;
 volatile uint8_t tick = 0;
 
 
-static SDL_Window* fenster = NULL;
-static SDL_Renderer* renderer = NULL;
 
 static void pumpevents();
 
@@ -31,39 +29,56 @@ extern unsigned int export_spr32_bin_len;
 
 #define NUM_SPR16 64
 #define NUM_SPR32 8
-static SDL_Texture* spr16[NUM_SPR16] = {0};
-static SDL_Texture* spr32[NUM_SPR32] = {0};
+
+#define BYTESIZE_SPR16 ((16*16)/2)   // 16x16 4bpp
+#define BYTESIZE_SPR32 ((32*32)/2)   // 32x32 4bpp
+
+static SDL_Window* fenster = NULL;
+static SDL_Renderer* renderer = NULL;
+static SDL_Texture* screenTexture = NULL;
+static SDL_Surface* screen = NULL;
+static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
 
-static SDL_Texture* raw_to_texture(const uint8_t* pixels, int w, int h);
 
 void sys_init()
 {
+    Uint32 flags = SDL_WINDOW_RESIZABLE;
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
-      fprintf(stderr, "SDL_Init() failed: %s\n", SDL_GetError());
-      exit(1);
+        goto bailout;
     }
 
-    Uint32 flags = SDL_WINDOW_RESIZABLE;
 
 //    if (fullscreen)
 //        flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
-    fenster = SDL_CreateWindow("laser zappy zap zap zap",
+    fenster = SDL_CreateWindow("ZapZapZappityZapZap",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              640, 480, flags);
+                              SCREEN_W, SCREEN_H, flags);
+    if (!fenster) {
+        goto bailout;
+    }
 
     renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_ACCELERATED);
-
-    if (!fenster) {
-        fprintf(stderr, "SDL_CreateWindow() failed: %s\n", SDL_GetError());
-        exit(1);
+    if (!renderer) {
+        goto bailout;
     }
+
     SDL_RenderSetLogicalSize(renderer, SCREEN_W, SCREEN_H);
+
+    screenTexture = SDL_CreateTexture(renderer,
+                               SDL_PIXELFORMAT_ARGB8888,
+                               SDL_TEXTUREACCESS_STREAMING,
+                               SCREEN_W, SCREEN_H);
+    if (screenTexture == NULL) {
+        goto bailout;
+    }
+
 
     // Set up palette
     {
-        palette = SDL_AllocPalette(16);
+        palette = SDL_AllocPalette(256);
 
         const uint16_t *src = (const uint16_t*)export_palette_bin;
         SDL_Color colors[16];
@@ -79,62 +94,41 @@ void sys_init()
             colors[i].r = (r<<4) | r;
             colors[i].g = (g<<4) | g;
             colors[i].b = (b<<4) | b;
-            colors[i].a = 255;  //i==0 ? 0 : 255;   // colour 0 transparent
+            colors[i].a = 255;
         }
-        SDL_SetPaletteColors(palette, colors, 0, 16);
-        /*
-        for (int i=0; i<palette->ncolors; ++i) {
-            printf("%d: %d,%d,%d,%d\n", i, palette->colors[i].r, palette->colors[i].g, palette->colors[i].b, palette->colors[i].a);
+        // fill out unused colours.
+        for (int i = 16; i < 256; ++i) {
+            colors[i].r = 255;
+            colors[i].g = 255;
+            colors[i].b = 255;
+            colors[i].a = 255;
         }
-        */
+        SDL_SetPaletteColors(palette, colors, 0, 256);
     }
 
-    // Set up sprites
-    {
-        const uint8_t *src = export_spr16_bin;
-        for( int i = 0; i < NUM_SPR16; ++i) {
-            spr16[i] = raw_to_texture(src, 16, 16);
-            if (spr16[i] == NULL) {
-                exit(1);
-            }
-            src += 8*16;        // 16x16 4bpp
-        }
+    // Set up screen
+    screen = SDL_CreateRGBSurfaceWithFormat(0, SCREEN_W, SCREEN_H, 8,
+        SDL_PIXELFORMAT_INDEX8);
+    if (screen == NULL) {
+        goto bailout;
     }
-    {
-        const uint8_t *src = export_spr32_bin;
-        for( int i = 0; i < NUM_SPR32; ++i) {
-            spr32[i] = raw_to_texture(src, 32, 32);
-            if (spr32[i] == NULL) {
-                exit(1);
-            }
-            src += 16*32;        // 32x32 4bpp
-        }
+    SDL_SetSurfacePalette(screen, palette);
+    //SDL_SetColorKey(screen, SDL_TRUE, 0);
+
+
+    // set up intermediate surface to convert to argb to update texture.
+    conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, SCREEN_W, SCREEN_H, 32,
+                               SDL_PIXELFORMAT_ARGB8888);
+    if (conversionSurface == NULL) {
+        goto bailout;
     }
+    return;
+
+bailout:
+    fprintf(stderr, "Init failed: %s\n", SDL_GetError());
+    exit(1);
 }
 
-
-static SDL_Texture* raw_to_texture(const uint8_t* pixels, int w, int h)
-{
-    SDL_Surface* surface = SDL_CreateRGBSurfaceWithFormat(0, w, h, 4,
-        SDL_PIXELFORMAT_INDEX4MSB);
-    if (surface == NULL) {
-        fprintf(stderr, "SDL_CreateRGBSurfaceWithFormat() failed: %s\n", SDL_GetError());
-        return NULL;
-    }
-    SDL_SetSurfacePalette(surface, palette);
-    SDL_SetColorKey(surface, SDL_TRUE, 0);
-    // copy in the image
-    memcpy(surface->pixels, pixels, h*surface->pitch);
-
-    SDL_Texture *t = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface);
-    if (t == NULL) {
-        fprintf(stderr, "SDL_CreateTextureFromSurface() failed: %s\n", SDL_GetError());
-        return NULL;
-    }
-
-    return t;
-}
 
 #define TICK_INTERVAL (1000/60)
 
@@ -207,14 +201,24 @@ void inp_tick()
 
 void sys_render_start()
 {
-    SDL_SetRenderDrawColor(renderer,0,0,0,255);
-    SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 128,128,128,255);
-    SDL_RenderDrawRect(renderer, NULL);
+    // clear the screen
+    memset(screen->pixels, 0, SCREEN_H*screen->pitch);
+
+    // cycle colour 15
+    uint8_t i = (((tick >> 1)) & 0x7) + 2;
+    SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
 }
 
 void sys_render_finish()
 {
+    // convert screen to argb
+    SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
+
+    // load into tetxure
+    SDL_UpdateTexture(screenTexture, NULL, conversionSurface->pixels, conversionSurface->pitch);
+    // display it!
+    SDL_RenderCopy(renderer, screenTexture, NULL, NULL);
+    //SDL_RenderDrawRect(renderer, NULL);
     SDL_RenderPresent(renderer);
 }
 
@@ -243,14 +247,34 @@ void sys_sfx_play(uint8_t effect)
 }
 
 
+static void blit_4bpp(SDL_Surface *dest, SDL_Rect const* destrect, const uint8_t *src)
+{
+    // TODO: clip.
+    int y;
+    for (y = 0; y < destrect->h; ++y) {
+        uint8_t *pix = (uint8_t*)(dest->pixels) + ((destrect->y + y) * dest->pitch) + destrect->x;
+        int x;
+        for (x = 0; x < destrect->w; x += 2) {
+            uint8_t c;
+            c = (*src >> 4) & 0x0f;
+            if (c) { *pix = c; }
+            ++pix;
+            c = *src & 0x0f;
+            if (c) { *pix = c; }
+            ++pix;
+            ++src;
+        }
+    }
+}
+
+
+
 void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    SDL_RenderCopy(renderer, spr16[img], NULL, &rect);
-//    SDL_SetRenderDrawColor(renderer, 128,128,128,255);
-//    SDL_RenderDrawRect(renderer, &rect);
+    blit_4bpp(screen, &rect, export_spr16_bin + (img * BYTESIZE_SPR16));
 }
 
 void sprout32(int16_t x, int16_t y, uint8_t img)
@@ -258,7 +282,7 @@ void sprout32(int16_t x, int16_t y, uint8_t img)
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 32, 32};
-    SDL_RenderCopy(renderer, spr32[img], NULL, &rect);
+    blit_4bpp(screen, &rect, export_spr32_bin + (img * BYTESIZE_SPR32));
 }
 
 // TODO
@@ -267,7 +291,7 @@ void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
     x = x >> FX;
     y = y >> FX;
     SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    SDL_RenderCopy(renderer, spr16[img], NULL, &rect);
+    blit_4bpp(screen, &rect, export_spr16_bin + (img * BYTESIZE_SPR16));
 }
 
 const uint8_t shot_spr[16] = {

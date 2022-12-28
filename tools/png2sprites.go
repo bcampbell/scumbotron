@@ -38,7 +38,7 @@ Flags:
 	flag.IntVar(&opts.width, "w", 8, "sprite width")
 	flag.IntVar(&opts.height, "h", 8, "sprite height")
 	flag.IntVar(&opts.numFrames, "num", 1, "number of sprites to export")
-	flag.IntVar(&opts.bitsPerPixel, "bpp", 8, "Bits per pixel (8,4,2,1)")
+	flag.IntVar(&opts.bitsPerPixel, "bpp", 8, "Bits per pixel (8,4,1)")
 	flag.StringVar(&opts.fmt, "fmt", "c", "Output format ('c', 'bin')")
 	flag.StringVar(&opts.outFile, "out", "-", "Output file ('-' for stdout)")
 	flag.Parse()
@@ -179,6 +179,8 @@ func cook(img *image.Paletted) []uint8 {
 		return cook8bpp(img)
 	case 4:
 		return cook4bpp(img)
+	case 1:
+		return cook1bpp(img)
 	}
 	return []uint8{}
 }
@@ -201,6 +203,25 @@ func cook4bpp(img *image.Paletted) []uint8 {
 		for x := 0; x < r.Dx(); x += 2 {
 			b := (img.Pix[idx]&0x0f)<<4 | (img.Pix[idx+1] & 0x0f)
 			idx += 2
+			out = append(out, b)
+		}
+	}
+	return out
+}
+
+func cook1bpp(img *image.Paletted) []uint8 {
+	out := []uint8{}
+	r := img.Bounds()
+	for y := 0; y < r.Dy(); y++ {
+		idx := img.PixOffset(r.Min.X, r.Min.Y+y)
+		for x := 0; x < r.Dx(); x += 8 {
+			var b byte
+			for i := 7; i >= 0; i-- {
+				if img.Pix[idx] > 0 {
+					b |= 1 << i
+				}
+				idx++
+			}
 			out = append(out, b)
 		}
 	}
