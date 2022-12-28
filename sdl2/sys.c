@@ -16,6 +16,8 @@ extern unsigned char export_spr16_bin[];
 extern unsigned int export_spr16_bin_len;
 extern unsigned char export_spr32_bin[];
 extern unsigned int export_spr32_bin_len;
+extern unsigned char export_chars_bin[];
+extern unsigned int export_chars_bin_len;
 
 // sprite image defs
 #define SPR16_BAITER 16
@@ -30,8 +32,8 @@ extern unsigned int export_spr32_bin_len;
 #define NUM_SPR16 64
 #define NUM_SPR32 8
 
-#define BYTESIZE_SPR16 ((16*16)/2)   // 16x16 4bpp
-#define BYTESIZE_SPR32 ((32*32)/2)   // 32x32 4bpp
+#define BYTESIZE_SPR16 (16*16)   // 16x16 8bpp
+#define BYTESIZE_SPR32 (32*32)   // 32x32 8bpp
 
 static SDL_Window* fenster = NULL;
 static SDL_Renderer* renderer = NULL;
@@ -40,6 +42,8 @@ static SDL_Surface* screen = NULL;
 static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
 
+static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty);
+static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte);
 
 void sys_init()
 {
@@ -201,24 +205,22 @@ void inp_tick()
 
 void sys_render_start()
 {
+    uint8_t i;
     // clear the screen
     memset(screen->pixels, 0, SCREEN_H*screen->pitch);
-
     // cycle colour 15
-    uint8_t i = (((tick >> 1)) & 0x7) + 2;
+    i = (((tick >> 1)) & 0x7) + 2;
     SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
 }
 
 void sys_render_finish()
 {
-    // convert screen to argb
+    // Convert screen to argb.
     SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
-
-    // load into tetxure
+    // Load into texture.
     SDL_UpdateTexture(screenTexture, NULL, conversionSurface->pixels, conversionSurface->pitch);
-    // display it!
+    // Display it!
     SDL_RenderCopy(renderer, screenTexture, NULL, NULL);
-    //SDL_RenderDrawRect(renderer, NULL);
     SDL_RenderPresent(renderer);
 }
 
@@ -226,12 +228,27 @@ void sys_clr()
 {
 }
 
+
+static uint8_t glyph(char ascii) {
+    if (ascii >= 'A' && ascii <= 'Z') {
+        return (uint8_t)(ascii - ('A'-1));
+    }
+    if (ascii >= 'a' && ascii <= 'z') {
+        return (uint8_t)(ascii - ('a'-1));
+    }
+    return (uint8_t)ascii;
+}
+
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
-    size_t l = strlen(txt); 
-    SDL_Rect rect = {(int)cx*8, (int)cy*8, (int)l*8, 8};
-    SDL_SetRenderDrawColor(renderer,128,128,128,255);
-    SDL_RenderDrawRect(renderer, &rect);
+    int x = cx*8;
+    int y = cy*8;
+
+    while(*txt) {
+        uint8_t i = glyph(*txt++);
+        blit8_matte(export_chars_bin + (8 * 8 * i), 8, 8, screen, x, y, colour);
+        x += 8;
+    }
 }
 
 void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
@@ -247,22 +264,38 @@ void sys_sfx_play(uint8_t effect)
 }
 
 
-static void blit_4bpp(SDL_Surface *dest, SDL_Rect const* destrect, const uint8_t *src)
+static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty)
 {
-    // TODO: clip.
     int y;
-    for (y = 0; y < destrect->h; ++y) {
-        uint8_t *pix = (uint8_t*)(dest->pixels) + ((destrect->y + y) * dest->pitch) + destrect->x;
+    SDL_Rect unclipped {destx, desty, srcw, srch};
+    SDL_Rect r;
+    SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
+    for (y = 0; y < r.h; ++y) {
+        const uint8_t *in = src + (((r.y-desty) + y) * srcw) + (r.x-destx);
+        uint8_t *out = (uint8_t*)(dest->pixels) + ((r.y + y) * dest->pitch) + r.x;
         int x;
-        for (x = 0; x < destrect->w; x += 2) {
-            uint8_t c;
-            c = (*src >> 4) & 0x0f;
-            if (c) { *pix = c; }
-            ++pix;
-            c = *src & 0x0f;
-            if (c) { *pix = c; }
-            ++pix;
-            ++src;
+        for (x = 0; x < r.w; ++x) {
+            uint8_t c = *in++;
+            if (c) { *out = c; }    // key==0
+            ++out;
+        }
+    }
+}
+
+static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte)
+{
+    int y;
+    SDL_Rect unclipped {destx, desty, srcw, srch};
+    SDL_Rect r;
+    SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
+    for (y = 0; y < r.h; ++y) {
+        const uint8_t *in = src + (((r.y-desty) + y) * srcw) + (r.x-destx);
+        uint8_t *out = (uint8_t*)(dest->pixels) + ((r.y + y) * dest->pitch) + r.x;
+        int x;
+        for (x = 0; x < r.w; ++x) {
+            uint8_t c = *in++;
+            if (c) { *out = matte; }
+            ++out;
         }
     }
 }
@@ -271,27 +304,27 @@ static void blit_4bpp(SDL_Surface *dest, SDL_Rect const* destrect, const uint8_t
 
 void sprout16(int16_t x, int16_t y, uint8_t img)
 {
+    const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
     y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    blit_4bpp(screen, &rect, export_spr16_bin + (img * BYTESIZE_SPR16));
+    blit8(pix, 16, 16, screen, x, y);
 }
 
 void sprout32(int16_t x, int16_t y, uint8_t img)
 {
+    const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
     x = x >> FX;
     y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 32, 32};
-    blit_4bpp(screen, &rect, export_spr32_bin + (img * BYTESIZE_SPR32));
+    blit8(pix, 32, 32, screen, x, y);
 }
 
 // TODO
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
     y = y >> FX;
-    SDL_Rect rect = {(int)x, (int)y, 16, 16};
-    blit_4bpp(screen, &rect, export_spr16_bin + (img * BYTESIZE_SPR16));
+    blit8(pix, 16, 16, screen, x, y);
 }
 
 const uint8_t shot_spr[16] = {

@@ -1,7 +1,7 @@
 EXPORT=sdl2/export
 SRCS_COMMON = game.c gob.c player.c
 SRCS_SYS = sdl2/sys.c
-SRCS_EXPORT = $(EXPORT)/palette.c $(EXPORT)/spr16.c $(EXPORT)/spr32.c
+SRCS_EXPORT = $(EXPORT)/palette.c $(EXPORT)/spr16.c $(EXPORT)/spr32.c $(EXPORT)/chars.c
 INCS = gob.h player.h sdl2/sys.h
 
 SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
@@ -10,7 +10,7 @@ OBJS = $(patsubst %.cpp,%.o,$(SRCS) )
 
 CC := g++
 LIBS = `sdl2-config --libs` -lSDL2_mixer
-CFLAGS = `sdl2-config --cflags` -Wall -Isdl2
+CFLAGS = -ggdb `sdl2-config --cflags` -Wall -Isdl2
 EXE = game
 
 $(EXE): $(OBJS)
@@ -24,10 +24,13 @@ $(EXPORT)/palette.bin: sprites16.png
 	tools/png2sprites -palette -out $@ -fmt bin $<
 
 $(EXPORT)/spr16.bin: sprites16.png
-	tools/png2sprites -w 16 -h 16 -bpp 4 -num 64 -out $@ -fmt bin $<
+	tools/png2sprites -w 16 -h 16 -bpp 8 -num 64 -out $@ -fmt bin $<
 
 $(EXPORT)/spr32.bin: sprites32.png
-	tools/png2sprites -w 32 -h 32 -bpp 4 -num 8 -out $@ -fmt bin $<
+	tools/png2sprites -w 32 -h 32 -bpp 8 -num 8 -out $@ -fmt bin $<
+
+$(EXPORT)/chars.bin: chars.png
+	tools/png2sprites -w 8 -h 8 -bpp 8 -num 256 -out $@ -fmt bin $<
 
 %.c: %.bin
 	xxd -i -n export_`basename $<` $< $@
