@@ -621,7 +621,7 @@ void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
     }
 
     ex[e] = (((x >> FX) + 4) / 8) + 12;
-    ey[e] = (((y >> FX) + 12) / 8) + 12;
+    ey[e] = (((y >> FX) + 4) / 8) + 12;
     ekind[e] = kind;
     etimer[e] = 0;
 }

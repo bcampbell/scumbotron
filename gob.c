@@ -53,7 +53,7 @@ void gobs_tick(bool spawnphase)
             ++gobs_spawncnt;
             ++gobs_lockcnt;
             if( gobtimer[i] == 8) {
-                sys_addeffect(gobx[i], goby[i], EK_SPAWN);
+                sys_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
             } else if( gobtimer[i] == 0) {
                 // done spawning.
                 gobflags[i] &= ~GF_SPAWNING;
@@ -378,7 +378,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
     if (gobkind[d] == GK_AMOEBA_SMALL) {
         gobkind[d] = GK_NONE;
         sys_sfx_play(SFX_KABOOM);
-        sys_addeffect(gobx[d], goby[d], EK_KABOOM);
+        sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
         return;
     }
 
@@ -452,7 +452,7 @@ void tank_shot(uint8_t d, uint8_t s)
         // boom.
         gobkind[d] = GK_NONE;
         sys_sfx_play(SFX_KABOOM);
-        sys_addeffect(gobx[d], goby[d], EK_KABOOM);
+        sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
     } else {
         // knockback
         gobx[d] += (shot_xvel(s) >> 0);

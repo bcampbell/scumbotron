@@ -5,11 +5,6 @@
 volatile uint16_t inp_joystate = 0;
 volatile uint8_t tick = 0;
 
-
-
-static void pumpevents();
-
-
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
 extern unsigned char export_spr16_bin[];
@@ -42,8 +37,20 @@ static SDL_Surface* screen = NULL;
 static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
 
-static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty);
-static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte);
+// local functions
+static void pumpevents();
+static void blit8(const uint8_t *src, int srcw, int srch,
+    SDL_Surface *dest, int destx, int desty);
+static void blit8_matte(const uint8_t *src, int srcw, int srch,
+    SDL_Surface *dest, int destx, int desty, uint8_t matte);
+
+static void drawrect(SDL_Surface *dest, const SDL_Rect *r, uint8_t colour);
+
+static inline void sprout16(int16_t x, int16_t y, uint8_t img);
+static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+static inline void sprout32(int16_t x, int16_t y, uint8_t img);
+static void rendereffects();
+
 
 void sys_init()
 {
@@ -215,11 +222,15 @@ void sys_render_start()
 
 void sys_render_finish()
 {
+    rendereffects();
+
     // Convert screen to argb.
     SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
     // Load into texture.
     SDL_UpdateTexture(screenTexture, NULL, conversionSurface->pixels, conversionSurface->pitch);
-    // Display it!
+    SDL_SetRenderDrawColor(renderer, 32,32,32, 255);
+    SDL_RenderClear(renderer);
+    // Display screen.
     SDL_RenderCopy(renderer, screenTexture, NULL, NULL);
     SDL_RenderPresent(renderer);
 }
@@ -249,10 +260,6 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
     }
 }
 
-void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
-{
-}
-
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
 }
@@ -261,7 +268,43 @@ void sys_sfx_play(uint8_t effect)
 {
 }
 
+static inline uint8_t* pixptr(SDL_Surface* s, int x, int y)
+{
+    return (uint8_t*)s->pixels + (y*s->pitch) + x;
+}
 
+static void drawrect(SDL_Surface *dest, const SDL_Rect *r, uint8_t colour)
+{
+    int n;
+    uint8_t *p;
+    SDL_Rect b;
+    SDL_IntersectRect(&dest->clip_rect, r, &b);
+
+    // top
+    p = pixptr(dest, b.x, b.y);
+    for (n = 0; n < b.w; ++n) {
+         *p++ = colour;
+    }
+    // bottom
+    p = pixptr(dest, b.x, b.y + b.h - 1);
+    for (n = 0; n < b.w; ++n) {
+         *p++ = colour;
+    }
+    // left (excluding top and bottom)
+    p = pixptr(dest, b.x, b.y+1);
+    for (n = 0; n < b.h - 2; ++n) {
+         *p = colour;
+         p += dest->pitch;
+    }
+    // right (excluding top and bottom)
+    p = pixptr(dest, b.x + b.w-1, b.y+1);
+    for (n = 0; n < b.h - 2; ++n) {
+         *p = colour;
+         p += dest->pitch;
+    }
+}
+
+// blit with colour 0 transparent.
 static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty)
 {
     int y;
@@ -280,6 +323,7 @@ static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int
     }
 }
 
+// blit with colour 0 transparent, replace all other pixels with matte.
 static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte)
 {
     int y;
@@ -300,7 +344,7 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *des
 
 
 
-void sprout16(int16_t x, int16_t y, uint8_t img)
+static inline void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
@@ -308,7 +352,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
     blit8(pix, 16, 16, screen, x, y);
 }
 
-void sprout32(int16_t x, int16_t y, uint8_t img)
+static inline void sprout32(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
     x = x >> FX;
@@ -317,12 +361,12 @@ void sprout32(int16_t x, int16_t y, uint8_t img)
 }
 
 // TODO
-void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
     y = y >> FX;
-    blit8(pix, 16, 16, screen, x, y);
+    blit8_matte(pix, 16, 16, screen, x, y, 1);
 }
 
 const uint8_t shot_spr[16] = {
@@ -344,5 +388,119 @@ const uint8_t shot_spr[16] = {
     0,              // 1110 up+down+left           
     0,              // 1111
 };
+
+
+void sys_player_render(int16_t x, int16_t y) {
+    sprout16(x, y, 0);
+}
+
+void sys_shot_render(int16_t x, int16_t y, uint8_t direction) {
+    sprout16(x, y, shot_spr[direction]);
+}
+void sys_block_render(int16_t x, int16_t y) {
+    sprout16(x, y, 2);
+}
+
+void sys_grunt_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
+}
+
+void sys_baiter_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
+}
+
+void sys_tank_render(int16_t x, int16_t y, bool highlight) {
+    if (highlight) {
+        sprout16_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
+    } else {
+        sprout16(x, y,  SPR16_TANK + ((tick >> 5) & 0x01));
+    }
+}
+
+void sys_amoeba_big_render(int16_t x, int16_t y) {
+    sprout32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
+}
+
+void sys_amoeba_med_render(int16_t x, int16_t y) {
+    sprout16(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
+}
+
+void sys_amoeba_small_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
+}
+
+
+/*
+ * Visual Effects
+ */
+
+#define MAX_EFFECTS 8
+static uint8_t ekind[MAX_EFFECTS];
+static uint8_t etimer[MAX_EFFECTS];
+static int16_t ex[MAX_EFFECTS];
+static int16_t ey[MAX_EFFECTS];
+
+
+void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
+{
+    // find free one
+    uint8_t e = 0;
+    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
+        ++e;
+    }
+    if (e==MAX_EFFECTS) {
+        return; // none free
+    }
+
+    ex[e] = x;
+    ey[e] = y;
+    ekind[e] = kind;
+    etimer[e] = 0;
+}
+
+static void do_spawneffect(uint8_t e) {
+    int t = (int)etimer[e]++;
+    int x = ex[e]>>FX;
+    int y = ey[e]>>FX;
+
+    t = 14-t;
+
+    if(t>0) {
+        SDL_Rect r = {x-t*8, y-t*8, t*8*2, t*8*2};
+        drawrect(screen, &r, t);
+    } else {
+        ekind[e] = EK_NONE;
+    }
+}
+
+static void do_kaboomeffect(uint8_t e) {
+    int t = (int)etimer[e]++;
+    int x = ex[e]>>FX;
+    int y = ey[e]>>FX;
+
+    int f = t*t;
+    if(t<15) {
+        SDL_Rect r = {x-f/2, y-f/2, f, f};
+        drawrect(screen, &r, t);
+    } else {
+        ekind[e] = EK_NONE;
+    }
+}
+
+
+static void rendereffects()
+{
+    uint8_t e;
+    for(e = 0; e < MAX_EFFECTS; ++e) {
+        if (ekind[e] == EK_NONE) {
+            continue;
+        } else if (ekind[e] == EK_SPAWN) {
+            do_spawneffect(e);
+        } else if (ekind[e] == EK_KABOOM) {
+            do_kaboomeffect(e);
+        }
+    }
+}
+
 
 

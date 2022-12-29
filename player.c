@@ -101,7 +101,7 @@ uint8_t d;
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
                 overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
                 plrfacing[p] = 0xff;    // dead
-                sys_addeffect(gobx[d], goby[d], EK_KABOOM);
+                sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
                 // boom
                 return true;
             }
@@ -201,12 +201,12 @@ void shot_tick(uint8_t s)
 
 void shot_collisions()
 {
-uint8_t s;
+    uint8_t s;
     for (s = 0; s < MAX_SHOTS; ++s) {
         // Take centre point of shot.
         int16_t sx = shotx[s] + (8<<FX);
         int16_t sy = shoty[s] + (8<<FX);
-uint8_t d;
+        uint8_t d;
         if (shotdir[s] == 0) {
             continue;   // inactive
         }
@@ -231,7 +231,7 @@ uint8_t d;
                             tank_shot(d, s);
                             break;
                         default:
-                            sys_addeffect(gobx[d], goby[d], EK_KABOOM);
+                            sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
                             gobkind[d] = GK_NONE;
                             break;
                     }

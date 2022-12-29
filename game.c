@@ -37,6 +37,7 @@ void titlescreen_run()
 static void level_init(uint8_t level) {
 //    dudes_spawn(GK_AMOEBA_BIG, 10);
     dudes_spawn(GK_GRUNT, 20);
+    dudes_spawn(GK_TANK, 5);
     dudes_spawn(GK_BLOCK, 10);
 
     dudes_reset();    // position and intro
