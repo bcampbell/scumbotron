@@ -218,11 +218,12 @@ void sys_render_start()
     // cycle colour 15
     i = (((tick >> 1)) & 0x7) + 2;
     SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
+
+    rendereffects();
 }
 
 void sys_render_finish()
 {
-    rendereffects();
 
     // Convert screen to argb.
     SDL_BlitSurface(screen, NULL, conversionSurface, NULL);

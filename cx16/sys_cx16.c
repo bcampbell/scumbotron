@@ -55,7 +55,7 @@ static uint8_t etimer[MAX_EFFECTS];
 static uint8_t ex[MAX_EFFECTS];
 static uint8_t ey[MAX_EFFECTS];
 
-static void rendereffects();
+static void rendereffects(bool draw);
 
 // Number of sprites used so far in current frame
 static uint8_t sprcnt;
@@ -110,7 +110,9 @@ void sys_render_start()
     VERA.data1 = VERA.data0;
     VERA.data1 = VERA.data0;
 
-    rendereffects();
+    // clear, then draw the effects
+    rendereffects(false);
+    rendereffects(true);
 
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
@@ -129,7 +131,6 @@ void sys_render_finish()
         }
     }
     sprcntprev = sprcnt;
-
 
     sfx_tick();
     //testum();
@@ -628,23 +629,35 @@ void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
 
 
 
-static void do_kaboomeffect(uint8_t e) {
-    uint8_t t = etimer[e];
+static void do_spawneffect(uint8_t e, bool draw) {
+    uint8_t t = 16-etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    if(t<15) {
+    if (draw) {
         drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
-    }
-    if(t>0) {
-        --t;
+    } else {
         clrbox(cx-t, cy-t, cx+t, cy+t);
-    }
-    if(++etimer[e] == 16) {
-        ekind[e] = EK_NONE;
+        if (++etimer[e] >= 16) {
+            ekind[e] = EK_NONE;
+        }
     }
 }
 
-static void rendereffects()
+static void do_kaboomeffect(uint8_t e, bool draw) {
+    uint8_t t = etimer[e];
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+    if (draw) {
+        drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    } else {
+        clrbox(cx-t, cy-t, cx+t, cy+t);
+        if (++etimer[e] >= 16) {
+            ekind[e] = EK_NONE;
+        }
+    }
+}
+
+static void rendereffects(bool draw)
 {
     uint8_t e;
     for(e = 0; e < MAX_EFFECTS; ++e) {
@@ -652,11 +665,10 @@ static void rendereffects()
             continue;
         }
         if (ekind[e] == EK_SPAWN) {
-            //do_spawneffect(e);
-            do_kaboomeffect(e);
+            do_spawneffect(e, draw);
         }
         if (ekind[e] == EK_KABOOM) {
-            do_kaboomeffect(e);
+            do_kaboomeffect(e, draw);
         }
     }
 }
