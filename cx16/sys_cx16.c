@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include "sys.h"
+#include "../gob.h"
 
 // Platform-specifics for cx16
 
@@ -26,9 +27,6 @@ uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR32_SIZE (16*32)   // 32x32, 4 bpp
 
-//extern uint8_t palette[16*2];   // just 16 colours
-//extern uint8_t sprites16[64*SPR16_SIZE];   // 64 16x16 sprites
-//extern uint8_t sprites32[8*SPR32_SIZE];   // 16 32x32 sprites
 extern unsigned char export_palette_zbin[];
 extern unsigned int export_palette_zbin_len;
 extern unsigned char export_spr16_zbin[];
@@ -49,13 +47,42 @@ extern unsigned int export_spr32_zbin_len;
 #define VRAM_SPRITE_ATTRS 0x1FC00
 #define VRAM_PSG 0x1F9C0
 
+
+
+// sprite image defs
+#define SPR16_BAITER 16
+#define SPR16_AMOEBA_MED 20
+#define SPR16_AMOEBA_SMALL 24
+#define SPR16_TANK 28
+#define SPR16_GRUNT 30
+#define SPR16_SHOT 4
+#define SPR16_HZAPPER 12
+#define SPR16_HZAPPER_ON 13
+#define SPR16_VZAPPER 14
+#define SPR16_VZAPPER_ON 15
+
+#define SPR32_AMOEBA_BIG 0
+
+static void sprout16(int16_t x, int16_t y, uint8_t img);
+static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+static void sprout32(int16_t x, int16_t y, uint8_t img);
+static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
+static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, uint8_t colour);
+
+// TODO
+//static void draw_hline(uint8_t cx0, uint8_t cy0, uint8_t cy1, uint8_t ch, uint8_t, colour);
+//static void draw_vline(uint8_t cx0, uint8_t cx1, uint8_t cy1, uint8_t ch, uint8_t, colour);
+
+static void clr_layer0();
+
+
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
 static uint8_t etimer[MAX_EFFECTS];
 static uint8_t ex[MAX_EFFECTS];
 static uint8_t ey[MAX_EFFECTS];
 
-static void rendereffects(bool draw);
+static void rendereffects();
 
 // Number of sprites used so far in current frame
 static uint8_t sprcnt;
@@ -101,6 +128,7 @@ void testum() {
 
 void sys_render_start()
 {
+
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
     veraaddr0(VRAM_PALETTE + (i*2), VERA_INC_1);
@@ -109,10 +137,8 @@ void sys_render_start()
     VERA.data1 = VERA.data0;
     VERA.data1 = VERA.data0;
 
-    // clear, then draw the effects
-    rendereffects(false);
-    rendereffects(true);
-
+    clr_layer0();
+    rendereffects();
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
     sprcnt = 0;
@@ -135,7 +161,7 @@ void sys_render_finish()
     //testum();
 }
 
-void sprout16(int16_t x, int16_t y, uint8_t img ) {
+static void sprout16(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     // 0: aaaaaaaa
     //    a: img address (bits 12:5) so always 16-byte aligned.
@@ -167,7 +193,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img ) {
     ++sprcnt;
 }
 
-void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
+static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -181,7 +207,7 @@ void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     ++sprcnt;
 }
 
-void sprout32(int16_t x, int16_t y, uint8_t img ) {
+static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     const uint32_t addr = VRAM_SPRITES32 + (SPR32_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -334,12 +360,28 @@ void sys_init()
     {
         uint8_t i;
         veraaddr0(VRAM_LAYER0_TILES, VERA_INC_1);
+        // char 0
         for (i=0; i<8; ++i) {
             VERA.data0 = 0;
         }
+        //char 1
         for (i=0; i<4; ++i) {
             VERA.data0 = 0b10101010;
             VERA.data0 = 0b01010101;
+        }
+        // hline
+        for (i=0; i<8; ++i) {
+            uint8_t j;
+            for (j=0; j<8; ++j) {
+                VERA.data0 = (i==j) ? 0xff : 0x00;
+            }
+        }
+        // vline
+        for (i=0; i<8; ++i) {
+            uint8_t j;
+            for (j=0; j<8; ++j) {
+                VERA.data0 = 1<<(7-i);
+            }
         }
     }
 
@@ -506,10 +548,12 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 
 static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
 {
-    return VRAM_LAYER0_MAP + cy*64*2 + cx*2;
+    // layer is 64 x 64 chars, border 12.
+    return VRAM_LAYER0_MAP + (cy+12)*64*2 + (cx+12)*2;
 }
 
 
+// draw box in char coords
 static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, uint8_t colour)
 {
     uint8_t w = (x1 - x0) + 1;
@@ -568,6 +612,19 @@ static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, 
 
 }
 
+static void clr_layer0()
+{
+    uint8_t cy;
+    for (cy = 0; cy < (SCREEN_H / 8); ++cy) {
+        uint8_t cx;
+        // just set colour to 0
+        veraaddr0(layer0addr(0, cy) + 1, VERA_INC_2);
+        for (cx = 0; cx < (SCREEN_W / 8); ++cx) {
+            VERA.data0 = 0;
+        }
+    }
+}
+
 static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
 {
     uint8_t w = (x1 - x0) + 1;
@@ -620,43 +677,35 @@ void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
         return; // none free
     }
 
-    ex[e] = (((x >> FX) + 4) / 8) + 12;
-    ey[e] = (((y >> FX) + 4) / 8) + 12;
+    ex[e] = (((x >> FX) + 4) / 8);
+    ey[e] = (((y >> FX) + 4) / 8);
     ekind[e] = kind;
     etimer[e] = 0;
 }
 
 
 
-static void do_spawneffect(uint8_t e, bool draw) {
+static void do_spawneffect(uint8_t e) {
     uint8_t t = 16-etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    if (draw) {
-        drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
-    } else {
-        clrbox(cx-t, cy-t, cx+t, cy+t);
-        if (++etimer[e] >= 16) {
-            ekind[e] = EK_NONE;
-        }
+    drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    if (++etimer[e] >= 16) {
+        ekind[e] = EK_NONE;
     }
 }
 
-static void do_kaboomeffect(uint8_t e, bool draw) {
+static void do_kaboomeffect(uint8_t e) {
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    if (draw) {
-        drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
-    } else {
-        clrbox(cx-t, cy-t, cx+t, cy+t);
-        if (++etimer[e] >= 16) {
-            ekind[e] = EK_NONE;
-        }
+    drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    if (++etimer[e] >= 16) {
+        ekind[e] = EK_NONE;
     }
 }
 
-static void rendereffects(bool draw)
+static void rendereffects()
 {
     uint8_t e;
     for(e = 0; e < MAX_EFFECTS; ++e) {
@@ -664,10 +713,10 @@ static void rendereffects(bool draw)
             continue;
         }
         if (ekind[e] == EK_SPAWN) {
-            do_spawneffect(e, draw);
+            do_spawneffect(e);
         }
         if (ekind[e] == EK_KABOOM) {
-            do_kaboomeffect(e, draw);
+            do_kaboomeffect(e);
         }
     }
 }
@@ -740,6 +789,91 @@ static void sfx_tick()
             VERA.data0 = 0;
             break;
         }
+    }
+}
+
+void sys_player_render(int16_t x, int16_t y) {
+    sprout16(x, y, 0);
+}
+
+void sys_shot_render(int16_t x, int16_t y, uint8_t direction) {
+    sprout16(x, y, shot_spr[direction]);
+}
+void sys_block_render(int16_t x, int16_t y) {
+    sprout16(x, y, 2);
+}
+
+void sys_grunt_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
+}
+
+void sys_baiter_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
+}
+
+void sys_tank_render(int16_t x, int16_t y, bool highlight) {
+    if (highlight) {
+        sprout16_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
+    } else {
+        sprout16(x, y,  SPR16_TANK + ((tick >> 5) & 0x01));
+    }
+}
+
+void sys_amoeba_big_render(int16_t x, int16_t y) {
+    sprout32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
+}
+
+void sys_amoeba_med_render(int16_t x, int16_t y) {
+    sprout16(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
+}
+
+void sys_amoeba_small_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
+}
+
+void sys_hzapper_render(int16_t x, int16_t y, uint8_t state)
+{
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_HZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_HZAPPER_ON);
+            //if (tick & 0x01) {
+            //    hline_noclip(0, SCREEN_W, (y >> FX) + 8, 3);
+            //}
+            break;
+        case ZAPPER_ON:
+            //hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
+            {
+                int16_t cy = (( y >> FX) + 8) / 8;
+                drawbox(0, cy, SCREEN_W/8, cy, 2 + ((y>>FX) & 0x07), 15);
+                sprout16(x, y, SPR16_HZAPPER_ON);
+            }
+            break;
+    }
+}
+
+void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
+{
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_VZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_VZAPPER_ON);
+            //if (tick & 0x01) {
+            //    vline_noclip((x>>FX)+8, 0, SCREEN_H, 3);
+            //}
+            break;
+        case ZAPPER_ON:
+            //vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
+            {
+                int16_t cx = ((x >> FX) + 8 ) / 8;
+                drawbox(cx, 0, cx, SCREEN_H / 8, 10 + ((x >> FX) & 0x07), 15);
+                sprout16(x, y, SPR16_VZAPPER_ON);
+            }
+            break;
     }
 }
 

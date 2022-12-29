@@ -1,4 +1,5 @@
 #include "sys.h"
+#include "../gob.h"
 
 #include <SDL.h>
 
@@ -21,6 +22,10 @@ extern unsigned int export_chars_bin_len;
 #define SPR16_TANK 28
 #define SPR16_GRUNT 30
 #define SPR16_SHOT 4
+#define SPR16_HZAPPER 12
+#define SPR16_HZAPPER_ON 13
+#define SPR16_VZAPPER 14
+#define SPR16_VZAPPER_ON 15
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -44,7 +49,9 @@ static void blit8(const uint8_t *src, int srcw, int srch,
 static void blit8_matte(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty, uint8_t matte);
 
-static void drawrect(SDL_Surface *dest, const SDL_Rect *r, uint8_t colour);
+static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
+static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
+static void drawrect(const SDL_Rect *r, uint8_t colour);
 
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
@@ -274,35 +281,53 @@ static inline uint8_t* pixptr(SDL_Surface* s, int x, int y)
     return (uint8_t*)s->pixels + (y*s->pitch) + x;
 }
 
-static void drawrect(SDL_Surface *dest, const SDL_Rect *r, uint8_t colour)
+// Covers range [x_begin, x_end).
+static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour)
 {
-    int n;
-    uint8_t *p;
+    uint8_t *p = pixptr(screen, x_begin, y);
+    int n = x_end - x_begin;
+    while(n--) {
+        *p++ = colour;
+    }
+}
+
+// Covers range [y_begin, y_end).
+static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour)
+{
+    uint8_t *p = pixptr(screen, x, y_begin);
+    int n = y_end - y_begin;
+    while(n--) {
+        *p = colour;
+        p += screen->pitch;
+    }
+}
+
+static void drawrect(const SDL_Rect *r, uint8_t colour)
+{
     SDL_Rect b;
-    SDL_IntersectRect(&dest->clip_rect, r, &b);
+    SDL_IntersectRect(&screen->clip_rect, r, &b);
+
+    if( b.h == 0 || b.w == 0) {
+        return;
+    }
 
     // top
-    p = pixptr(dest, b.x, b.y);
-    for (n = 0; n < b.w; ++n) {
-         *p++ = colour;
-    }
+    hline_noclip(b.x, b.x + b.w, b.y, colour);
+
     // bottom
-    p = pixptr(dest, b.x, b.y + b.h - 1);
-    for (n = 0; n < b.w; ++n) {
-         *p++ = colour;
+    if (b.h<2) {
+        return;
     }
+    hline_noclip(b.x, b.x + b.w, b.y + b.h-1, colour);
+
     // left (excluding top and bottom)
-    p = pixptr(dest, b.x, b.y+1);
-    for (n = 0; n < b.h - 2; ++n) {
-         *p = colour;
-         p += dest->pitch;
-    }
+    vline_noclip(b.x, b.y + 1, b.y + b.h - 2, colour);
+
     // right (excluding top and bottom)
-    p = pixptr(dest, b.x + b.w-1, b.y+1);
-    for (n = 0; n < b.h - 2; ++n) {
-         *p = colour;
-         p += dest->pitch;
+    if (b.w < 2) {
+        return;
     }
+    vline_noclip(b.x + b.w-1, b.y+1, b.y + b.h - 2, colour);
 }
 
 // blit with colour 0 transparent.
@@ -430,8 +455,40 @@ void sys_amoeba_small_render(int16_t x, int16_t y) {
     sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
 }
 
-void sys_laser_render(int16_t x, int16_t y) {
-    sprout16(x, y, 0);
+void sys_hzapper_render(int16_t x, int16_t y, uint8_t state) {
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_HZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_HZAPPER_ON);
+            //if (tick & 0x01) {
+            //    hline_noclip(0, SCREEN_W, (y >> FX) + 8, 3);
+            //}
+            break;
+        case ZAPPER_ON:
+            hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
+            sprout16(x, y, SPR16_HZAPPER_ON);
+            break;
+    }
+}
+
+void sys_vzapper_render(int16_t x, int16_t y, uint8_t state) {
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_VZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_VZAPPER_ON);
+            //if (tick & 0x01) {
+            //    vline_noclip((x>>FX)+8, 0, SCREEN_H, 3);
+            //}
+            break;
+        case ZAPPER_ON:
+            vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
+            sprout16(x, y, SPR16_VZAPPER_ON);
+            break;
+    }
 }
 
 
@@ -472,7 +529,7 @@ static void do_spawneffect(uint8_t e) {
 
     if(t>0) {
         SDL_Rect r = {x-t*8, y-t*8, t*8*2, t*8*2};
-        drawrect(screen, &r, t);
+        drawrect(&r, t);
     } else {
         ekind[e] = EK_NONE;
     }
@@ -486,7 +543,7 @@ static void do_kaboomeffect(uint8_t e) {
     int f = t*t;
     if(t<15) {
         SDL_Rect r = {x-f/2, y-f/2, f, f};
-        drawrect(screen, &r, t);
+        drawrect(&r, t);
     } else {
         ekind[e] = EK_NONE;
     }

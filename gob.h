@@ -25,7 +25,8 @@
 #define GK_AMOEBA_MED 7
 #define GK_AMOEBA_SMALL 8
 #define GK_TANK 9
-#define GK_LASER 10
+#define GK_HZAPPER 10
+#define GK_VZAPPER 11
 
 // Flags
 #define GF_SPAWNING 0x01
@@ -34,8 +35,6 @@
 
 // Gob tables.
 #define MAX_GOBS 40
-
-// Vars
 
 extern uint8_t gobkind[MAX_GOBS];
 extern uint8_t gobflags[MAX_GOBS];
@@ -55,7 +54,6 @@ extern uint8_t gobs_spawncnt;  // num dudes spawning.
 void gobs_init();
 void gobs_tick(bool spawnphase);
 void gobs_render();
-void shot_collisions();
 uint8_t dude_alloc();
 void dude_randompos(uint8_t d);
 void dudes_reset();
@@ -78,8 +76,14 @@ void grunt_init(uint8_t d);
 void baiter_init(uint8_t d);
 void block_init(uint8_t d);
 void tank_init(uint8_t d);
-void laser_init(uint8_t d);
+void hzapper_init(uint8_t d);
+void vzapper_init(uint8_t d);
 void tank_shot(uint8_t d, uint8_t shot);
-void laser_shot(uint8_t d, uint8_t shot);
+void zapper_shot(uint8_t d, uint8_t shot);
+
+#define ZAPPER_OFF 0
+#define ZAPPER_WARMING_UP 1
+#define ZAPPER_ON 2
+uint8_t zapper_state(uint8_t d);
 
 #endif // GOB_H

@@ -87,27 +87,46 @@ static inline bool overlap(int16_t amin, int16_t amax, int16_t bmin, int16_t bma
 // returns true if player killed.
 bool player_collisions()
 {
+    bool norwegian_blue = false;
     uint8_t p;
     for (p = 0; p < MAX_PLAYERS; ++p) {
         int16_t px0 = plrx[p] + (4 << FX);
         int16_t py0 = plry[p] + (4 << FX);
         int16_t px1 = plrx[p] + (12 << FX);
         int16_t py1 = plry[p] + (12 << FX);
-uint8_t d; 
+        uint8_t d;
         for (d = 0; d < MAX_GOBS; ++d) {
             if (gobkind[d]==GK_NONE) {
                 continue;
             }
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
                 overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
-                plrfacing[p] = 0xff;    // dead
-                sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
                 // boom
-                return true;
+                norwegian_blue = true;
+                break;
+            }
+            // special checks for zapper beams
+            if (gobkind[d] == GK_VZAPPER && zapper_state(d) == ZAPPER_ON) {
+                int16_t xzap = gobx[d] + (8<<FX);
+                if (px0 <= xzap && px1 >= xzap) {
+                    norwegian_blue = true;
+                    break;
+                }
+            }
+            if (gobkind[d] == GK_HZAPPER && zapper_state(d) == ZAPPER_ON) {
+                int16_t yzap = goby[d] + (8<<FX);
+                if (py0 <= yzap && py1 >= yzap) {
+                    norwegian_blue = true;
+                    break;
+                }
             }
         }
+        if (norwegian_blue) {
+            plrfacing[p] = 0xff;    // mark as dead
+            sys_addeffect(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+        }
     }
-    return false;
+    return norwegian_blue;
 }
 
 
@@ -230,8 +249,9 @@ void shot_collisions()
                         case GK_TANK:
                             tank_shot(d, s);
                             break;
-                        case GK_LASER:
-                            laser_shot(d, s);
+                        case GK_HZAPPER:
+                        case GK_VZAPPER:
+                            zapper_shot(d, s);
                             break;
                         default:
                             sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);

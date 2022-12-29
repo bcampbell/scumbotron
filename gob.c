@@ -21,7 +21,7 @@ void grunt_tick(uint8_t d);
 void baiter_tick(uint8_t d);
 void amoeba_tick(uint8_t d);
 void tank_tick(uint8_t d);
-void laser_tick(uint8_t d);
+void zapper_tick(uint8_t d);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -90,8 +90,9 @@ void gobs_tick(bool spawnphase)
                 ++gobs_lockcnt;
                 tank_tick(i);
                 break;
-            case GK_LASER:
-                laser_tick(i);
+            case GK_HZAPPER:
+            case GK_VZAPPER:
+                zapper_tick(i);
                 break;
             default:
                 break;
@@ -130,8 +131,11 @@ void gobs_render()
             case GK_TANK:
                 sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
                 break;
-            case GK_LASER:
-                sys_laser_render(gobx[d], goby[d]);
+            case GK_HZAPPER:
+                sys_hzapper_render(gobx[d], goby[d], zapper_state(d));
+                break;
+            case GK_VZAPPER:
+                sys_vzapper_render(gobx[d], goby[d], zapper_state(d));
                 break;
             default:
                 break;
@@ -164,8 +168,11 @@ void dudes_spawn(uint8_t kind, uint8_t n)
             case GK_TANK:
                 tank_init(d);
                 break;
-            case GK_LASER:
-                laser_init(d);
+            case GK_HZAPPER:
+                hzapper_init(d);
+                break;
+            case GK_VZAPPER:
+                vzapper_init(d);
                 break;
             default:
                 break;
@@ -472,22 +479,47 @@ void tank_shot(uint8_t d, uint8_t s)
 
 }
 
-// laser
+// zapper
 
-void laser_init(uint8_t d)
+void hzapper_init(uint8_t d)
 {
-    gobkind[d] = GK_LASER;
+    uint8_t foo = rnd();
+    gobkind[d] = GK_HZAPPER;
     gobflags[d] = 0;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (1<<FX)/4;
     gobvy[d] = (1<<FX)/4;
+    if (foo & 1) {
+        gobvx[d] = -gobvx[d]; 
+    }
+    if (foo & 2) {
+        gobvy[d] = -gobvy[d]; 
+    }
     gobdat[d] = 0;
     gobtimer[d] = 0;
 }
 
+void vzapper_init(uint8_t d)
+{
+    uint8_t foo = rnd();
+    gobkind[d] = GK_VZAPPER;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = (1<<FX)/4;
+    gobvy[d] = (1<<FX)/4;
+    if (foo & 1) {
+        gobvx[d] = -gobvx[d]; 
+    }
+    if (foo & 2) {
+        gobvy[d] = -gobvy[d]; 
+    }
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
 
-void laser_tick(uint8_t d)
+void zapper_tick(uint8_t d)
 {
     int16_t x = gobx[d];
     int16_t y = goby[d];
@@ -513,9 +545,27 @@ void laser_tick(uint8_t d)
         gobvy[d] = -gobvy[d];
     }
     goby[d] = y;
+
+    // fire control
+    if(tick & 0x04) {
+        gobtimer[d]++;
+    }
+
 }
 
-void laser_shot(uint8_t d, uint8_t s)
+
+uint8_t zapper_state(uint8_t d)
+{
+    if (gobtimer[d] < 200) {
+        return ZAPPER_OFF;
+    }
+    if (gobtimer[d] < 220) {
+        return ZAPPER_WARMING_UP;
+    }
+    return ZAPPER_ON;
+}
+
+void zapper_shot(uint8_t d, uint8_t s)
 {
     // knockback
     gobvx[d] += (shot_xvel(s) >> FX);
