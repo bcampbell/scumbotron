@@ -230,13 +230,11 @@ void sys_clr()
 
 
 static uint8_t glyph(char ascii) {
-    if (ascii >= 'A' && ascii <= 'Z') {
-        return (uint8_t)(ascii - ('A'-1));
+    // 32-126 directly printable
+    if (ascii >= 32 && ascii <= 126) {
+        return (uint8_t)ascii;
     }
-    if (ascii >= 'a' && ascii <= 'z') {
-        return (uint8_t)(ascii - ('a'-1));
-    }
-    return (uint8_t)ascii;
+    return 0;
 }
 
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
