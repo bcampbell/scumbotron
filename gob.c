@@ -21,6 +21,7 @@ void grunt_tick(uint8_t d);
 void baiter_tick(uint8_t d);
 void amoeba_tick(uint8_t d);
 void tank_tick(uint8_t d);
+void laser_tick(uint8_t d);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -89,6 +90,9 @@ void gobs_tick(bool spawnphase)
                 ++gobs_lockcnt;
                 tank_tick(i);
                 break;
+            case GK_LASER:
+                laser_tick(i);
+                break;
             default:
                 break;
         }
@@ -126,6 +130,9 @@ void gobs_render()
             case GK_TANK:
                 sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
                 break;
+            case GK_LASER:
+                sys_laser_render(gobx[d], goby[d]);
+                break;
             default:
                 break;
         }
@@ -156,6 +163,9 @@ void dudes_spawn(uint8_t kind, uint8_t n)
                 break;
             case GK_TANK:
                 tank_init(d);
+                break;
+            case GK_LASER:
+                laser_init(d);
                 break;
             default:
                 break;
@@ -460,5 +470,55 @@ void tank_shot(uint8_t d, uint8_t s)
         gobtimer[d] = 8;
     }
 
+}
+
+// laser
+
+void laser_init(uint8_t d)
+{
+    gobkind[d] = GK_LASER;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = (1<<FX)/4;
+    gobvy[d] = (1<<FX)/4;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
+
+void laser_tick(uint8_t d)
+{
+    int16_t x = gobx[d];
+    int16_t y = goby[d];
+    const int16_t xmax = (SCREEN_W - 16)<<FX;
+    const int16_t ymax = (SCREEN_H - 16)<<FX;
+
+    x += gobvx[d];
+    if (x < 0) {
+        x = -x;
+        gobvx[d] = -gobvx[d];
+    } else if (x >= xmax) {
+        x = xmax - (x - xmax);
+        gobvx[d] = -gobvx[d];
+    }
+    gobx[d] = x;
+
+    y += gobvy[d];
+    if (y < 0) {
+        y = -y;
+        gobvy[d] = -gobvy[d];
+    } else if (y >= ymax) {
+        y = ymax - (y - ymax);
+        gobvy[d] = -gobvy[d];
+    }
+    goby[d] = y;
+}
+
+void laser_shot(uint8_t d, uint8_t s)
+{
+    // knockback
+    gobvx[d] += (shot_xvel(s) >> FX);
+    gobvy[d] += (shot_yvel(s) >> FX);
 }
 

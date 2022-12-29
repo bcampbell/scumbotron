@@ -25,6 +25,7 @@
 #define GK_AMOEBA_MED 7
 #define GK_AMOEBA_SMALL 8
 #define GK_TANK 9
+#define GK_LASER 10
 
 // Flags
 #define GF_SPAWNING 0x01
@@ -77,6 +78,8 @@ void grunt_init(uint8_t d);
 void baiter_init(uint8_t d);
 void block_init(uint8_t d);
 void tank_init(uint8_t d);
+void laser_init(uint8_t d);
 void tank_shot(uint8_t d, uint8_t shot);
+void laser_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H

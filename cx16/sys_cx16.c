@@ -97,7 +97,6 @@ void testum() {
         VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
         VERA.data0 = etimer[0] + '0';
         VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
-
 }
 
 void sys_render_start()

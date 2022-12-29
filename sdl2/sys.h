@@ -33,6 +33,7 @@ void sys_tank_render(int16_t x, int16_t y, bool highlight);
 void sys_amoeba_big_render(int16_t x, int16_t y);
 void sys_amoeba_med_render(int16_t x, int16_t y);
 void sys_amoeba_small_render(int16_t x, int16_t y);
+void sys_laser_render(int16_t x, int16_t y);
 
 // fixed-point: 6 fractional bits.
 #define FX 6

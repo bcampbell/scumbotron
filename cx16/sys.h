@@ -117,4 +117,9 @@ static inline void sys_amoeba_med_render(int16_t x, int16_t y) {
 static inline void sys_amoeba_small_render(int16_t x, int16_t y) {
     sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
 }
+
+static inline void sys_laser_render(int16_t x, int16_t y) {
+    sprout16(x, y, 0);
+}
+
 #endif // SYS_CX16_H

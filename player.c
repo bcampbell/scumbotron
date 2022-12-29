@@ -27,7 +27,7 @@ static uint8_t shot_alloc();
 #define JOY_BTN_1_MASK 0x80
 
 // player
-#define PLAYER_SPD FX_ONE
+#define PLAYER_SPD (2*FX_ONE);
 
 void player_create(uint8_t p, int16_t x, int16_t y) {
     plrx[p] = x;
@@ -229,6 +229,9 @@ void shot_collisions()
                             break;
                         case GK_TANK:
                             tank_shot(d, s);
+                            break;
+                        case GK_LASER:
+                            laser_shot(d, s);
                             break;
                         default:
                             sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
