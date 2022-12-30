@@ -58,6 +58,9 @@ static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout32(int16_t x, int16_t y, uint8_t img);
 static void rendereffects();
 
+void sys_gatso(uint8_t t)
+{
+}
 
 void sys_init()
 {

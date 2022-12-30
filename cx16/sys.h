@@ -40,8 +40,6 @@ extern volatile uint8_t tick;
 15 - 0
 */
 
-
-
 // sfx
 #define SFX_NONE 0
 #define SFX_LASER 1
@@ -62,6 +60,12 @@ extern void sys_sfx_play(uint8_t effect);
 #define FX 6
 #define FX_ONE (1<<FX)
 
+
+// noddy profiling
+#define GATSO_OFF 0
+#define GATSO_ON 1
+
+void sys_gatso(uint8_t t);
 
 void sys_player_render(int16_t x, int16_t y);
 void sys_shot_render(int16_t x, int16_t y, uint8_t direction);

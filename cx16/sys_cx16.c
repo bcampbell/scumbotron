@@ -92,6 +92,12 @@ static uint8_t sprcntprev;
 static void sfx_init();
 static void sfx_tick();
 
+// set the border colour for raster-timing
+void sys_gatso(uint8_t g)
+{
+    VERA.display.border = g;
+}
+
 static inline void veraaddr0(uint32_t addr, uint8_t inc) {
     VERA.control = 0x00;
     VERA.address = ((addr)&0xffff);
@@ -128,7 +134,6 @@ void testum() {
 
 void sys_render_start()
 {
-
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
     veraaddr0(VRAM_PALETTE + (i*2), VERA_INC_1);
@@ -158,6 +163,7 @@ void sys_render_finish()
     sprcntprev = sprcnt;
 
     sfx_tick();
+    drawbox(3,3,19,19,1,1);
     //testum();
 }
 

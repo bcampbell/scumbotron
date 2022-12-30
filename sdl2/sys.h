@@ -36,6 +36,13 @@ void sys_amoeba_small_render(int16_t x, int16_t y);
 void sys_hzapper_render(int16_t x, int16_t y, uint8_t state);
 void sys_vzapper_render(int16_t x, int16_t y, uint8_t state);
 
+// noddy profiling
+#define GATSO_OFF 0
+#define GATSO_ON 1
+
+void sys_gatso(uint8_t t);
+
+
 // fixed-point: 6 fractional bits.
 #define FX 6
 #define FX_ONE (1<<FX)

@@ -58,6 +58,7 @@ uint8_t level_run(uint8_t level) {
     player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
     level_init(level);
     while (1) {
+        sys_gatso(GATSO_ON);
         sys_render_start();
         player_renderall();
         gobs_render();
@@ -125,6 +126,7 @@ uint8_t level_run(uint8_t level) {
                 }
                 break;
         }
+        sys_gatso(GATSO_OFF);
         waitvbl();
     }
 }
