@@ -318,16 +318,16 @@ static void drawrect(const SDL_Rect *r, uint8_t colour)
     if (b.h<2) {
         return;
     }
-    hline_noclip(b.x, b.x + b.w, b.y + b.h-1, colour);
+    hline_noclip(b.x, b.x + b.w, b.y + b.h - 1, colour);
 
     // left (excluding top and bottom)
-    vline_noclip(b.x, b.y + 1, b.y + b.h - 2, colour);
+    vline_noclip(b.x, b.y + 1, b.y + b.h - 1, colour);
 
     // right (excluding top and bottom)
     if (b.w < 2) {
         return;
     }
-    vline_noclip(b.x + b.w-1, b.y+1, b.y + b.h - 2, colour);
+    vline_noclip(b.x + b.w-1, b.y + 1, b.y + b.h - 1, colour);
 }
 
 // blit with colour 0 transparent.
