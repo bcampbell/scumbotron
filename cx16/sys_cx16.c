@@ -39,15 +39,15 @@ extern unsigned int export_spr32_zbin_len;
 #define VRAM_SPRITES32 (VRAM_SPRITES16 + (64 * SPR16_SIZE))
 #define VRAM_LAYER1_MAP 0x1b000
 #define VRAM_LAYER1_TILES 0x1F000
-#define VRAM_LAYER0_MAP  0x00000    //64x64
+// layer0 is double-buffered
+#define VRAM_LAYER0_MAP_BUF0  0x00000    //64*64*2 = 0x2000
+#define VRAM_LAYER0_MAP_BUF1  0x02000    //64*64*2 = 0x2000
 #define VRAM_LAYER0_TILES  0x08000
 
 // hardwired:
 #define VRAM_PALETTE 0x1FA00
 #define VRAM_SPRITE_ATTRS 0x1FC00
 #define VRAM_PSG 0x1F9C0
-
-
 
 // sprite image defs
 #define SPR16_BAITER 16
@@ -66,15 +66,15 @@ extern unsigned int export_spr32_zbin_len;
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
-static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1);
-static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, uint8_t colour);
 
-// TODO
-//static void draw_hline(uint8_t cx0, uint8_t cy0, uint8_t cy1, uint8_t ch, uint8_t, colour);
-//static void draw_vline(uint8_t cx0, uint8_t cx1, uint8_t cy1, uint8_t ch, uint8_t, colour);
+static void drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
+static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
+static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
 
 static void clr_layer0();
 
+// which layer0 buffer we're displaying (we'll draw into the other one)
+static uint8_t layer0_displaybuf;
 
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
@@ -134,6 +134,16 @@ void testum() {
 
 void sys_render_start()
 {
+    // Toggle the layer0 buffer.
+    if(layer0_displaybuf) {
+       layer0_displaybuf = 0;
+       VERA.layer0.mapbase = (VRAM_LAYER0_MAP_BUF0>>9);
+    } else {
+       layer0_displaybuf = 1;
+       VERA.layer0.mapbase = (VRAM_LAYER0_MAP_BUF1>>9);
+    }
+    clr_layer0();
+
     // cycle colour 15
     uint8_t i = (((tick >> 1)) & 0x7) + 2;
     veraaddr0(VRAM_PALETTE + (i*2), VERA_INC_1);
@@ -142,8 +152,6 @@ void sys_render_start()
     VERA.data1 = VERA.data0;
     VERA.data1 = VERA.data0;
 
-    clr_layer0();
-    rendereffects();
     // Set up for writing sprites.
     // Use vera channel 1 exclusively for writing sprite attrs,
     sprcnt = 0;
@@ -163,8 +171,8 @@ void sys_render_finish()
     sprcntprev = sprcnt;
 
     sfx_tick();
-    drawbox(3,3,19,19,1,1);
     //testum();
+    rendereffects();
 }
 
 static void sprout16(int16_t x, int16_t y, uint8_t img ) {
@@ -259,17 +267,6 @@ void sys_clr()
         VERA.data0 = ' '; // tile
         VERA.data0 = 0; // colour
     }
-
-    // effects layer
-    veraaddr0(VRAM_LAYER0_MAP, VERA_INC_1);
-    for (y = 0; y < 64; ++y) {
-        uint8_t x;
-        for (x = 0; x < 64; ++x) {
-            VERA.data0 = 1; //(x&1) ^ (y&1);
-            VERA.data0 = 0; //x & 15;
-        }
-    }
-
 }
 
 
@@ -309,7 +306,8 @@ void sys_init()
 
     // effects layer setup
     VERA.layer0.config = (1<<6) | (1<<4) | (0<<3) | (0<<2) | 0;    // 64x64 tiles, !T256C, !bitmapmode, 1bpp
-    VERA.layer0.mapbase = (VRAM_LAYER0_MAP>>9);
+    layer0_displaybuf = 0;
+    VERA.layer0.mapbase = (VRAM_LAYER0_MAP_BUF0>>9);
     VERA.layer0.tilebase = ((VRAM_LAYER0_TILES)>>11)<<2 | 0<<1 | 0; // 8x8 tiles
     VERA.layer0.hscroll = 12*8; // 16bit
     VERA.layer0.vscroll = 12*8; // 16bit
@@ -413,7 +411,22 @@ void sys_init()
         }
     }
 
-    // clear the tile layers
+    // clear both layer0 buffers (used for effects)
+    {
+        int i;
+        veraaddr0(VRAM_LAYER0_MAP_BUF0, VERA_INC_1);
+        for (i=0; i<64*64; ++i) {
+            VERA.data0 = 0; // tile
+            VERA.data0 = 0; // colour
+        }
+        veraaddr0(VRAM_LAYER0_MAP_BUF1, VERA_INC_1);
+        for (i=0; i<64*64; ++i) {
+            VERA.data0 = 0; // tile
+            VERA.data0 = 0; // colour
+        }
+    }
+
+    // clear layer1 (text layer)
     sys_clr();
 }
 
@@ -554,68 +567,105 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 
 static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
 {
-    // layer is 64 x 64 chars, border 12.
-    return VRAM_LAYER0_MAP + (cy+12)*64*2 + (cx+12)*2;
+    // Layer is 64 x 64 chars, border 12.
+    // And doublebuffered. Draw into the non-displayed one.
+    if (layer0_displaybuf==0) {
+        return VRAM_LAYER0_MAP_BUF1 + (cy+12)*64*2 + (cx+12)*2;
+    } else {
+        return VRAM_LAYER0_MAP_BUF0 + (cy+12)*64*2 + (cx+12)*2;
+    }
 }
 
-
-// draw box in char coords
-static void drawbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1, uint8_t ch, uint8_t colour)
+// Draw vertical line of chars, range [cy_begin, cy_end).
+static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
-    uint8_t w = (x1 - x0) + 1;
-    uint8_t h = (y1 - y0) + 1;
-    uint8_t i;
+    if (cy_begin >= 64 ){
+        ch = 2;
+    }
+    if (cy_end >= 64 ){
+        ch = 3;
+    }
+    if (cy_end < cy_begin ){
+        ch=4;
+    }
+    uint8_t n;
+    // char
+    veraaddr0(layer0addr(cx,cy_begin), VERA_INC_128);
+    for (n = cy_end - cy_begin; n; --n) {
+        VERA.data0 = ch;
+    }
+    // colour
+    veraaddr0(layer0addr(cx,cy_begin)+1, VERA_INC_128);
+    for (n = cy_end - cy_begin; n; --n) {
+        VERA.data0 = colour;
+    }
+}
+
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+{
+    uint8_t n;
+    // char
+    veraaddr0(layer0addr(cx_begin,cy), VERA_INC_2);
+    for (n = cx_end - cx_begin; n; --n) {
+        VERA.data0 = ch;
+    }
+    // colour
+    veraaddr0(layer0addr(cx_begin,cy)+1, VERA_INC_2);
+    for (n = cx_end - cx_begin; n; --n) {
+        VERA.data0 = colour;
+    }
+}
+
+static inline int8_t cclip(int8_t v, int8_t low, int8_t high)
+{
+    if (v < low) {
+        return low;
+    } else if (v > high) {
+        return high;
+    } else {
+        return v;
+    }
+}
+
+// draw box in char coords, with clipping
+// (note cx,cy can be negative)
+static void drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
+{
+    int8_t x0,y0,x1,y1;
+    x0 = cclip(cx, 0, SCREEN_W / 8);
+    x1 = cclip(cx + w, 0, SCREEN_W / 8);
+    y0 = cclip(cy, 0, SCREEN_H / 8);
+    y1 = cclip(cy + h, 0, SCREEN_H / 8);
 
     // top
-    veraaddr0(layer0addr(x0,y0), VERA_INC_2);
-    for (i = w; i; --i) {
-        VERA.data0 = ch;
+    if (y0 == cy) {
+        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y0, ch, colour);
     }
-    veraaddr0(layer0addr(x0,y0)+1, VERA_INC_2);
-    for (i = w; i; --i) {
-        VERA.data0 = colour;
-    }
-
-    if (h > 1) {
-        // bottom
-        veraaddr0(layer0addr(x0,y1), VERA_INC_2);
-        for (i = w; i; --i) {
-            VERA.data0 = ch;
-        }
-        veraaddr0(layer0addr(x0,y1)+1, VERA_INC_2);
-        for (i = w; i; --i) {
-            VERA.data0 = colour;
-        }
-    }
-
-    // Don't need to draw top or bottom chars.
-    if (h < 2) {
+    if (h<=1) {
         return;
     }
-    h -= 2;
-    ++y0;
 
-    // left side
-    veraaddr0(layer0addr(x0,y0), VERA_INC_128);
-    for (i = h; i; --i) {
-        VERA.data0 = ch;
+    // bottom
+    if (y1 - 1 == cy + h-1) {
+        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y1 - 1, ch, colour);
     }
-    veraaddr0(layer0addr(x0,y0)+1, VERA_INC_128);
-    for (i = h; i; --i) {
-        VERA.data0 = colour;
-    }
-    if (w > 1) {
-        // right side (but not top or bottom char)
-        veraaddr0(layer0addr(x1,y0), VERA_INC_128);
-        for (i = h; i; --i) {
-            VERA.data0 = ch;
-        }
-        veraaddr0(layer0addr(x1,y0)+1, VERA_INC_128);
-        for (i = h; i; --i) {
-            VERA.data0 = colour;
-        }
+    if (h<=2) {
+        return;
     }
 
+    // left (excluding top and bottom)
+    if (x0 == cx) {
+        vline_chars_noclip((uint8_t)x0, (uint8_t)y0, (uint8_t)y1, ch, colour);
+    }
+    if (w <= 1) {
+        return;
+    }
+
+    // right (excluding top and bottom)
+    if (x1 - 1 == cx + w - 1) {
+        vline_chars_noclip((uint8_t)x1 - 1, (uint8_t)y0, (uint8_t)y1, ch, colour);
+    }
 }
 
 static void clr_layer0()
@@ -626,47 +676,6 @@ static void clr_layer0()
         // just set colour to 0
         veraaddr0(layer0addr(0, cy) + 1, VERA_INC_2);
         for (cx = 0; cx < (SCREEN_W / 8); ++cx) {
-            VERA.data0 = 0;
-        }
-    }
-}
-
-static void clrbox(uint8_t x0, uint8_t y0, uint8_t x1, uint8_t y1)
-{
-    uint8_t w = (x1 - x0) + 1;
-    uint8_t h = (y1 - y0) + 1;
-    uint8_t i;
-
-    // top
-    veraaddr0(layer0addr(x0,y0), VERA_INC_2);
-    for (i = w; i; --i) {
-        VERA.data0 = 0;
-    }
-
-    if (h > 1) {
-        // bottom
-        veraaddr0(layer0addr(x0,y1), VERA_INC_2);
-        for (i = w; i; --i) {
-            VERA.data0 = 0;
-        }
-    }
-
-    // Don't need to draw top or bottom chars.
-    if (h < 2) {
-        return;
-    }
-    h -= 2;
-    ++y0;
-
-    // left side
-    veraaddr0(layer0addr(x0,y0), VERA_INC_128);
-    for (i = h; i; --i) {
-        VERA.data0 = 0;
-    }
-    if (w > 1) {
-        // right side (but not top or bottom char)
-        veraaddr0(layer0addr(x1,y0), VERA_INC_128);
-        for (i = h; i; --i) {
             VERA.data0 = 0;
         }
     }
@@ -695,7 +704,7 @@ static void do_spawneffect(uint8_t e) {
     uint8_t t = 16-etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    drawbox(cx-t, cy-t, t*2, t*2, 1, t);
     if (++etimer[e] >= 16) {
         ekind[e] = EK_NONE;
     }
@@ -705,7 +714,7 @@ static void do_kaboomeffect(uint8_t e) {
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    drawbox(cx-t, cy-t, cx+t, cy+t, 1, t);
+    drawbox(cx-t, cy-t, t*2, t*2, 1, t);
     if (++etimer[e] >= 16) {
         ekind[e] = EK_NONE;
     }
@@ -853,7 +862,8 @@ void sys_hzapper_render(int16_t x, int16_t y, uint8_t state)
             //hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
             {
                 int16_t cy = (( y >> FX) + 8) / 8;
-                drawbox(0, cy, SCREEN_W/8, cy, 2 + ((y>>FX) & 0x07), 15);
+                hline_chars_noclip(0, SCREEN_W / 8, cy,
+                    2 + ((y >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_HZAPPER_ON);
             }
             break;
@@ -876,7 +886,8 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
             //vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
             {
                 int16_t cx = ((x >> FX) + 8 ) / 8;
-                drawbox(cx, 0, cx, SCREEN_H / 8, 10 + ((x >> FX) & 0x07), 15);
+                vline_chars_noclip(cx, 0, SCREEN_H / 8,
+                    10 + ((x >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_VZAPPER_ON);
             }
             break;
