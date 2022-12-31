@@ -232,6 +232,36 @@ void dude_randompos(uint8_t d) {
     goby[d] = (ymid + y) << FX;
 }
 
+// move according to velocity, bouncing off walls.
+void gob_move_bounce_x(uint8_t d)
+{
+    int16_t x = gobx[d];
+    const int16_t xmax = (SCREEN_W - 16)<<FX;
+    x += gobvx[d];
+    if (x < 0) {
+        x = -x;
+        gobvx[d] = -gobvx[d];
+    } else if (x >= xmax) {
+        x = xmax - (x - xmax);
+        gobvx[d] = -gobvx[d];
+    }
+    gobx[d] = x;
+}
+
+void gob_move_bounce_y(uint8_t d)
+{
+    int16_t y = goby[d];
+    const int16_t ymax = (SCREEN_H - 16)<<FX;
+    y += gobvy[d];
+    if (y < 0) {
+        y = -y;
+        gobvy[d] = -gobvy[d];
+    } else if (y >= ymax) {
+        y = ymax - (y - ymax);
+        gobvy[d] = -gobvy[d];
+    }
+    goby[d] = y;
+}
 
 // block
 
@@ -519,47 +549,24 @@ void vzapper_init(uint8_t d)
     gobtimer[d] = 0;
 }
 
+// used for both h and v zappers
 void zapper_tick(uint8_t d)
 {
-    int16_t x = gobx[d];
-    int16_t y = goby[d];
-    const int16_t xmax = (SCREEN_W - 16)<<FX;
-    const int16_t ymax = (SCREEN_H - 16)<<FX;
-
-    x += gobvx[d];
-    if (x < 0) {
-        x = -x;
-        gobvx[d] = -gobvx[d];
-    } else if (x >= xmax) {
-        x = xmax - (x - xmax);
-        gobvx[d] = -gobvx[d];
-    }
-    gobx[d] = x;
-
-    y += gobvy[d];
-    if (y < 0) {
-        y = -y;
-        gobvy[d] = -gobvy[d];
-    } else if (y >= ymax) {
-        y = ymax - (y - ymax);
-        gobvy[d] = -gobvy[d];
-    }
-    goby[d] = y;
-
-    // fire control
+    gob_move_bounce_x(d);
+    gob_move_bounce_y(d);
+    // Firing state governed by timer (ticks/8)
     if(tick & 0x04) {
         gobtimer[d]++;
     }
-
 }
 
-
+// return zapper state based on timer
 uint8_t zapper_state(uint8_t d)
 {
-    if (gobtimer[d] < 200) {
+    if (gobtimer[d] < 150) {
         return ZAPPER_OFF;
     }
-    if (gobtimer[d] < 220) {
+    if (gobtimer[d] < 180) {
         return ZAPPER_WARMING_UP;
     }
     return ZAPPER_ON;

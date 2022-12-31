@@ -69,6 +69,8 @@ static inline int16_t gob_size(uint8_t d) {
     }
 }
 
+void gob_move_bounce_x(uint8_t d);
+void gob_move_bounce_y(uint8_t d);
 
 void amoeba_init(uint8_t d);
 void amoeba_shot(uint8_t d, uint8_t shot);
