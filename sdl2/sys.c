@@ -273,6 +273,22 @@ void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
+    char buf[40];
+    uint8_t i;
+    sprintf(buf, "LV %" PRIu8 "", level);
+    sys_text(0, 0, buf, 1);
+
+    sprintf(buf,"%08" PRIu32 "", score);
+    sys_text(8, 0, buf, 1);
+
+    for (i = 0; i < 7 && i < lives; ++i) {
+        buf[i] = '*';
+    }
+    if (lives > 7) {
+        buf[i++] = '+';
+    }
+    buf[i] = '\0';
+    sys_text(18, 0, buf, 3);
 }
 
 void sys_sfx_play(uint8_t effect)

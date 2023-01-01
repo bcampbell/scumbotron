@@ -181,8 +181,6 @@ void dudes_spawn(uint8_t kind, uint8_t n)
     }
 }
 
-
-
 // for all dudes:
 // - set to new random position.
 // - put into spawning mode.
@@ -263,8 +261,9 @@ void gob_move_bounce_y(uint8_t d)
     goby[d] = y;
 }
 
-// block
-
+/*
+ * block
+ */
 void block_init(uint8_t d)
 {
     gobkind[d] = GK_BLOCK;
@@ -277,9 +276,18 @@ void block_init(uint8_t d)
     gobtimer[d] = 0;
 }
 
+void block_shot(uint8_t d, uint8_t shot)
+{
+    player_add_score(10);
+    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    gobkind[d] = GK_NONE;
+}
 
-// grunt
 
+
+/*
+ * grunt
+ */
 void grunt_init(uint8_t d)
 {
     gobkind[d] = GK_GRUNT;
@@ -314,8 +322,17 @@ void grunt_tick(uint8_t d)
     }
 }
 
+void grunt_shot(uint8_t d, uint8_t shot)
+{
+    player_add_score(50);
+    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    gobkind[d] = GK_NONE;
+}
 
-// baiter
+
+/*
+ * baiter
+ */
 void baiter_init(uint8_t d)
 {
     gobkind[d] = GK_BAITER;
@@ -352,7 +369,17 @@ void baiter_tick(uint8_t d)
 
 }
 
-// amoeba
+void baiter_shot(uint8_t d, uint8_t shot)
+{
+    player_add_score(75);
+    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    gobkind[d] = GK_NONE;
+}
+
+
+/*
+ * amoeba
+ */
 void amoeba_init(uint8_t d)
 {
     gobkind[d] = GK_AMOEBA_BIG;
@@ -401,9 +428,6 @@ void amoeba_tick(uint8_t d)
     } else if (py > goby[d] && gobvy[d] < AMOEBA_MAX_SPD) {
         gobvy[d] += AMOEBA_ACCEL;
     }
-
-
-
 }
 
 void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
@@ -423,6 +447,7 @@ void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
 void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
+        player_add_score(20);
         gobkind[d] = GK_NONE;
         sys_sfx_play(SFX_KABOOM);
         sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
@@ -497,6 +522,7 @@ void tank_shot(uint8_t d, uint8_t s)
     --gobdat[d];
     if (gobdat[d]==0) {
         // boom.
+        player_add_score(100);
         gobkind[d] = GK_NONE;
         sys_sfx_play(SFX_KABOOM);
         sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
@@ -509,8 +535,9 @@ void tank_shot(uint8_t d, uint8_t s)
 
 }
 
-// zapper
-
+/*
+ * zapper
+ */
 void hzapper_init(uint8_t d)
 {
     uint8_t foo = rnd();

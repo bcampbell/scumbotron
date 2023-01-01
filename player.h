@@ -29,7 +29,7 @@ void player_create(uint8_t d, int16_t x, int16_t y);
 void player_tick(uint8_t d);
 void shot_tick(uint8_t s);
 void shot_collisions();
-
+void player_add_score(uint8_t points);
 
 #define SHOT_SPD (8<<FX)
 

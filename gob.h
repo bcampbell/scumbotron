@@ -61,6 +61,10 @@ void dudes_spawn(uint8_t kind, uint8_t n);
 
 uint8_t rnd();
 
+// generic gob fns
+void gob_move_bounce_x(uint8_t d);
+void gob_move_bounce_y(uint8_t d);
+
 static inline int16_t gob_size(uint8_t d) {
     switch (gobkind[d]) {
         case GK_AMOEBA_BIG: return 32<<FX;
@@ -69,20 +73,30 @@ static inline int16_t gob_size(uint8_t d) {
     }
 }
 
-void gob_move_bounce_x(uint8_t d);
-void gob_move_bounce_y(uint8_t d);
+// block fns
+void grunt_init(uint8_t d);
+void grunt_shot(uint8_t d, uint8_t shot);
 
+// block fns
+void baiter_init(uint8_t d);
+void baiter_shot(uint8_t d, uint8_t shot);
+
+// block fns
+void block_init(uint8_t d);
+void block_shot(uint8_t d, uint8_t shot);
+
+// tank fns
+void tank_init(uint8_t d);
+void tank_shot(uint8_t d, uint8_t shot);
+
+// amoeba fns
 void amoeba_init(uint8_t d);
 void amoeba_shot(uint8_t d, uint8_t shot);
-void grunt_init(uint8_t d);
-void baiter_init(uint8_t d);
-void block_init(uint8_t d);
-void tank_init(uint8_t d);
+
+// zapper fns
 void hzapper_init(uint8_t d);
 void vzapper_init(uint8_t d);
-void tank_shot(uint8_t d, uint8_t shot);
 void zapper_shot(uint8_t d, uint8_t shot);
-
 #define ZAPPER_OFF 0
 #define ZAPPER_WARMING_UP 1
 #define ZAPPER_ON 2

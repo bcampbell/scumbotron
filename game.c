@@ -62,7 +62,6 @@ uint8_t level_run(uint8_t level) {
         sys_render_start();
         player_renderall();
         gobs_render();
-        player_score += 1000;
         sys_hud(level, player_lives, player_score);
 
         sys_render_finish();

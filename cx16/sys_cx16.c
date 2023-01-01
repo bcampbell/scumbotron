@@ -537,7 +537,7 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     {
         uint8_t i;
         c = 2;
-        for(i=0; i<7 && i<lives; ++i) {
+        for(i=0; i < 7 && i < lives; ++i) {
             VERA.data0 = 0x53;  // heart
             VERA.data0 = c;
         }

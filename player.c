@@ -29,6 +29,11 @@ static uint8_t shot_alloc();
 // player
 #define PLAYER_SPD (2*FX_ONE);
 
+void player_add_score(uint8_t points)
+{
+    player_score += points;
+}
+
 void player_create(uint8_t p, int16_t x, int16_t y) {
     plrx[p] = x;
     plry[p] = y;
@@ -241,6 +246,15 @@ void shot_collisions()
                 if (sx >= dx0 && sx < dx1) {
                     // boom.
                     switch (gobkind[d]) {
+                        case GK_BLOCK:
+                            block_shot(d, s);
+                            break;
+                        case GK_GRUNT:
+                            grunt_shot(d, s);
+                            break;
+                        case GK_BAITER:
+                            baiter_shot(d, s);
+                            break;
                         case GK_AMOEBA_BIG:
                         case GK_AMOEBA_MED:
                         case GK_AMOEBA_SMALL:
@@ -254,8 +268,6 @@ void shot_collisions()
                             zapper_shot(d, s);
                             break;
                         default:
-                            sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-                            gobkind[d] = GK_NONE;
                             break;
                     }
 
