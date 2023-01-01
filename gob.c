@@ -347,8 +347,8 @@ void baiter_init(uint8_t d)
 
 void baiter_tick(uint8_t d)
 {
-    const int16_t BAITER_MAX_SPD = 4 << FX;
-    const int16_t BAITER_ACCEL = 2;
+    const int16_t BAITER_MAX_SPD = 2 << FX;
+    const int16_t BAITER_ACCEL = 3;
     int16_t px,py;
 
     px = plrx[0];
@@ -357,7 +357,8 @@ void baiter_tick(uint8_t d)
     } else if (px > gobx[d] && gobvx[d] < BAITER_MAX_SPD) {
         gobvx[d] += BAITER_ACCEL;
     }
-    gobx[d] += gobvx[d];
+//    gobx[d] += gobvx[d];
+    gob_move_bounce_x(d);
 
     py = plry[0];
     if (py < goby[d] && gobvy[d] > -BAITER_MAX_SPD) {
@@ -365,7 +366,8 @@ void baiter_tick(uint8_t d)
     } else if (py > goby[d] && gobvy[d] < BAITER_MAX_SPD) {
         gobvy[d] += BAITER_ACCEL;
     }
-    goby[d] += gobvy[d];
+    gob_move_bounce_y(d);
+//    goby[d] += gobvy[d];
 
 }
 

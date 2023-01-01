@@ -39,6 +39,7 @@ static void level_init(uint8_t level) {
     dudes_spawn(GK_GRUNT, 10);
     dudes_spawn(GK_HZAPPER, 2);
     dudes_spawn(GK_VZAPPER, 2);
+    dudes_spawn(GK_BAITER, 5);
 
     dudes_reset();    // position and intro
 }
