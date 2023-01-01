@@ -7,6 +7,10 @@
 #include "gob.h"
 #include "player.h"
 
+static uint8_t baiter_timer;
+static uint8_t baiter_count;
+static void level_baiter_check();
+
 void titlescreen_run()
 {
     sys_clr();
@@ -35,11 +39,11 @@ void titlescreen_run()
 #define LEVELRESULT_GAMEOVER 2
 
 static void level_init(uint8_t level) {
+
 //    dudes_spawn(GK_AMOEBA_BIG, 10);
     dudes_spawn(GK_GRUNT, 10);
     dudes_spawn(GK_HZAPPER, 2);
     dudes_spawn(GK_VZAPPER, 2);
-    dudes_spawn(GK_BAITER, 5);
 
     dudes_reset();    // position and intro
 }
@@ -53,6 +57,8 @@ static void level_init(uint8_t level) {
 uint8_t level_run(uint8_t level) {
     uint8_t statetimer=0;
     uint8_t state = LEVELSTATE_GETREADY;
+    baiter_count = 0;
+    baiter_timer = 0;
 
     sys_clr();
     gobs_init();
@@ -96,6 +102,8 @@ uint8_t level_run(uint8_t level) {
                 if (gobs_lockcnt == 0) {
                     state = LEVELSTATE_CLEARED;
                     statetimer = 0;
+                } else {
+                    level_baiter_check();
                 }
                 break;
             case LEVELSTATE_CLEARED:
@@ -120,6 +128,8 @@ uint8_t level_run(uint8_t level) {
                         player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
                         dudes_reset();
                         statetimer = 0;
+                        baiter_count = 0;
+                        baiter_timer = 0;
                     } else {
                         return LEVELRESULT_GAMEOVER;
                     }
@@ -131,6 +141,35 @@ uint8_t level_run(uint8_t level) {
     }
 }
 
+static void level_baiter_check()
+{
+    // update baiters
+    if ((tick & 0x0f) == 0x0f) {
+        // 16*100 = 1600 (about 25 secs)
+        // 16*33 = about 9 secs
+        uint8_t threshold = baiter_count == 0 ? 100 : 33;
+        ++baiter_timer;
+        if (baiter_timer > threshold) {
+            uint8_t i;
+            baiter_timer = 0;
+            if (baiter_count < 15) {
+                ++baiter_count;
+            }
+            // spawn `em!
+            for (i = 0; i < baiter_count; ++i) {
+                uint8_t b = dude_alloc();
+                if (b >= MAX_GOBS) {
+                    return;
+                }
+                // TODO: spawning.
+                baiter_init(b);
+                dude_randompos(b);
+                gobflags[b] |= GF_SPAWNING;
+                gobtimer[b] = 8 + (i*8);
+            }
+        }
+    }
+}
 
 void game_run()
 {
