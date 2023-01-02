@@ -1,5 +1,5 @@
-#ifndef SYS_SDL2_H
-#define SYS_SDL2_H
+#ifndef SYS_H
+#define SYS_H
 
 /*
  * Common interface for all platforms
@@ -8,17 +8,22 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+// fixed-point: 6 fractional bits.
+#define FX 6
+#define FX_ONE (1<<FX)
+// core game stuff.
+#define SCREEN_W 320
+#define SCREEN_H 240
+
 void sys_init();
 void waitvbl();
 void inp_tick();
 
 void sys_render_start();
 void sys_render_finish();
-void sys_sfx_play(uint8_t effect);
 
 void sys_clr();
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
-void sys_addeffect(int16_t x, int16_t y, uint8_t kind);
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
 extern volatile uint16_t inp_joystate;
@@ -39,28 +44,18 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state);
 // noddy profiling
 #define GATSO_OFF 0
 #define GATSO_ON 1
-
 void sys_gatso(uint8_t t);
-
-
-// fixed-point: 6 fractional bits.
-#define FX 6
-#define FX_ONE (1<<FX)
 
 // sfx
 #define SFX_NONE 0
 #define SFX_LASER 1
 #define SFX_KABOOM 2
-
+void sys_sfx_play(uint8_t effect);
 
 // (visual) effect kinds
 #define EK_NONE 0
 #define EK_SPAWN 1
 #define EK_KABOOM 2
+void sys_addeffect(int16_t x, int16_t y, uint8_t kind);
 
-// core game stuff.
-#define SCREEN_W 320
-#define SCREEN_H 240
-
-
-#endif // SYS_SDL2_H
+#endif // SYS_H

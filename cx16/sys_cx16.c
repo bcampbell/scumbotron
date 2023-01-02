@@ -1,12 +1,9 @@
 #include <cx16.h>
-#include <stdint.h>
 
-#include "sys.h"
+#include "../sys.h"
 #include "../gob.h"
 
 // Platform-specifics for cx16
-
-
 
 // irq.s, glue.s
 extern void inp_tick();

@@ -1,4 +1,4 @@
-#include "sys.h"
+#include "../sys.h"
 #include "../gob.h"
 
 #include <SDL.h>
