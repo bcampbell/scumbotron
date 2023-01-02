@@ -51,10 +51,12 @@ void gobs_tick(bool spawnphase)
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
     for (i = 0; i < MAX_GOBS; ++i) {
+        if (gobkind[i] == GK_NONE) {
+            continue;
+        }
         // Is gob playing its spawning-in effect?
         if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
-            ++gobs_lockcnt;
             if( gobtimer[i] == 8) {
                 sys_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
             } else if( gobtimer[i] == 0) {
@@ -65,31 +67,29 @@ void gobs_tick(bool spawnphase)
             --gobtimer[i];
             continue;
         }
+        if (gobflags[i] & GF_LOCKS_LEVEL) {
+            ++gobs_lockcnt;
+        }
+
         // If in spawn phase, keep everything frozen until we finish.
         if (spawnphase) {
             continue;
         }
         switch(gobkind[i]) {
-            case GK_NONE:
-                break;
             case GK_BLOCK:
                 break;
             case GK_GRUNT:
-                ++gobs_lockcnt;
                 grunt_tick(i);
                 break;
             case GK_BAITER:
-                ++gobs_lockcnt;
                 baiter_tick(i);
                 break;
             case GK_AMOEBA_BIG:
             case GK_AMOEBA_MED:
             case GK_AMOEBA_SMALL:
-                ++gobs_lockcnt;
                 amoeba_tick(i);
                 break;
             case GK_TANK:
-                ++gobs_lockcnt;
                 tank_tick(i);
                 break;
             case GK_HZAPPER:
@@ -284,7 +284,7 @@ void gob_move_bounce_y(uint8_t d)
 void block_init(uint8_t d)
 {
     gobkind[d] = GK_BLOCK;
-    gobflags[d] = 0;
+    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -308,7 +308,7 @@ void block_shot(uint8_t d, uint8_t shot)
 void grunt_init(uint8_t d)
 {
     gobkind[d] = GK_GRUNT;
-    gobflags[d] = 0;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (2 << FX) + (rnd() & 0x7f);
@@ -353,7 +353,7 @@ void grunt_shot(uint8_t d, uint8_t shot)
 void baiter_init(uint8_t d)
 {
     gobkind[d] = GK_BAITER;
-    gobflags[d] = 0;
+    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -402,7 +402,7 @@ void baiter_shot(uint8_t d, uint8_t shot)
 void amoeba_init(uint8_t d)
 {
     gobkind[d] = GK_AMOEBA_BIG;
-    gobflags[d] = 0;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -500,7 +500,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 void tank_init(uint8_t d)
 {
     gobkind[d] = GK_TANK;
-    gobflags[d] = 0;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -561,7 +561,7 @@ void hzapper_init(uint8_t d)
 {
     uint8_t foo = rnd();
     gobkind[d] = GK_HZAPPER;
-    gobflags[d] = 0;
+    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (1<<FX)/4;
@@ -580,7 +580,7 @@ void vzapper_init(uint8_t d)
 {
     uint8_t foo = rnd();
     gobkind[d] = GK_VZAPPER;
-    gobflags[d] = 0;
+    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (1<<FX)/4;
@@ -632,7 +632,7 @@ void zapper_shot(uint8_t d, uint8_t s)
 void fragger_init(uint8_t d)
 {
     gobkind[d] = GK_FRAGGER;
-    gobflags[d] = 0;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 1<<FX;
@@ -679,7 +679,7 @@ static const int16_t frag_vy[4] = {-2<<FX, -2<<FX, 2<<FX, 2<<FX};
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir)
 {
     gobkind[f] = GK_FRAG;
-    gobflags[f] = 0;
+    gobflags[f] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[f] = x;
     goby[f] = y;
     gobdat[f] = dir;  // direction

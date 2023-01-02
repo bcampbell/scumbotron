@@ -94,7 +94,7 @@ bool player_collisions()
         int16_t py1 = plry[p] + (12 << FX);
         uint8_t d;
         for (d = 0; d < MAX_GOBS; ++d) {
-            if (gobkind[d]==GK_NONE) {
+            if (gobkind[d]==GK_NONE || (gobflags[d] & GF_COLLIDES_PLAYER) == 0) {
                 continue;
             }
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
@@ -228,7 +228,7 @@ void shot_collisions()
         for (d = 0; d < MAX_GOBS; ++d) {
             int16_t dy0 = goby[d];
             int16_t dy1 = goby[d] + gob_size(d);
-            if (gobkind[d]==GK_NONE) {
+            if (gobkind[d] == GK_NONE || (gobflags[d] & GF_COLLIDES_SHOT) == 0) {
                 continue;
             }
             if (sy >= dy0 && sy < dy1) {
