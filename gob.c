@@ -673,8 +673,8 @@ void fragger_shot(uint8_t d, uint8_t s)
  * Frag
  */
 
-static const int16_t frag_vx[4] = {-2<<FX, 2<<FX, -2<<FX, 2<<FX};
-static const int16_t frag_vy[4] = {-2<<FX, -2<<FX, 2<<FX, 2<<FX};
+static const int16_t frag_vx[4] = {-2 * FX_ONE, 2 * FX_ONE, -2 * FX_ONE, 2 * FX_ONE};
+static const int16_t frag_vy[4] = {-2 * FX_ONE, -2 * FX_ONE, 2 * FX_ONE, 2 * FX_ONE};
 
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir)
 {
