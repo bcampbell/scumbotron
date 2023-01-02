@@ -258,6 +258,12 @@ void shot_collisions()
                         case GK_VZAPPER:
                             zapper_shot(d, s);
                             break;
+                        case GK_FRAGGER:
+                            fragger_shot(d, s);
+                            break;
+                        case GK_FRAG:
+                            frag_shot(d, s);
+                            break;
                         default:
                             break;
                     }

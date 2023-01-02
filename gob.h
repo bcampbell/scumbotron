@@ -21,6 +21,8 @@
 #define GK_TANK 9
 #define GK_HZAPPER 10
 #define GK_VZAPPER 11
+#define GK_FRAGGER 12
+#define GK_FRAG 13
 
 // Flags
 #define GF_SPAWNING 0x01
@@ -67,11 +69,11 @@ static inline int16_t gob_size(uint8_t d) {
     }
 }
 
-// block fns
+// grunt fns
 void grunt_init(uint8_t d);
 void grunt_shot(uint8_t d, uint8_t shot);
 
-// block fns
+// baiter fns
 void baiter_init(uint8_t d);
 void baiter_shot(uint8_t d, uint8_t shot);
 
@@ -95,5 +97,13 @@ void zapper_shot(uint8_t d, uint8_t shot);
 #define ZAPPER_WARMING_UP 1
 #define ZAPPER_ON 2
 uint8_t zapper_state(uint8_t d);
+
+// fragger
+void fragger_init(uint8_t d);
+void fragger_shot(uint8_t d, uint8_t shot);
+
+// frag
+void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir);
+void frag_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H

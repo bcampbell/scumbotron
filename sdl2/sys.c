@@ -25,6 +25,11 @@ extern unsigned int export_chars_bin_len;
 #define SPR16_HZAPPER_ON 13
 #define SPR16_VZAPPER 14
 #define SPR16_VZAPPER_ON 15
+#define SPR16_FRAGGER 32
+#define SPR16_FRAG_NW 33
+#define SPR16_FRAG_NE 34
+#define SPR16_FRAG_SW 35
+#define SPR16_FRAG_SE 36
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -508,6 +513,16 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state) {
     }
 }
 
+void sys_fragger_render(int16_t x, int16_t y) {
+    sprout16(x, y,  SPR16_FRAGGER);
+}
+
+static int8_t frag_frames[4] = {SPR16_FRAG_NW, SPR16_FRAG_NE,
+    SPR16_FRAG_SW, SPR16_FRAG_SE};
+
+void sys_frag_render(int16_t x, int16_t y, uint8_t dir) {
+    sprout16(x, y,  frag_frames[dir]);
+}
 
 /*
  * Visual Effects

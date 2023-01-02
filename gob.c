@@ -22,6 +22,8 @@ void baiter_tick(uint8_t d);
 void amoeba_tick(uint8_t d);
 void tank_tick(uint8_t d);
 void zapper_tick(uint8_t d);
+void fragger_tick(uint8_t d);
+void frag_tick(uint8_t d);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -94,6 +96,12 @@ void gobs_tick(bool spawnphase)
             case GK_VZAPPER:
                 zapper_tick(i);
                 break;
+            case GK_FRAGGER:
+                fragger_tick(i);
+                break;
+            case GK_FRAG:
+                frag_tick(i);
+                break;
             default:
                 break;
         }
@@ -137,6 +145,12 @@ void gobs_render()
             case GK_VZAPPER:
                 sys_vzapper_render(gobx[d], goby[d], zapper_state(d));
                 break;
+            case GK_FRAGGER:
+                sys_fragger_render(gobx[d], goby[d]);
+                break;
+            case GK_FRAG:
+                sys_frag_render(gobx[d], goby[d], gobdat[d]);
+                break;
             default:
                 break;
         }
@@ -174,10 +188,13 @@ void dudes_spawn(uint8_t kind, uint8_t n)
             case GK_VZAPPER:
                 vzapper_init(d);
                 break;
+            case GK_FRAGGER:
+                fragger_init(d);
+                break;
             default:
                 break;
         }
-        // position set by respawn
+        // position set by reset
     }
 }
 
@@ -606,5 +623,88 @@ void zapper_shot(uint8_t d, uint8_t s)
     // knockback
     gobvx[d] += (shot_xvel(s) >> FX);
     gobvy[d] += (shot_yvel(s) >> FX);
+}
+
+/*
+ * Fragger
+ */
+
+void fragger_init(uint8_t d)
+{
+    gobkind[d] = GK_FRAGGER;
+    gobflags[d] = 0;
+    gobx[d] = 0;
+    goby[d] = 0;
+    gobvx[d] = 1<<FX;
+    gobvy[d] = 1<<FX;
+    gobdat[d] = 0;
+    gobtimer[d] = 0;
+}
+
+
+void fragger_tick(uint8_t d)
+{
+    gob_move_bounce_x(d);
+    gob_move_bounce_y(d);
+}
+
+
+
+void fragger_shot(uint8_t d, uint8_t s)
+{
+    // boom.
+    int16_t x = gobx[d];
+    int16_t y = goby[d];
+    uint8_t i;
+    player_add_score(100);
+    gobkind[d] = GK_NONE;
+    sys_sfx_play(SFX_KABOOM);
+    sys_addeffect(x+(8<<FX), y+(8<<FX), EK_KABOOM);
+    for (i = 0; i < 4; ++i) {
+        uint8_t f = dude_alloc();
+        if (f >=MAX_GOBS) {
+            return;
+        }
+        frag_spawn(f, x, y, i);
+    }
+}
+
+/*
+ * Frag
+ */
+
+static const int16_t frag_vx[4] = {-2<<FX, 2<<FX, -2<<FX, 2<<FX};
+static const int16_t frag_vy[4] = {-2<<FX, -2<<FX, 2<<FX, 2<<FX};
+
+void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir)
+{
+    gobkind[f] = GK_FRAG;
+    gobflags[f] = 0;
+    gobx[f] = x;
+    goby[f] = y;
+    gobdat[f] = dir;  // direction
+    gobvx[f] = frag_vx[dir];
+    gobvy[f] = frag_vy[dir];
+    gobtimer[f] = 50;
+}
+
+
+void frag_tick(uint8_t d)
+{
+    gobx[d] += gobvx[d];
+    goby[d] += gobvy[d];
+
+    if (--gobtimer[d] == 0) {
+        gobkind[d] = GK_NONE;
+    }
+}
+
+void frag_shot(uint8_t d, uint8_t s)
+{
+    // boom.
+    player_add_score(20);
+    gobkind[d] = GK_NONE;
+    sys_sfx_play(SFX_KABOOM);
+    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
 }
 

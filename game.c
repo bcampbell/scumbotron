@@ -41,6 +41,7 @@ static void level_init(uint8_t level) {
 
 //    dudes_spawn(GK_AMOEBA_BIG, 10);
     dudes_spawn(GK_GRUNT, 10);
+    dudes_spawn(GK_FRAGGER, 10);
     dudes_spawn(GK_HZAPPER, 2);
     dudes_spawn(GK_VZAPPER, 2);
 
