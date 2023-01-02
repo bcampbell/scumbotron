@@ -10,12 +10,6 @@
 // Game object (gob) Stuff
 //
 
-#define DIR_UP 0x08
-#define DIR_DOWN 0x04
-#define DIR_LEFT 0x02
-#define DIR_RIGHT 0x01
-
-
 // Kinds
 #define GK_NONE 0
 #define GK_BLOCK 3

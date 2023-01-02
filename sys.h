@@ -17,7 +17,6 @@
 
 void sys_init();
 void waitvbl();
-void inp_tick();
 
 void sys_render_start();
 void sys_render_finish();
@@ -26,7 +25,6 @@ void sys_clr();
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
-extern volatile uint16_t inp_joystate;
 extern volatile uint8_t tick;
 
 void sys_player_render(int16_t x, int16_t y);
@@ -57,5 +55,24 @@ void sys_sfx_play(uint8_t effect);
 #define EK_SPAWN 1
 #define EK_KABOOM 2
 void sys_addeffect(int16_t x, int16_t y, uint8_t kind);
+
+
+#define DIR_UP 0x08
+#define DIR_DOWN 0x04
+#define DIR_LEFT 0x02
+#define DIR_RIGHT 0x01
+
+// input
+#define INP_UP DIR_UP
+#define INP_DOWN DIR_DOWN
+#define INP_LEFT DIR_LEFT
+#define INP_RIGHT DIR_RIGHT
+#define INP_FIRE_UP 0x80
+#define INP_FIRE_DOWN 0x40
+#define INP_FIRE_LEFT 0x20
+#define INP_FIRE_RIGHT 0x10
+
+uint8_t sys_inp_dualsticks();
+
 
 #endif // SYS_H

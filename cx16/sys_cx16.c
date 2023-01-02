@@ -170,6 +170,7 @@ void sys_render_finish()
     sfx_tick();
     //testum();
     rendereffects();
+    inp_tick(); // update inp_joystate
 }
 
 static void sprout16(int16_t x, int16_t y, uint8_t img ) {
@@ -889,5 +890,28 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
             }
             break;
     }
+}
+
+
+uint8_t sys_inp_dualsticks()
+{
+    uint8_t out = 0;
+    uint8_t i;
+    struct {uint16_t hw; uint8_t bitmask; } mapping[8] = {
+        {JOY_UP_MASK, INP_FIRE_UP},
+        {JOY_DOWN_MASK, INP_FIRE_DOWN},
+        {JOY_LEFT_MASK, INP_FIRE_LEFT},
+        {JOY_RIGHT_MASK, INP_FIRE_RIGHT},
+        {0x4000, INP_UP},    // X
+        {0x0080, INP_DOWN},  // B
+        {0x0040, INP_LEFT},  // Y
+        {0x8000, INP_RIGHT}, // A
+    };
+    for (i = 0; i < 8; ++i) {
+        if ((inp_virtpad & mapping[i].hw)) {
+            out |= mapping[i].bitmask;
+        }
+    }
+    return out;
 }
 

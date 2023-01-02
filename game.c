@@ -17,14 +17,13 @@ void titlescreen_run()
     while(1)
     {
         uint8_t i;
-        inp_tick();
         sys_render_start();
         for (i=0; i<20; ++i) {
             sys_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
         }
         sys_render_finish();
 
-        if ((inp_joystate & 0x80) == 0) {
+        if (sys_inp_dualsticks()) {
             return;
         }
 
@@ -72,8 +71,6 @@ uint8_t level_run(uint8_t level) {
         sys_hud(level, player_lives, player_score);
 
         sys_render_finish();
-
-        inp_tick();
 
         gobs_tick(state == LEVELSTATE_GETREADY);    // spawnphase?
         player_tickall();

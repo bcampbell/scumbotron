@@ -3,7 +3,6 @@
 
 #include <SDL.h>
 
-volatile uint16_t inp_joystate = 0;
 volatile uint8_t tick = 0;
 
 extern unsigned char export_palette_bin[];
@@ -191,33 +190,32 @@ static void pumpevents()
     }
 }
 
-// hackhackhack
-#define JOY_UP_MASK 0x08
-#define JOY_DOWN_MASK 0x04
-#define JOY_LEFT_MASK 0x02
-#define JOY_RIGHT_MASK 0x01
-#define JOY_BTN_1_MASK 0x80
-
-void inp_tick()
+uint8_t sys_inp_dualsticks()
 {
-    uint16_t j=0;
+
+    uint8_t out = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    if (keys[SDL_SCANCODE_UP]) {
-        j |= JOY_UP_MASK;
+    uint8_t i;
+    struct {
+        uint8_t scancode;
+        uint8_t bitmask;
+    } mapping[8] = {
+        {SDL_SCANCODE_UP, INP_FIRE_UP},
+        {SDL_SCANCODE_DOWN, INP_FIRE_DOWN},
+        {SDL_SCANCODE_LEFT, INP_FIRE_LEFT},
+        {SDL_SCANCODE_RIGHT, INP_FIRE_RIGHT},
+        {SDL_SCANCODE_W, INP_UP},
+        {SDL_SCANCODE_S, INP_DOWN},
+        {SDL_SCANCODE_A, INP_LEFT},
+        {SDL_SCANCODE_D, INP_RIGHT},
+    };
+   
+    for (i = 0; i < 8; ++i) {
+        if (keys[mapping[i].scancode]) {
+            out |= mapping[i].bitmask;
+        }
     }
-    if (keys[SDL_SCANCODE_DOWN]) {
-        j |= JOY_DOWN_MASK;
-    }
-    if (keys[SDL_SCANCODE_LEFT]) {
-        j |= JOY_LEFT_MASK;
-    }
-    if (keys[SDL_SCANCODE_RIGHT]) {
-        j |= JOY_RIGHT_MASK;
-    }
-    if (keys[SDL_SCANCODE_Z]) {
-        j |= JOY_BTN_1_MASK;
-    }
-    inp_joystate = ~j;
+    return out;
 }
 
 void sys_render_start()

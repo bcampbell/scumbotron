@@ -19,13 +19,6 @@ uint8_t shottimer[MAX_SHOTS];
 
 static uint8_t shot_alloc();
 
-// hackhackhack (from cx16.h)
-#define JOY_UP_MASK 0x08
-#define JOY_DOWN_MASK 0x04
-#define JOY_LEFT_MASK 0x02
-#define JOY_RIGHT_MASK 0x01
-#define JOY_BTN_1_MASK 0x80
-
 // player
 #define PLAYER_SPD (2*FX_ONE);
 
@@ -137,25 +130,22 @@ bool player_collisions()
 
 
 void player_tick(uint8_t d) {
-    uint8_t dir = 0;
+    uint8_t sticks = sys_inp_dualsticks();
+    uint8_t dir = sticks & 0x0F;
     ++plrtimer[d];
 
-    if ((inp_joystate & JOY_UP_MASK) ==0) {
-        dir |= DIR_UP;
+    if (sticks & INP_UP) {
         plry[d] -= PLAYER_SPD;
-    } else if ((inp_joystate & JOY_DOWN_MASK) ==0) {
-        dir |= DIR_DOWN;
+    } else if (sticks & INP_DOWN) {
         plry[d] += PLAYER_SPD;
     }
-    if ((inp_joystate & JOY_LEFT_MASK) ==0) {
-        dir |= DIR_LEFT;
+    if (sticks & INP_LEFT) {
         plrx[d] -= PLAYER_SPD;
-    } else if ((inp_joystate & JOY_RIGHT_MASK) ==0) {
-        dir |= DIR_RIGHT;
+    } else if (sticks & INP_RIGHT) {
         plrx[d] += PLAYER_SPD;
     }
 
-    if ((inp_joystate & JOY_BTN_1_MASK) == 0) {
+    if (sticks & 0xF0) {
         if (!plrfacing[d]) {
             plrfacing[d] = dir;
         }
@@ -168,7 +158,8 @@ void player_tick(uint8_t d) {
             if (shot < MAX_SHOTS) {
                 shotx[shot] = plrx[d];
                 shoty[shot] = plry[d];
-                shotdir[shot] = plrfacing[d];   // direction
+//                shotdir[shot] = plrfacing[d];   // direction
+                shotdir[shot] = (sticks >> 4);  // fire direction
                 shottimer[shot] = 16;
             }
         }

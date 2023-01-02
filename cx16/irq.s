@@ -85,7 +85,10 @@ inp_virtpad_map_out_lo:
 ;  .X, byte 1:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 ;              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 
-; the virtual gamepad, driven by keyboard.
+; The virtual gamepad, driven by keyboard.
+; not sure of correct bit order here...
+; Aalso bits are inverted compared to HW I think.
+; In any case, revisit!
 inp_virtpad: .byte 0,0
 
 keyhandler:
