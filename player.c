@@ -178,22 +178,22 @@ void player_tick(uint8_t d) {
         }
     }
 
-    {
     // keep player on screen
-    const int16_t xmax = (SCREEN_W - 16) << FX;
-    if (plrx[d] < 0<<FX) {
-        plrx[d] = 0;
-    } else if (plrx[d] > xmax) {
-        plrx[d] = xmax;
-    }
+    {
+        const int16_t xmax = (SCREEN_W - 16) << FX;
+        if (plrx[d] < 0<<FX) {
+            plrx[d] = 0;
+        } else if (plrx[d] > xmax) {
+            plrx[d] = xmax;
+        }
     }
     {
-    const int16_t ymax = (SCREEN_H - 16) << FX;
-    if (plry[d] < 0<<FX) {
-        plry[d] = 0;
-    } else if (plry[d] > ymax) {
-        plry[d] = ymax;
-    }
+        const int16_t ymax = (SCREEN_H - 16) << FX;
+        if (plry[d] < 0<<FX) {
+            plry[d] = 0;
+        } else if (plry[d] > ymax) {
+            plry[d] = ymax;
+        }
     }
 }
 
