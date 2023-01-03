@@ -356,7 +356,7 @@ static void drawrect(const SDL_Rect *r, uint8_t colour)
 static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty)
 {
     int y;
-    SDL_Rect unclipped {destx, desty, srcw, srch};
+    SDL_Rect unclipped = {destx, desty, srcw, srch};
     SDL_Rect r;
     SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
     for (y = 0; y < r.h; ++y) {
@@ -375,7 +375,7 @@ static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int
 static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte)
 {
     int y;
-    SDL_Rect unclipped {destx, desty, srcw, srch};
+    SDL_Rect unclipped = {destx, desty, srcw, srch};
     SDL_Rect r;
     SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
     for (y = 0; y < r.h; ++y) {
