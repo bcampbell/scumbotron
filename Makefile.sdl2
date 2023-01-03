@@ -1,44 +1,54 @@
-EXPORT=sdl2/export
-SRCS_COMMON = game.c gob.c player.c
-SRCS_SYS = sdl2/sys.c
-SRCS_EXPORT = $(EXPORT)/palette.c $(EXPORT)/spr16.c $(EXPORT)/spr32.c $(EXPORT)/chars.c
-INCS = gob.h player.h sdl2/sys.h
+BUILD_DIR=build_sdl2
+EXPORT_DIR=$(BUILD_DIR)/export
 
-SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
+SRCS = sdl2/sys.c \
+	game.c gob.c player.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
 
-OBJS = $(patsubst %.cpp,%.o,$(SRCS) )
+OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 
-CC := g++
-LIBS = `sdl2-config --libs` -lSDL2_mixer
+CC := gcc
+LDFLAGS =
+LDLIBS = `sdl2-config --libs` -lSDL2_mixer
 CFLAGS = -ggdb `sdl2-config --cflags` -Wall -Isdl2
-EXE = game
+DEPFLAGS = -MMD -MP -MF $@.d
 
-$(EXE): $(OBJS)
-	$(CC) $(CFLAGS) -o $(EXE) $(OBJS) $(LIBS)
+DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
-%.o : %.cpp
-	$(CC) $(CFLAGS) -o $@ -c $<
-	
+
+$(BUILD_DIR)/game: $(OBJ_FILES)
+	@echo Linking $(notdir $@)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(BUILD_DIR)/%.o: %.c
+	@echo Compiling $(notdir $<)
+	@# Create the folder structure for the output file
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
+
+-include $(DEP_FILES)
+
 # graphics exporting
-$(EXPORT)/palette.bin: sprites16.png
+$(EXPORT_DIR)/palette.bin: sprites16.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -palette -out $@ -fmt bin $<
 
-$(EXPORT)/spr16.bin: sprites16.png
+$(EXPORT_DIR)/spr16.bin: sprites16.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -w 16 -h 16 -bpp 8 -num 64 -out $@ -fmt bin $<
 
-$(EXPORT)/spr32.bin: sprites32.png
+$(EXPORT_DIR)/spr32.bin: sprites32.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -w 32 -h 32 -bpp 8 -num 8 -out $@ -fmt bin $<
 
-$(EXPORT)/chars.bin: chars.png
+$(EXPORT_DIR)/chars.bin: chars.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -w 8 -h 8 -bpp 8 -num 256 -out $@ -fmt bin $<
 
 %.c: %.bin
 	xxd -i -n export_`basename $<` $< $@
 
-depend:
-	$(CC) -MM $(CFLAGS) $(SRCS) > .depend
-
-ifeq ($(wildcard .depend),.depend)
-include .depend
-endif
+.PHONY: clean
+clean:
+	- rm -rf $(BUILD_DIR)
 

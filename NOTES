@@ -51,3 +51,5 @@ compiler: https://github.com/uli/huc
 - tile layer
 
 
+# MISC
+Makefile tips: https://interrupt.memfault.com/blog/gnu-make-guidelines

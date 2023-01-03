@@ -3,7 +3,7 @@
 *.o
 Makefile
 cx16/export
-sdl2/export
+build_sdl2
 game
 game.prg
 game.prg.elf
