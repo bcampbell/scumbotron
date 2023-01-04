@@ -4,40 +4,61 @@
 # disassemble whole lot: (compile with -g!)
 # llvm-objdump -dSr game.prg.elf >/tmp/game.s
 
-EXPORT=cx16/export
-SRCS_COMMON = game.c gob.c player.c
-SRCS_SYS = cx16/sys_cx16.c
+#CC := mos-cx16-clang
+#CFLAGS = -Icx16 -g -Os
+#SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
+#OBJS = $(patsubst %.c,%.o,$(SRCS) )
+#OBJS += $(patsubst %.s,%.o,$(SRCS_ASM) )
+
+#%.o : %.c
+#	$(CC) $(CFLAGS) -o $@ -c $<
+
+#%.o : %.s
+#	$(CC) $(CFLAGS) -o $@ -c $<
+
+BUILD_DIR=build_cx16
+EXPORT_DIR=$(BUILD_DIR)/export
+
+SRCS = cx16/sys_cx16.c \
+	game.c gob.c player.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c)
 SRCS_ASM = cx16/irq.s cx16/glue.s 
-SRCS_EXPORT = $(EXPORT)/palette.c $(EXPORT)/spr16.c $(EXPORT)/spr32.c
-INCS = gob.h player.h cx16/sys.h
+
+OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
 
 CC := mos-cx16-clang
 CFLAGS = -Icx16 -g -Os
-SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
-OBJS = $(patsubst %.c,%.o,$(SRCS) )
-OBJS += $(patsubst %.s,%.o,$(SRCS_ASM) )
+LDFLAGS =
+LDLIBS = 
+DEPFLAGS = -MMD -MP -MF $@.d
 
+DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
-#game.prg: $(SRCS) $(SRCS_ASM)
-#	$(CC) $(CFLAGS) $(SRCS) $(SRCS_ASM) -o $@
+$(BUILD_DIR)/game.prg: $(OBJ_FILES)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-game.prg: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-%.o : %.c
-	$(CC) $(CFLAGS) -o $@ -c $<
+$(BUILD_DIR)/%.o: %.s
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o : %.s
-	$(CC) $(CFLAGS) -o $@ -c $<
+-include $(DEP_FILES)
 
 # graphics exporting
-$(EXPORT)/palette.bin: sprites16.png
+$(EXPORT_DIR)/palette.bin: sprites16.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -palette -out $@ -fmt bin $<
 
-$(EXPORT)/spr16.bin: sprites16.png
+$(EXPORT_DIR)/spr16.bin: sprites16.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -w 16 -h 16 -bpp 4 -num 64 -out $@ -fmt bin $<
 
-$(EXPORT)/spr32.bin: sprites32.png
+$(EXPORT_DIR)/spr32.bin: sprites32.png
+	mkdir -p $(dir $@)
 	tools/png2sprites -w 32 -h 32 -bpp 4 -num 8 -out $@ -fmt bin $<
 
 # These two rules compress .bin files then convert them to .c source.
@@ -47,11 +68,11 @@ $(EXPORT)/spr32.bin: sprites32.png
 %.c: %.zbin
 	xxd -i -n export_`basename $<` $< $@
 
-run: game.prg
-	x16emu -prg game.prg -run
+.PHONY: run
+run: $(BUILD_DIR)/game.prg
+	x16emu -prg $(BUILD_DIR)/game.prg -run
 
 .PHONY: clean
-
 clean:
-	rm game.prg game.prg.elf $(OBJS)
+	- rm -rf $(BUILD_DIR)
 

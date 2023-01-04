@@ -1,12 +1,8 @@
 *.swp
 *.bak
-*.o
 Makefile
-cx16/export
 build_sdl2
-game
-game.prg
-game.prg.elf
+build_cx16
 log
 tools/png2sprites
 todo.txt
