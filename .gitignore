@@ -3,6 +3,7 @@
 Makefile
 build_sdl2
 build_cx16
+build_nds
 log
 tools/png2sprites
 todo.txt
