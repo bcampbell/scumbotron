@@ -50,6 +50,10 @@ compiler: https://github.com/uli/huc
 - 64 sprites (16x16)
 - tile layer
 
+# SAM Coupé
+
+- 6MHz z80
+- Mode 4 256x192 4bbp
 
 # MISC
 Makefile tips: https://interrupt.memfault.com/blog/gnu-make-guidelines

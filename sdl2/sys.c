@@ -1,5 +1,5 @@
 #include "../sys.h"
-#include "../gob.h"
+#include "../gob.h" // for ZAPPER_*
 
 #include <SDL.h>
 
@@ -47,6 +47,11 @@ static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
 
 // local functions
+static void sys_init();
+static void waitvbl();
+static void sys_render_start();
+static void sys_render_finish();
+
 static void pumpevents();
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
@@ -596,5 +601,17 @@ static void rendereffects()
     }
 }
 
+
+int main(void) {
+    sys_init();
+    game_init();
+    while(1) {
+        waitvbl();
+        sys_render_start();
+        game_render();
+        sys_render_finish();
+        game_tick();
+    }
+}
 
 

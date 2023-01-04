@@ -1,6 +1,11 @@
 #ifndef SYS_H
 #define SYS_H
 
+// provided by game.c:
+void game_init();
+void game_tick();
+void game_render();
+
 /*
  * Common interface for all platforms
  */
@@ -14,12 +19,6 @@
 // core game stuff.
 #define SCREEN_W 320
 #define SCREEN_H 240
-
-void sys_init();
-void waitvbl();
-
-void sys_render_start();
-void sys_render_finish();
 
 void sys_clr();
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);

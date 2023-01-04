@@ -1,17 +1,16 @@
 #include <cx16.h>
 
 #include "../sys.h"
-#include "../gob.h"
+#include "../gob.h" // for ZAPPER_*
 
 // Platform-specifics for cx16
 
 // irq.s, glue.s
 extern void inp_tick();
-
-// irq.s
 extern void irq_init();
 extern void keyhandler_init();
 extern uint16_t inp_virtpad;
+extern void waitvbl();
 
 //  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
 //              SNES | B | Y |SEL|STA|UP |DN |LT |RT |
@@ -74,6 +73,10 @@ static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uin
 static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
 
 static void clr_layer0();
+
+static void sys_init();
+static void sys_render_start();
+static void sys_render_finish();
 
 // which layer0 buffer we're displaying (we'll draw into the other one)
 static uint8_t layer0_displaybuf;
@@ -172,10 +175,8 @@ void sys_render_finish()
     }
     sprcntprev = sprcnt;
 
-    sfx_tick();
     //testum();
     rendereffects();
-    inp_tick(); // update inp_joystate
 }
 
 static void sprout16(int16_t x, int16_t y, uint8_t img ) {
@@ -928,5 +929,19 @@ uint8_t sys_inp_dualsticks()
         }
     }
     return out;
+}
+
+int main(void) {
+    sys_init();
+    game_init();
+    while(1) {
+        waitvbl();
+        sys_render_start();
+        game_render();
+        sys_render_finish();
+        sfx_tick();
+        inp_tick(); // update inp_joystate
+        game_tick();
+    }
 }
 
