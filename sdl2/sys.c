@@ -110,21 +110,13 @@ void sys_init()
     {
         palette = SDL_AllocPalette(256);
 
-        const uint16_t *src = (const uint16_t*)export_palette_bin;
+        const uint8_t *src = export_palette_bin;
         SDL_Color colors[16];
         for (int i = 0; i < 16; ++i) {
-		    // VERA format is:
-            // xxxxrrrrggggbbbb
-            uint16_t c = *src++;
-            uint8_t r = (c>>8) & 0x000f;
-            uint8_t g = (c>>4) & 0x000f;
-            uint8_t b = (c>>0) & 0x000f;
-
-            // nibble-double to get 8bit components
-            colors[i].r = (r<<4) | r;
-            colors[i].g = (g<<4) | g;
-            colors[i].b = (b<<4) | b;
-            colors[i].a = 255;
+            colors[i].r = *src++;
+            colors[i].g = *src++;
+            colors[i].b = *src++;
+            colors[i].a = *src++;
         }
         // fill out unused colours.
         for (int i = 16; i < 256; ++i) {

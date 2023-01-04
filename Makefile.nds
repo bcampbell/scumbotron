@@ -10,26 +10,21 @@ export PATH	:=	$(DEVKITPATH)/tools/bin:$(DEVKITPATH)/devkitARM/bin:$(PATH)
 BUILD_DIR=build_nds
 EXPORT_DIR=$(BUILD_DIR)/export
 
-SRCS = nds/main.c \
-	game.c gob.c player.c \
-	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
+SRCS = nds/main.c game.c gob.c player.c
+SRCS_EXPORT = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+OBJ_FILES += $(SRCS_EXPORT:.c=.o)
 
-#CC := gcc
-#LDFLAGS =
-#LDLIBS = `sdl2-config --libs` -lSDL2_mixer
-#CFLAGS = -ggdb `sdl2-config --cflags` -Wall -Isdl2
-PREFIX		:=	arm-none-eabi-
-
-export CC	:=	$(PREFIX)gcc
-export CXX	:=	$(PREFIX)g++
-export AS	:=	$(PREFIX)as
-export AR	:=	$(PREFIX)gcc-ar
-export OBJCOPY	:=	$(PREFIX)objcopy
-export STRIP	:=	$(PREFIX)strip
-export NM	:=	$(PREFIX)gcc-nm
-export RANLIB	:=	$(PREFIX)gcc-ranlib
+PREFIX := arm-none-eabi-
+CC := $(PREFIX)gcc
+#CXX	:=	$(PREFIX)g++
+#AS	:=	$(PREFIX)as
+#AR	:=	$(PREFIX)gcc-ar
+#OBJCOPY	:=	$(PREFIX)objcopy
+#STRIP	:=	$(PREFIX)strip
+#NM	:=	$(PREFIX)gcc-nm
+#RANLIB	:=	$(PREFIX)gcc-ranlib
 
 LIBNDS=$(DEVKITPRO)/libnds
 
@@ -42,11 +37,12 @@ CFLAGS	= -Inds -DARM9 -I$(LIBNDS)/include
 #CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:= -g $(ARCH)
-LDFLAGS	= -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+#LDFLAGS	= -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS	= -specs=ds_arm9.specs -g $(ARCH)
 LDFLAGS += -L$(LIBNDS)/lib
 LDLIBS = -lnds9
 
-##
+#
 DEPFLAGS = -MMD -MP -MF $@.d
 
 DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
@@ -66,43 +62,33 @@ $(BUILD_DIR)/%.o: %.c
 # graphics exporting
 $(EXPORT_DIR)/palette.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -palette -out $@ -fmt bin $<
+	tools/png2sprites -palette nds $< $@
 
 $(EXPORT_DIR)/spr16.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 16 -h 16 -bpp 8 -num 64 -out $@ -fmt bin $<
+	tools/png2sprites -w 16 -h 16 -num 64 -fmt nds4bpp $< $@
 
 $(EXPORT_DIR)/spr32.bin: sprites32.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 32 -bpp 8 -num 8 -out $@ -fmt bin $<
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt nds4bpp $< $@
 
 $(EXPORT_DIR)/chars.bin: chars.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 8 -h 8 -bpp 8 -num 256 -out $@ -fmt bin $<
+	tools/png2sprites -w 8 -h 8 -num 256 -fmt nds4bpp $< $@
 
 %.c: %.bin
 	xxd -i -n export_`basename $<` $< $@
 
-ifeq ($(strip $(GAME_TITLE)),)
-GAME_TITLE	:=	$(notdir $(OUTPUT))
-endif
-
-ifeq ($(strip $(GAME_SUBTITLE1)),)
-GAME_SUBTITLE1	:=	builtwithdevkitARM
-endif
-
-ifeq ($(strip $(GAME_SUBTITLE2)),)
-GAME_SUBTITLE2	:=	http://devkitpro.org
-endif
-
-ifeq ($(strip $(GAME_ICON)),)
 GAME_ICON      :=      $(DEVKITPRO)/libnds/icon.bmp
-endif
 
 %.nds: %.elf
-	ndstool -c $@ -9 $< -b $(GAME_ICON) "Game;subtitle1;subtitle2" $(_ADDFILES)
+	ndstool -c $@ -9 $< -b $(GAME_ICON) "Game;subtitle1;subtitle2"
 
 .PHONY: clean
 clean:
 	- rm -rf $(BUILD_DIR)
+
+.PHONY: run
+run: $(BUILD_DIR)/game.nds
+	desmume $<
 

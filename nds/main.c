@@ -4,6 +4,15 @@
 
 #include <stdio.h>
 
+extern unsigned char export_palette_bin[];
+extern unsigned int export_palette_bin_len;
+extern unsigned char export_spr16_bin[];
+extern unsigned int export_spr16_bin_len;
+extern unsigned char export_spr32_bin[];
+extern unsigned int export_spr32_bin_len;
+extern unsigned char export_chars_bin[];
+extern unsigned int export_chars_bin_len;
+
 volatile uint8_t tick = 0;
 
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
@@ -66,6 +75,12 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 #define SPR16_FRAG_SE 36
 
 #define SPR32_AMOEBA_BIG 0
+
+#define NUM_SPR16 64
+#define NUM_SPR32 8
+
+#define BYTESIZE_SPR16 (16*16/2)   // 16x16 4bpp
+#define BYTESIZE_SPR32 (32*32/2)   // 32x32 4bpp
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour)
 {
@@ -217,27 +232,48 @@ static void init()
 	oamInit(&oamMain, SpriteMapping_1D_32, false);
 	oamInit(&oamSub, SpriteMapping_1D_32, false);
 
-	gfx = oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
-	gfxSub = oamAllocateGfx(&oamSub, SpriteSize_16x16, SpriteColorFormat_256Color);
+    // set up palettes
+    {
+        int i;
+        const uint16_t *src = (const uint16_t*)export_palette_bin;
+        for (i = 0; i < 16; ++i) {
+            SPRITE_PALETTE[i] = src[i];
+            SPRITE_PALETTE_SUB[i] = src[i];
+            BG_PALETTE[i] = src[i];
+            BG_PALETTE_SUB[i] = src[i];
+        }
+        // highlight palette
+        for (i = 16; i < 32; ++i) {
+            SPRITE_PALETTE[i] = 0x7FFF;
+            SPRITE_PALETTE_SUB[i] = 0x7FFF;
+            BG_PALETTE[i] = 0x7FFF;
+            BG_PALETTE_SUB[i] = 0x7FFF;
+        }
+    }
 
-	for(i = 0; i < 16 * 16 / 2; i++)
-	{
-		gfx[i] = 1 | (1 << 8);
-		gfxSub[i] = 1 | (1 << 8);
-	}
-
-	SPRITE_PALETTE[1] = RGB15(31,0,0);
-	SPRITE_PALETTE_SUB[1] = RGB15(0,31,0);
-
+    // load sprites into vram
+    {
+        int i;
+        const uint8_t *src = export_spr16_bin;
+        uint8_t* dest;
+    	for (i = 0; i < NUM_SPR16; ++i)
+	    {
+            dest = ((uint8_t*)SPRITE_GFX) + (i*BYTESIZE_SPR16);
+            memcpy(dest, src, BYTESIZE_SPR16);
+            dest = ((uint8_t*)SPRITE_GFX_SUB) + (i*BYTESIZE_SPR16);
+            memcpy(dest, src, BYTESIZE_SPR16);
+            src += BYTESIZE_SPR16;
+    	}
+    }
 
 	irqSet(IRQ_VBLANK, vblank);
-	consoleDemoInit();
+	//consoleDemoInit();
 }
-
 
 
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    sprout16(x,y,img);
 }
 
 static inline void sprout32(int16_t x, int16_t y, uint8_t img)
@@ -256,8 +292,8 @@ static inline void sprout16(int16_t x, int16_t y, uint8_t img)
         0,                    //priority, lower renders last (on top)
         0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
         SpriteSize_16x16,     
-        SpriteColorFormat_256Color, 
-        gfx,                  //pointer to the loaded graphics
+        SpriteColorFormat_16Color, 
+        oamGetGfxPtr(&oamMain, img*4), 
         -1,                  //sprite rotation data  
         false,               //double the size when rotating?
         false,			//hide the sprite?
@@ -265,15 +301,14 @@ static inline void sprout16(int16_t x, int16_t y, uint8_t img)
         false	//apply mosaic
         );              
     
-    
     oamSet(&oamSub, 
         spr, 
         x>>FX, y>>FX,
         0, 
         0,
         SpriteSize_16x16, 
-        SpriteColorFormat_256Color, 
-        gfxSub, 
+        SpriteColorFormat_16Color, 
+        oamGetGfxPtr(&oamSub, img*4), 
         -1, 
         false, 
         false,			
@@ -296,6 +331,9 @@ int main(void) {
 
         spr = 0;
         game_render();
+
+        oamClear(&oamMain, spr, 128-spr);
+        oamClear(&oamSub, spr, 128-spr);
 
 		swiWaitForVBlank();
 		

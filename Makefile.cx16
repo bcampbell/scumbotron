@@ -4,18 +4,6 @@
 # disassemble whole lot: (compile with -g!)
 # llvm-objdump -dSr game.prg.elf >/tmp/game.s
 
-#CC := mos-cx16-clang
-#CFLAGS = -Icx16 -g -Os
-#SRCS = $(SRCS_COMMON) $(SRCS_SYS) $(SRCS_EXPORT)
-#OBJS = $(patsubst %.c,%.o,$(SRCS) )
-#OBJS += $(patsubst %.s,%.o,$(SRCS_ASM) )
-
-#%.o : %.c
-#	$(CC) $(CFLAGS) -o $@ -c $<
-
-#%.o : %.s
-#	$(CC) $(CFLAGS) -o $@ -c $<
-
 BUILD_DIR=build_cx16
 EXPORT_DIR=$(BUILD_DIR)/export
 
@@ -51,15 +39,15 @@ $(BUILD_DIR)/%.o: %.s
 # graphics exporting
 $(EXPORT_DIR)/palette.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -palette -out $@ -fmt bin $<
+	tools/png2sprites -palette cx16 $< $@
 
 $(EXPORT_DIR)/spr16.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 16 -h 16 -bpp 4 -num 64 -out $@ -fmt bin $<
+	tools/png2sprites -w 16 -h 16 -num 64 -fmt 4bpp $< $@
 
 $(EXPORT_DIR)/spr32.bin: sprites32.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 32 -bpp 4 -num 8 -out $@ -fmt bin $<
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt 4bpp $< $@
 
 # These two rules compress .bin files then convert them to .c source.
 %.zbin: %.bin

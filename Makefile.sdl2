@@ -17,12 +17,9 @@ DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
 
 $(BUILD_DIR)/game: $(OBJ_FILES)
-	@echo Linking $(notdir $@)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(BUILD_DIR)/%.o: %.c
-	@echo Compiling $(notdir $<)
-	@# Create the folder structure for the output file
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
@@ -31,19 +28,19 @@ $(BUILD_DIR)/%.o: %.c
 # graphics exporting
 $(EXPORT_DIR)/palette.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -palette -out $@ -fmt bin $<
+	tools/png2sprites -palette rgba $< $@
 
 $(EXPORT_DIR)/spr16.bin: sprites16.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 16 -h 16 -bpp 8 -num 64 -out $@ -fmt bin $<
+	tools/png2sprites -w 16 -h 16 -num 64 -fmt 8bpp -num 64 $< $@
 
 $(EXPORT_DIR)/spr32.bin: sprites32.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 32 -bpp 8 -num 8 -out $@ -fmt bin $<
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt 8bpp $< $@
 
 $(EXPORT_DIR)/chars.bin: chars.png
 	mkdir -p $(dir $@)
-	tools/png2sprites -w 8 -h 8 -bpp 8 -num 256 -out $@ -fmt bin $<
+	tools/png2sprites -w 8 -h 8 -num 256 -fmt 8bpp $< $@
 
 %.c: %.bin
 	xxd -i -n export_`basename $<` $< $@

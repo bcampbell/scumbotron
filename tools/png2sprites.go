@@ -13,18 +13,17 @@ import (
 )
 
 var opts struct {
-	paletteOnly  bool
-	width        int
-	height       int
-	numFrames    int
-	bitsPerPixel int
-	fmt          string
-	outFile      string
+	palette   string
+	width     int
+	height    int
+	numFrames int
+	fmt       string
+	csource   bool
 }
 
 func main() {
 	flag.Usage = func() {
-		txt := `Usage: %s [flags] infile
+		txt := `Usage: %s [flags] infile [outfile]
 
 Convert a paletted png image to sprites.
 
@@ -34,13 +33,12 @@ Flags:
 		flag.PrintDefaults()
 	}
 
-	flag.BoolVar(&opts.paletteOnly, "palette", false, "Output palette only")
+	flag.StringVar(&opts.palette, "palette", "", "Output palette only (RGBA, nds, cx16)")
 	flag.IntVar(&opts.width, "w", 8, "sprite width")
 	flag.IntVar(&opts.height, "h", 8, "sprite height")
 	flag.IntVar(&opts.numFrames, "num", 1, "number of sprites to export")
-	flag.IntVar(&opts.bitsPerPixel, "bpp", 8, "Bits per pixel (8,4,1)")
-	flag.StringVar(&opts.fmt, "fmt", "c", "Output format ('c', 'bin')")
-	flag.StringVar(&opts.outFile, "out", "-", "Output file ('-' for stdout)")
+	flag.StringVar(&opts.fmt, "fmt", "8bpp", "output format (8bpp, 4bpp, 1bpp, nds4bpp)")
+	flag.BoolVar(&opts.csource, "c", false, "Output C source instead of raw binary")
 	flag.Parse()
 
 	if len(flag.Args()) < 1 {
@@ -54,14 +52,20 @@ Flags:
 		os.Exit(1)
 	}
 
-	dumper, err := initDumper()
+	// output file specified?
+	var outFile string
+	if len(flag.Args()) >= 2 {
+		outFile = flag.Arg(1)
+	}
+	dumper, err := initDumper(outFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 		os.Exit(1)
 	}
 	defer dumper.Close()
 
-	if opts.paletteOnly {
+	if opts.palette != "" {
+		// dump palette only.
 		err := dumpPalette(img, dumper)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
@@ -77,26 +81,23 @@ Flags:
 	}
 }
 
-func initDumper() (Dumper, error) {
+func initDumper(outFile string) (Dumper, error) {
 	var f *os.File
 
-	if opts.outFile == "-" {
+	if outFile == "-" || outFile == "" {
 		f = os.Stdout
 	} else {
 		var err error
-		f, err = os.Create(opts.outFile)
+		f, err = os.Create(outFile)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	switch opts.fmt {
-	case "c":
+	if opts.csource {
 		return &SrcDumper{NumPerRow: 8, Out: f, Indent: "\t"}, nil
-	case "bin":
+	} else {
 		return &BinDumper{f}, nil
-	default:
-		return nil, fmt.Errorf("Unknown format '%s'", opts.fmt)
 	}
 }
 
@@ -121,18 +122,63 @@ func loadImg(infilename string) (*image.Paletted, error) {
 }
 
 func dumpPalette(m *image.Paletted, dumper Dumper) error {
+
+	switch opts.palette {
+	case "nds":
+		return dumpPaletteNDS(m, dumper)
+	case "cx16":
+		return dumpPaletteCX16(m, dumper)
+	case "rgba":
+		return dumpPaletteRGBA(m, dumper)
+	default:
+		return errors.New("Unknown -palette type")
+	}
+}
+
+func dumpPaletteRGBA(m *image.Paletted, dumper Dumper) error {
 	var pal color.Palette
 	pal = m.ColorModel().(color.Palette)
+	dumper.Commentf("Palette (%d colours) R,G,B,A\n", len(pal))
+	for i := 0; i < len(pal); i++ {
+		c := pal[i].(color.RGBA)
+		_, err := dumper.Write([]byte{c.R, c.G, c.B, c.A})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	dumper.Commentf("Palette (%d colours)\n", len(pal))
+func dumpPaletteCX16(m *image.Paletted, dumper Dumper) error {
+	var pal color.Palette
+	pal = m.ColorModel().(color.Palette)
+	dumper.Commentf("Palette (%d colours) xxxxrrrrggggbbbb, little endian\n", len(pal))
 	for i := 0; i < len(pal); i++ {
 		c := pal[i].(color.RGBA)
 		// output format is
-		// ggggbbbb, xxxxrrrr
+		// xxxxrrrrggggbbbb, little endian
 
 		lo := uint8((c.G & 0xf0) | (c.B >> 4))
 		hi := uint8(c.R >> 4)
 		_, err := dumper.Write([]byte{lo, hi})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func dumpPaletteNDS(m *image.Paletted, dumper Dumper) error {
+	var pal color.Palette
+	pal = m.ColorModel().(color.Palette)
+	dumper.Commentf("Palette (%d colours) xbbbbgggggrrrrr little-endian\n", len(pal))
+	for i := 0; i < len(pal); i++ {
+		c := pal[i].(color.RGBA)
+		// output format is
+		// xbbbbbgggggrrrrr (but in little-endian order)
+		var out uint16
+		out = uint16(c.R>>3) | (uint16(c.G>>3) << 5) | (uint16(c.B>>3) << 10)
+		_, err := dumper.Write([]byte{uint8(out & 0xff), uint8(out >> 8)})
 		if err != nil {
 			return err
 		}
@@ -153,8 +199,11 @@ func dumpImages(img *image.Paletted, writer Dumper) error {
 			return fmt.Errorf("frame %d is outside image bounds", i)
 		}
 		frame, _ := img.SubImage(rect).(*image.Paletted)
-		dat := cook(frame)
-		err := writer.Commentf("img %d (%dx%d)\n", i, w, h)
+		dat, err := cook(frame)
+		if err != nil {
+			return err
+		}
+		err = writer.Commentf("img %d (%dx%d)\n", i, w, h)
 		if err != nil {
 			return err
 		}
@@ -173,29 +222,31 @@ func dumpImages(img *image.Paletted, writer Dumper) error {
 	return nil
 }
 
-func cook(img *image.Paletted) []uint8 {
-	switch opts.bitsPerPixel {
-	case 8:
+func cook(img *image.Paletted) ([]uint8, error) {
+	switch opts.fmt {
+	case "8bpp":
 		return cook8bpp(img)
-	case 4:
+	case "4bpp":
 		return cook4bpp(img)
-	case 1:
+	case "nds4bpp":
+		return cook4bppNDS(img)
+	case "1bpp":
 		return cook1bpp(img)
 	}
-	return []uint8{}
+	return []uint8{}, errors.New("unsupported -fmt")
 }
 
-func cook8bpp(img *image.Paletted) []uint8 {
+func cook8bpp(img *image.Paletted) ([]uint8, error) {
 	out := []uint8{}
 	r := img.Bounds()
 	for y := 0; y < img.Bounds().Dy(); y++ {
 		idx := img.PixOffset(r.Min.X, r.Min.Y+y)
 		out = append(out, img.Pix[idx:idx+r.Dx()]...)
 	}
-	return out
+	return out, nil
 }
 
-func cook4bpp(img *image.Paletted) []uint8 {
+func cook4bpp(img *image.Paletted) ([]uint8, error) {
 	out := []uint8{}
 	r := img.Bounds()
 	for y := 0; y < r.Dy(); y++ {
@@ -206,10 +257,33 @@ func cook4bpp(img *image.Paletted) []uint8 {
 			out = append(out, b)
 		}
 	}
-	return out
+	return out, nil
 }
 
-func cook1bpp(img *image.Paletted) []uint8 {
+// NDS 4bbp
+// outputs 8x8 blocks (so 32x16 sprite would be 8 blocks)
+// 2 pixels/byte, but nds needs reversed order!
+func cook4bppNDS(img *image.Paletted) ([]uint8, error) {
+	out := []uint8{}
+	r := img.Bounds()
+	// TODO: return error if not divisible into 8x8 blocks.
+	for blky := 0; blky < r.Dy()/8; blky++ {
+		for blkx := 0; blkx < r.Dx()/8; blkx++ {
+			for y := 0; y < 8; y++ {
+				idx := img.PixOffset(r.Min.X+(blkx*8), r.Min.Y+(blky*8)+y)
+				for x := 0; x < 8; x += 2 {
+					// note reversed order!
+					b := (img.Pix[idx] & 0x0f) | (img.Pix[idx+1]&0x0f)<<4
+					idx += 2
+					out = append(out, b)
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
+func cook1bpp(img *image.Paletted) ([]uint8, error) {
 	out := []uint8{}
 	r := img.Bounds()
 	for y := 0; y < r.Dy(); y++ {
@@ -225,7 +299,7 @@ func cook1bpp(img *image.Paletted) []uint8 {
 			out = append(out, b)
 		}
 	}
-	return out
+	return out, nil
 }
 
 type Dumper interface {
