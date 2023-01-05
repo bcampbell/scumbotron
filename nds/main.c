@@ -47,14 +47,26 @@ void sys_clr()
 {
 }
 
+static uint8_t glyph(char ascii) {
+    // 32-126 directly printable
+    if (ascii >= 32 && ascii <= 126) {
+        return (uint8_t)ascii;
+    }
+    return 0;
+}
+
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
-	iprintf("\x1b[10;0H%s", txt);
+    uint16_t* dest = BG_MAP_RAM(8) + cy*32 + cx;    // addressing 16bit words
+    while(*txt) {
+        uint16_t i = (uint16_t)glyph(*txt++) | ((uint16_t)colour<<12);
+        *dest++ = i;    //0 | 1<<12;
+    }
 }
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
-	iprintf("\x1b[0;l0Hlv %d  score: %d  lives: %d", (int)level, (int)score, (int)lives);
+//	iprintf("\x1b[0;l0Hlv %d  score: %d  lives: %d", (int)level, (int)score, (int)lives);
 }
 
 // sprite image defs
@@ -222,32 +234,38 @@ u16* gfxSub;
 
 static void init()
 {
-    int i;
-	videoSetMode(MODE_0_2D);
-	videoSetModeSub(MODE_0_2D);
+    videoSetMode(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE);
+    videoSetModeSub(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE);
 
-	vramSetBankA(VRAM_A_MAIN_SPRITE);
-	vramSetBankD(VRAM_D_SUB_SPRITE);
+    vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
+    vramSetBankB(VRAM_B_MAIN_SPRITE_0x06400000);
+    vramSetBankC(VRAM_C_SUB_BG_0x06200000);
+    vramSetBankD(VRAM_D_SUB_SPRITE);
+
+	//vramSetBankA(VRAM_A_MAIN_SPRITE);
+	//vramSetBankD(VRAM_D_SUB_SPRITE);
+
+  	// Set up backgrounds.
+    // Tile base at: 0*0x4000 = 0
+    // Map0 base at:  8*0x0800 = 0x4000
+	REG_BG0CNT = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(8);
+	REG_BG0CNT_SUB = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(8);
 
 	oamInit(&oamMain, SpriteMapping_1D_32, false);
 	oamInit(&oamSub, SpriteMapping_1D_32, false);
 
-    // set up palettes
+    // set up sprite palettes
     {
         int i;
         const uint16_t *src = (const uint16_t*)export_palette_bin;
         for (i = 0; i < 16; ++i) {
             SPRITE_PALETTE[i] = src[i];
             SPRITE_PALETTE_SUB[i] = src[i];
-            BG_PALETTE[i] = src[i];
-            BG_PALETTE_SUB[i] = src[i];
         }
         // highlight palette
         for (i = 16; i < 32; ++i) {
             SPRITE_PALETTE[i] = 0x7FFF;
             SPRITE_PALETTE_SUB[i] = 0x7FFF;
-            BG_PALETTE[i] = 0x7FFF;
-            BG_PALETTE_SUB[i] = 0x7FFF;
         }
     }
 
@@ -264,6 +282,27 @@ static void init()
             memcpy(dest, src, BYTESIZE_SPR16);
             src += BYTESIZE_SPR16;
     	}
+    }
+
+    // set up BG palettes (use one palette for each colour!)
+    {
+        int i;
+        const uint16_t *src = (const uint16_t*)export_palette_bin;
+        for (i=0; i<16; ++i) {
+            BG_PALETTE[(i*16) + 0] = 0;
+            BG_PALETTE_SUB[(i*16) + 0] = 0;
+            int j;
+            for (j=1; j<16; ++j) {
+                BG_PALETTE[(i*16) + j] = src[i];
+                BG_PALETTE_SUB[(i*16) + j] = src[i];
+            }
+
+        }
+    }
+    // load charset into vram
+    {
+        dmaCopy(export_chars_bin, BG_TILE_RAM(0), (8*4)*256);   // 256 4bpp tiles
+        dmaCopy(export_chars_bin, BG_TILE_RAM_SUB(0), (8*4)*256);   // 256 4bpp tiles
     }
 
 	irqSet(IRQ_VBLANK, vblank);
@@ -332,13 +371,22 @@ int main(void) {
         spr = 0;
         game_render();
 
+        // clear leftover sprites
         oamClear(&oamMain, spr, 128-spr);
         oamClear(&oamSub, spr, 128-spr);
 
 		swiWaitForVBlank();
-		
+
 		oamUpdate(&oamMain);
 		oamUpdate(&oamSub);
+        // clear text layer
+        {
+            int i;
+            uint16_t *dest = BG_MAP_RAM(8);
+            for (i = 0; i < 32 * 32; ++i) {
+                *dest++ = 0x20;
+            }
+        }
     }
 	
 	return 0;
