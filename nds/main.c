@@ -321,40 +321,48 @@ static inline void sprout32(int16_t x, int16_t y, uint8_t img)
 
 
 
-int spr;
+int sprMain;
+int sprSub;
 
 static inline void sprout16(int16_t x, int16_t y, uint8_t img)
 {
-    oamSet(&oamMain, //main graphics engine context
-        spr,           //oam index (0 to 127)  
-        x>>FX, y>>FX,   //x and y pixle location of the sprite
-        0,                    //priority, lower renders last (on top)
-        0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
-        SpriteSize_16x16,     
-        SpriteColorFormat_16Color, 
-        oamGetGfxPtr(&oamMain, img*4), 
-        -1,                  //sprite rotation data  
-        false,               //double the size when rotating?
-        false,			//hide the sprite?
-        false, false, //vflip, hflip
-        false	//apply mosaic
-        );              
-    
-    oamSet(&oamSub, 
-        spr, 
-        x>>FX, y>>FX,
-        0, 
-        0,
-        SpriteSize_16x16, 
-        SpriteColorFormat_16Color, 
-        oamGetGfxPtr(&oamSub, img*4), 
-        -1, 
-        false, 
-        false,			
-        false, false, 
-        false	
-        );              
-    ++spr;
+    x = x >> FX;
+    y = y >> FX;
+    if (x > -16 && x < SCREEN_W && y >-16 && y < (SCREEN_H/2)) {
+        oamSet(&oamMain, //main graphics engine context
+            sprMain,           //oam index (0 to 127)  
+            x, y,   //x and y pixle location of the sprite
+            0,                    //priority, lower renders last (on top)
+            0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
+            SpriteSize_16x16,     
+            SpriteColorFormat_16Color, 
+            oamGetGfxPtr(&oamMain, img*4), 
+            -1,                  //sprite rotation data  
+            false,               //double the size when rotating?
+            false,			//hide the sprite?
+            false, false, //vflip, hflip
+            false	//apply mosaic
+            );
+        ++sprMain;
+    }
+    y -= (SCREEN_H/2);
+    if (x > -16 && x < SCREEN_W && y >-16 && y < (SCREEN_H/2)) {
+        oamSet(&oamSub, 
+            sprSub, 
+            x, y,
+            0, 
+            0,
+            SpriteSize_16x16, 
+            SpriteColorFormat_16Color, 
+            oamGetGfxPtr(&oamSub, img*4), 
+            -1, 
+            false, 
+            false,			
+            false, false, 
+            false	
+            );
+        ++sprSub;
+    }
 }	
 
 
@@ -368,12 +376,13 @@ int main(void) {
 		scanKeys();
         game_tick();
 
-        spr = 0;
+        sprMain = 0;
+        sprSub = 0;
         game_render();
 
         // clear leftover sprites
-        oamClear(&oamMain, spr, 128-spr);
-        oamClear(&oamSub, spr, 128-spr);
+        oamClear(&oamMain, sprMain, 128-sprMain);
+        oamClear(&oamSub, sprSub, 128-sprSub);
 
 		swiWaitForVBlank();
 
