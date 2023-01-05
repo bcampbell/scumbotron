@@ -1,6 +1,8 @@
 #ifndef SYS_H
 #define SYS_H
 
+#include "plat_details.h"    // platform-specific details (screen size etc...)
+
 // provided by game.c:
 void game_init();
 void game_tick();
@@ -16,9 +18,6 @@ void game_render();
 // fixed-point: 6 fractional bits.
 #define FX 6
 #define FX_ONE (1<<FX)
-// core game stuff.
-#define SCREEN_W 320
-#define SCREEN_H 240
 
 void sys_clr();
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
