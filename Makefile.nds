@@ -11,7 +11,7 @@ BUILD_DIR=build_nds
 EXPORT_DIR=$(BUILD_DIR)/export
 
 SRCS = nds/main.c game.c gob.c player.c
-SRCS_EXPORT = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
+SRCS_EXPORT = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr32x8.c spr8x32.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 OBJ_FILES += $(SRCS_EXPORT:.c=.o)
@@ -71,6 +71,14 @@ $(EXPORT_DIR)/spr16.bin: sprites16.png
 $(EXPORT_DIR)/spr32.bin: sprites32.png
 	mkdir -p $(dir $@)
 	tools/png2sprites -w 32 -h 32 -num 8 -fmt nds4bpp $< $@
+
+$(EXPORT_DIR)/spr32x8.bin: hzapperbeam.png
+	mkdir -p $(dir $@)
+	tools/png2sprites -w 32 -h 8 -num 1 -fmt nds4bpp $< $@
+
+$(EXPORT_DIR)/spr8x32.bin: vzapperbeam.png
+	mkdir -p $(dir $@)
+	tools/png2sprites -w 8 -h 32 -num 1 -fmt nds4bpp $< $@
 
 $(EXPORT_DIR)/chars.bin: chars.png
 	mkdir -p $(dir $@)

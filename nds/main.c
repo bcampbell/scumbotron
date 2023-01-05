@@ -13,11 +13,23 @@ extern unsigned int export_spr32_bin_len;
 extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
 
+extern unsigned char export_spr32x8_bin[];
+extern unsigned int export_spr32x8_bin_len;
+extern unsigned char export_spr8x32_bin[];
+extern unsigned int export_spr8x32_bin_len;
+
 volatile uint8_t tick = 0;
 
-static inline void sprout16(int16_t x, int16_t y, uint8_t img);
-static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-static inline void sprout32(int16_t x, int16_t y, uint8_t img);
+// track sprite usage during frame
+int sprMain;
+int sprSub;
+
+static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprSize, int pal);
+static void sprout16(int16_t x, int16_t y, uint8_t img);
+static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+static void sprout32(int16_t x, int16_t y, uint8_t img);
+static void sprout32x8(int16_t x, int16_t y, uint8_t img);
+static void sprout8x32(int16_t x, int16_t y, uint8_t img);
 
 static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
     {KEY_UP, INP_UP},
@@ -93,6 +105,12 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 
 #define BYTESIZE_SPR16 (16*16/2)   // 16x16 4bpp
 #define BYTESIZE_SPR32 (32*32/2)   // 32x32 4bpp
+
+// DS-specific sprites for zapper beams
+#define NUM_SPR32x8 1
+#define BYTESIZE_SPR32x8 (32*8/2)   // 32x8 4bpp
+#define NUM_SPR8x32 1
+#define BYTESIZE_SPR8x32 (8*32/2)   // 8x32 4bpp
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour)
 {
@@ -174,8 +192,13 @@ void sys_hzapper_render(int16_t x, int16_t y, uint8_t state) {
             //}
             break;
         case ZAPPER_ON:
-            hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
-            sprout16(x, y, SPR16_HZAPPER_ON);
+            {
+                int px;
+                sprout16(x, y, SPR16_HZAPPER_ON);
+                for(px = 0; px < SCREEN_W; px += 32) {
+                    sprout32x8(px<<FX, y + (4<<FX), 0);
+                }
+            }
             break;
     }
 }
@@ -193,7 +216,13 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state) {
             break;
         case ZAPPER_ON:
             vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
-            sprout16(x, y, SPR16_VZAPPER_ON);
+            {
+                int py;
+                sprout16(x, y, SPR16_VZAPPER_ON);
+                for(py = 0; py < SCREEN_H; py += 32) {
+                    sprout8x32(x + (4<<FX), py<<FX, 0);
+                }
+            }
             break;
     }
 }
@@ -228,9 +257,6 @@ static void vblank()
 }
 
 
-
-u16* gfx;
-u16* gfxSub;
 
 static void init()
 {
@@ -271,17 +297,34 @@ static void init()
 
     // load sprites into vram
     {
-        int i;
-        const uint8_t *src = export_spr16_bin;
-        uint8_t* dest;
-    	for (i = 0; i < NUM_SPR16; ++i)
-	    {
-            dest = ((uint8_t*)SPRITE_GFX) + (i*BYTESIZE_SPR16);
-            memcpy(dest, src, BYTESIZE_SPR16);
-            dest = ((uint8_t*)SPRITE_GFX_SUB) + (i*BYTESIZE_SPR16);
-            memcpy(dest, src, BYTESIZE_SPR16);
-            src += BYTESIZE_SPR16;
-    	}
+        size_t nbytes;
+        uint8_t *destmain = (uint8_t*)SPRITE_GFX;
+        uint8_t *destsub = (uint8_t*)SPRITE_GFX_SUB;
+        nbytes = NUM_SPR16 * BYTESIZE_SPR16;
+        dmaCopy(export_spr16_bin, destmain, nbytes);
+        dmaCopy(export_spr16_bin, destsub, nbytes);
+        destmain += nbytes;
+        destsub += nbytes;
+
+        nbytes = NUM_SPR32 * BYTESIZE_SPR32;
+        dmaCopy(export_spr32_bin, destmain, nbytes);
+        dmaCopy(export_spr32_bin, destsub, nbytes);
+        destmain += nbytes;
+        destsub += nbytes;
+ 
+        // load zapper beam sprites into vram
+        // (would prefer 64x8 but GBA/DS doesn't support it)
+        nbytes = NUM_SPR32x8 * BYTESIZE_SPR32x8;
+        dmaCopy(export_spr32x8_bin, destmain, nbytes);
+        dmaCopy(export_spr32x8_bin, destsub, nbytes);
+        destmain += nbytes;
+        destsub += nbytes;
+
+        nbytes = NUM_SPR8x32 * BYTESIZE_SPR8x32;
+        dmaCopy(export_spr8x32_bin, destmain, nbytes);
+        dmaCopy(export_spr8x32_bin, destsub, nbytes);
+        destmain += nbytes;
+        destsub += nbytes;
     }
 
     // set up BG palettes (use one palette for each colour!)
@@ -309,62 +352,63 @@ static void init()
 	//consoleDemoInit();
 }
 
-
-static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+// Plonk a sprite on the virtual playfield, which spans both screens.
+// x,y:  pixel coords (not fixedpoint)
+// tile: first tile of image
+// pal:  palette index to use
+// w,h:  size in pixels (not fixedpoint)
+// sprSize: SpriteSize_* enum
+static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprsize, int pal)
 {
-    sprout16(x,y,img);
-}
-
-static inline void sprout32(int16_t x, int16_t y, uint8_t img)
-{
-}
-
-
-
-int sprMain;
-int sprSub;
-
-static inline void sprout16(int16_t x, int16_t y, uint8_t img)
-{
-    x = x >> FX;
-    y = y >> FX;
-    if (x > -16 && x < SCREEN_W && y >-16 && y < (SCREEN_H/2)) {
-        oamSet(&oamMain, //main graphics engine context
-            sprMain,           //oam index (0 to 127)  
-            x, y,   //x and y pixle location of the sprite
-            0,                    //priority, lower renders last (on top)
-            0,					  //this is the palette index if multiple palettes or the alpha value if bmp sprite	
-            SpriteSize_16x16,     
-            SpriteColorFormat_16Color, 
-            oamGetGfxPtr(&oamMain, img*4), 
-            -1,                  //sprite rotation data  
-            false,               //double the size when rotating?
-            false,			//hide the sprite?
-            false, false, //vflip, hflip
-            false	//apply mosaic
-            );
+    // On main screen?
+    if (x > -w && x < SCREEN_W && y >-h && y < (SCREEN_H/2)) {
+        oamSet(&oamMain, sprMain, x, y, 0, pal,
+            sprsize, SpriteColorFormat_16Color,
+            oamGetGfxPtr(&oamMain, tile),
+            -1, false, false, false, false, false);
         ++sprMain;
     }
+    // On sub screen?
     y -= (SCREEN_H/2);
-    if (x > -16 && x < SCREEN_W && y >-16 && y < (SCREEN_H/2)) {
-        oamSet(&oamSub, 
-            sprSub, 
-            x, y,
-            0, 
-            0,
-            SpriteSize_16x16, 
-            SpriteColorFormat_16Color, 
-            oamGetGfxPtr(&oamSub, img*4), 
-            -1, 
-            false, 
-            false,			
-            false, false, 
-            false	
-            );
+    if (x > -w && x < SCREEN_W && y >-h && y < (SCREEN_H/2)) {
+        oamSet(&oamSub, sprSub, x, y, 0, pal,
+            sprsize, SpriteColorFormat_16Color,
+            oamGetGfxPtr(&oamSub, tile),
+            -1, false, false, false, false, false);
         ++sprSub;
     }
-}	
+}
 
+
+static void sprout16(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = img * 4;    // 4 tiles/sprite
+    internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 0);
+}
+
+static void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = img * 4;    // 4 tiles/sprite
+    internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 1);
+}
+
+static void sprout32(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = (4 * NUM_SPR16) + img * 16;    // 16 tiles/sprite
+    internal_sprout(x>>FX, y>>FX, tile, 32,32, SpriteSize_32x32, 0);
+}
+
+static void sprout32x8(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = (4 * NUM_SPR16) + (16 * NUM_SPR32) + (4*img);
+    internal_sprout(x>>FX, y>>FX, tile, 32,8, SpriteSize_32x8, 0);
+}
+
+static void sprout8x32(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = (4 * NUM_SPR16) + (16 * NUM_SPR32) + (4 * NUM_SPR32x8) + (4*img);
+    internal_sprout(x>>FX, y>>FX, tile, 8,32, SpriteSize_8x32, 0);
+}
 
 int main(void) {
     init();
