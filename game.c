@@ -10,7 +10,7 @@
 #define STATE_TITLESCREEN 0
 #define STATE_GETREADY 1   // pause, get ready
 #define STATE_PLAY 2       // main gameplay
-#define STATE_CLEARED 3    // all dudes clear
+#define STATE_CLEARED 3    // level is cleared of bad dudes
 #define STATE_KILLED 4     // player just died (but has another life)
 #define STATE_GAMEOVER 5
 
@@ -199,7 +199,7 @@ static void tick_STATE_KILLED()
     if (++statetimer > 60) {
         if (player_lives > 0 ) {
             --player_lives;
-            dudes_reset();
+            gobs_reset();
             enter_STATE_GETREADY();
         } else {
             enter_STATE_GAMEOVER();
@@ -274,14 +274,13 @@ static void level_init(uint8_t level)
 {
     gobs_init();
 
-//    dudes_spawn(GK_AMOEBA_BIG, 10);
-    dudes_spawn(GK_GRUNT, 10);
-    dudes_spawn(GK_FRAGGER, 10);
-    dudes_spawn(GK_HZAPPER, 2);
-    dudes_spawn(GK_VZAPPER, 2);
-    dudes_spawn(GK_TANK, 2);
+    gobs_create(GK_GRUNT, 10);
+    gobs_create(GK_FRAGGER, 10);
+    gobs_create(GK_HZAPPER, 2);
+    gobs_create(GK_VZAPPER, 2);
+    gobs_create(GK_AMOEBA_BIG, 3);
 
-    dudes_reset();    // position and intro
+    gobs_reset();    // position and intro
 }
 
 static void level_baiter_check()
@@ -300,13 +299,13 @@ static void level_baiter_check()
             }
             // spawn `em!
             for (i = 0; i < baiter_count; ++i) {
-                uint8_t b = dude_alloc();
+                uint8_t b = gob_alloc();
                 if (b >= MAX_GOBS) {
                     return;
                 }
                 // TODO: spawning.
                 baiter_init(b);
-                dude_randompos(b);
+                gob_randompos(b);
                 gobflags[b] |= GF_SPAWNING;
                 gobtimer[b] = 8 + (i*8);
             }

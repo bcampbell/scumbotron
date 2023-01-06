@@ -27,7 +27,7 @@
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
 #define GF_LOCKS_LEVEL 0x02 // Must be destroyed to complete level
-#define GF_NO_RESPAWN 0x04  // Doesn't survive level reset (eg after player death)
+#define GF_NO_RESET 0x04  // Doesn't survive level reset (eg after player death)
 #define GF_COLLIDES_PLAYER 0x08 // Collides with player.
 #define GF_COLLIDES_SHOT 0x10   // Collides with player shots.
 
@@ -44,18 +44,18 @@ extern uint8_t gobdat[MAX_GOBS];
 extern uint8_t gobtimer[MAX_GOBS];
 
 // these two set by gobs_tick()
-extern uint8_t gobs_lockcnt;   // num dudes holding level open.
-extern uint8_t gobs_spawncnt;  // num dudes spawning.
+extern uint8_t gobs_lockcnt;   // num gobs holding level open.
+extern uint8_t gobs_spawncnt;  // num gobs spawning.
 
 
 // gob functions
 void gobs_init();
 void gobs_tick(bool spawnphase);
 void gobs_render();
-uint8_t dude_alloc();
-void dude_randompos(uint8_t d);
-void dudes_reset();
-void dudes_spawn(uint8_t kind, uint8_t n);
+uint8_t gob_alloc();
+void gob_randompos(uint8_t d);
+void gobs_reset();
+void gobs_create(uint8_t kind, uint8_t n);
 
 uint8_t rnd();
 

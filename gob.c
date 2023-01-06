@@ -12,8 +12,8 @@ uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
 // these two set by gobs_tick()
-uint8_t gobs_lockcnt;   // num dudes holding level open.
-uint8_t gobs_spawncnt;  // num dudes spawning.
+uint8_t gobs_lockcnt;   // num gobs holding level open.
+uint8_t gobs_spawncnt;  // num gobs spawning.
 
 
 // gob-specific functions
@@ -157,10 +157,10 @@ void gobs_render()
     }
 }
 
-void dudes_spawn(uint8_t kind, uint8_t n)
+void gobs_create(uint8_t kind, uint8_t n)
 {
     while(n--) {
-        uint8_t d = dude_alloc();
+        uint8_t d = gob_alloc();
         if (d >= MAX_GOBS) {
             return;
         }
@@ -198,17 +198,21 @@ void dudes_spawn(uint8_t kind, uint8_t n)
     }
 }
 
-// for all dudes:
+// for all gobs:
 // - set to new random position.
 // - put into spawning mode.
-void dudes_reset() {
+void gobs_reset() {
     uint8_t t=0;
     uint8_t g;
     for (g = 0; g < MAX_GOBS; ++g) {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
-        dude_randompos(g);
+        if (gobflags[g] & GF_NO_RESET) {
+            gobkind[g] = GK_NONE;
+            continue;
+        }
+        gob_randompos(g);
         gobflags[g] |= GF_SPAWNING;
         gobtimer[g] = t + 8;
         t += 2;
@@ -216,7 +220,7 @@ void dudes_reset() {
 }
 
 // returns 0 if none free.
-uint8_t dude_alloc() {
+uint8_t gob_alloc() {
     uint8_t d;
     for(d = 0; d < MAX_GOBS; ++d) {
         if(gobkind[d] == GK_NONE) {
@@ -226,7 +230,7 @@ uint8_t dude_alloc() {
     return MAX_GOBS;
 }
 
-void dude_randompos(uint8_t d) {
+void gob_randompos(uint8_t d) {
     const int16_t xmid = (SCREEN_W/2)-8;
     const int16_t ymid = (SCREEN_H/2)-8;
 
@@ -450,11 +454,12 @@ void amoeba_tick(uint8_t d)
 }
 
 void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
-    uint8_t d = dude_alloc();
+    uint8_t d = gob_alloc();
     if (d >= MAX_GOBS) {
         return;
     }
     gobkind[d] = kind;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = x;
     goby[d] = y;
     gobvx[d] = vx;
@@ -661,7 +666,7 @@ void fragger_shot(uint8_t d, uint8_t s)
     sys_sfx_play(SFX_KABOOM);
     sys_addeffect(x+(8<<FX), y+(8<<FX), EK_KABOOM);
     for (i = 0; i < 4; ++i) {
-        uint8_t f = dude_alloc();
+        uint8_t f = gob_alloc();
         if (f >=MAX_GOBS) {
             return;
         }
@@ -679,7 +684,7 @@ static const int16_t frag_vy[4] = {-2 * FX_ONE, -2 * FX_ONE, 2 * FX_ONE, 2 * FX_
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir)
 {
     gobkind[f] = GK_FRAG;
-    gobflags[f] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[f] = GF_NO_RESET | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[f] = x;
     goby[f] = y;
     gobdat[f] = dir;  // direction
