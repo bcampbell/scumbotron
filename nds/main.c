@@ -128,25 +128,6 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
     sys_text(18, 0, buf, 3);
 }
 
-// sprite image defs
-#define SPR16_BAITER 16
-#define SPR16_AMOEBA_MED 20
-#define SPR16_AMOEBA_SMALL 24
-#define SPR16_TANK 28
-#define SPR16_GRUNT 30
-#define SPR16_SHOT 4
-#define SPR16_EXTRALIFE 8
-#define SPR16_HZAPPER 12
-#define SPR16_HZAPPER_ON 13
-#define SPR16_VZAPPER 14
-#define SPR16_VZAPPER_ON 15
-#define SPR16_FRAGGER 32
-#define SPR16_FRAG_NW 33
-#define SPR16_FRAG_NE 34
-#define SPR16_FRAG_SW 35
-#define SPR16_FRAG_SE 36
-
-#define SPR32_AMOEBA_BIG 0
 
 #define NUM_SPR16 64
 #define NUM_SPR32 8

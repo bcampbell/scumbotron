@@ -99,8 +99,13 @@ bool player_collisions()
             }
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
                 overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
-                // boom
-                norwegian_blue = true;
+                if (gobkind[d] == GK_POWERUP) {
+                    player_lives++;
+                    gobkind[d] = GK_NONE;
+                } else {
+                    // boom
+                    norwegian_blue = true;
+                }
                 break;
             }
             // special checks for zapper beams
