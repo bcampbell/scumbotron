@@ -24,12 +24,15 @@ volatile uint8_t tick = 0;
 int sprMain;
 int sprSub;
 
-static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprSize, int pal);
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
 static void sprout32x8(int16_t x, int16_t y, uint8_t img);
 static void sprout8x32(int16_t x, int16_t y, uint8_t img);
+
+static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprSize, int pal);
+static void do_colour_cycling();
+static uint8_t glyph(char ascii);
 
 static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
     {KEY_UP, INP_UP},
@@ -410,6 +413,17 @@ static void sprout8x32(int16_t x, int16_t y, uint8_t img)
     internal_sprout(x>>FX, y>>FX, tile, 8,32, SpriteSize_8x32, 0);
 }
 
+
+static void do_colour_cycling()
+{
+    int i = (((tick >> 1)) & 0x7) + 2;
+    uint16_t c = ((const uint16_t*)export_palette_bin)[i];
+    SPRITE_PALETTE[15] = c;
+    SPRITE_PALETTE_SUB[15] = c;
+    BG_PALETTE_SUB[15] = c;
+    BG_PALETTE_SUB[15] = c;
+}
+
 int main(void) {
     init();
 
@@ -432,6 +446,8 @@ int main(void) {
 
 		oamUpdate(&oamMain);
 		oamUpdate(&oamSub);
+
+        do_colour_cycling();
         // clear text layer
         {
             int i;
