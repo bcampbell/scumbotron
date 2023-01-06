@@ -27,7 +27,7 @@
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
 #define GF_LOCKS_LEVEL 0x02 // Must be destroyed to complete level
-#define GF_NO_RESET 0x04  // Doesn't survive level reset (eg after player death)
+#define GF_PERSIST 0x04  // Survives level reset (eg after player death)
 #define GF_COLLIDES_PLAYER 0x08 // Collides with player.
 #define GF_COLLIDES_SHOT 0x10   // Collides with player shots.
 

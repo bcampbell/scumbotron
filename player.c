@@ -189,6 +189,14 @@ void player_tick(uint8_t d) {
 }
 
 
+void shot_clearall()
+{
+    uint8_t s;
+    for(s = 0; s < MAX_SHOTS; ++s) {
+        shotdir[s] = 0;
+    }
+}
+
 // returns 0 if none free.
 static uint8_t shot_alloc()
 {

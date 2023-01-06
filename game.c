@@ -128,6 +128,7 @@ static void enter_STATE_GETREADY()
     baiter_count = 0;
     baiter_timer = 0;
     player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
+    shot_clearall();
     sys_clr();
 }
 

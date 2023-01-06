@@ -208,7 +208,7 @@ void gobs_reset() {
         if (gobkind[g] == GK_NONE) {
             continue;
         }
-        if (gobflags[g] & GF_NO_RESET) {
+        if (!(gobflags[g] & GF_PERSIST)) {
             gobkind[g] = GK_NONE;
             continue;
         }
@@ -288,7 +288,7 @@ void gob_move_bounce_y(uint8_t d)
 void block_init(uint8_t d)
 {
     gobkind[d] = GK_BLOCK;
-    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -312,7 +312,7 @@ void block_shot(uint8_t d, uint8_t shot)
 void grunt_init(uint8_t d)
 {
     gobkind[d] = GK_GRUNT;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (2 << FX) + (rnd() & 0x7f);
@@ -406,7 +406,7 @@ void baiter_shot(uint8_t d, uint8_t shot)
 void amoeba_init(uint8_t d)
 {
     gobkind[d] = GK_AMOEBA_BIG;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -459,7 +459,7 @@ void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
         return;
     }
     gobkind[d] = kind;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = x;
     goby[d] = y;
     gobvx[d] = vx;
@@ -505,7 +505,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 void tank_init(uint8_t d)
 {
     gobkind[d] = GK_TANK;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -566,7 +566,7 @@ void hzapper_init(uint8_t d)
 {
     uint8_t foo = rnd();
     gobkind[d] = GK_HZAPPER;
-    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (1<<FX)/4;
@@ -585,7 +585,7 @@ void vzapper_init(uint8_t d)
 {
     uint8_t foo = rnd();
     gobkind[d] = GK_VZAPPER;
-    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = (1<<FX)/4;
@@ -637,7 +637,7 @@ void zapper_shot(uint8_t d, uint8_t s)
 void fragger_init(uint8_t d)
 {
     gobkind[d] = GK_FRAGGER;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 1<<FX;
@@ -684,7 +684,7 @@ static const int16_t frag_vy[4] = {-2 * FX_ONE, -2 * FX_ONE, 2 * FX_ONE, 2 * FX_
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir)
 {
     gobkind[f] = GK_FRAG;
-    gobflags[f] = GF_NO_RESET | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[f] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[f] = x;
     goby[f] = y;
     gobdat[f] = dir;  // direction
