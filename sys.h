@@ -27,6 +27,7 @@ extern volatile uint8_t tick;
 
 void sys_player_render(int16_t x, int16_t y);
 void sys_shot_render(int16_t x, int16_t y, uint8_t direction);
+void sys_powerup_render(int16_t x, int16_t y, uint8_t kind);
 void sys_block_render(int16_t x, int16_t y);
 void sys_grunt_render(int16_t x, int16_t y);
 void sys_baiter_render(int16_t x, int16_t y);

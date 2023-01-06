@@ -23,6 +23,7 @@
 #define GK_VZAPPER 11
 #define GK_FRAGGER 12
 #define GK_FRAG 13
+#define GK_POWERUP 14
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -107,5 +108,8 @@ void fragger_shot(uint8_t d, uint8_t shot);
 // frag
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir);
 void frag_shot(uint8_t d, uint8_t shot);
+
+// powerup fns
+void powerup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind);
 
 #endif // GOB_H

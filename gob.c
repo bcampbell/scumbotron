@@ -24,6 +24,7 @@ void tank_tick(uint8_t d);
 void zapper_tick(uint8_t d);
 void fragger_tick(uint8_t d);
 void frag_tick(uint8_t d);
+void powerup_tick(uint8_t d);
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -102,6 +103,9 @@ void gobs_tick(bool spawnphase)
             case GK_FRAG:
                 frag_tick(i);
                 break;
+            case GK_POWERUP:
+                powerup_tick(i);
+                break;
             default:
                 break;
         }
@@ -150,6 +154,9 @@ void gobs_render()
                 break;
             case GK_FRAG:
                 sys_frag_render(gobx[d], goby[d], gobdat[d]);
+                break;
+            case GK_POWERUP:
+                sys_powerup_render(gobx[d], goby[d], gobdat[d]);
                 break;
             default:
                 break;
@@ -348,6 +355,8 @@ void grunt_shot(uint8_t d, uint8_t shot)
     player_add_score(50);
     sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
     gobkind[d] = GK_NONE;
+    // transform into powerup
+    powerup_create(d, gobx[d], goby[d], 0);
 }
 
 
@@ -357,7 +366,7 @@ void grunt_shot(uint8_t d, uint8_t shot)
 void baiter_init(uint8_t d)
 {
     gobkind[d] = GK_BAITER;
-    gobflags[d] = GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[d] = 0;
     goby[d] = 0;
     gobvx[d] = 0;
@@ -711,5 +720,27 @@ void frag_shot(uint8_t d, uint8_t s)
     gobkind[d] = GK_NONE;
     sys_sfx_play(SFX_KABOOM);
     sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+}
+
+/*
+ * Powerup
+ */
+
+void powerup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind)
+{
+    gobkind[d] = GK_POWERUP;
+    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
+    gobx[d] = x;
+    goby[d] = y;
+    gobvx[d] = (uint16_t)rnd() - 128;
+    gobvy[d] = (uint16_t)rnd() - 128;
+    gobdat[d] = kind;  // 0 = extra life
+    gobtimer[d] = 0;
+}
+
+void powerup_tick(uint8_t d)
+{
+    gob_move_bounce_x(d);
+    gob_move_bounce_y(d);
 }
 

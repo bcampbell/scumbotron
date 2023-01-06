@@ -45,25 +45,6 @@ extern unsigned int export_spr32_zbin_len;
 #define VRAM_SPRITE_ATTRS 0x1FC00
 #define VRAM_PSG 0x1F9C0
 
-// sprite image defs
-#define SPR16_BAITER 16
-#define SPR16_AMOEBA_MED 20
-#define SPR16_AMOEBA_SMALL 24
-#define SPR16_TANK 28
-#define SPR16_GRUNT 30
-#define SPR16_SHOT 4
-#define SPR16_HZAPPER 12
-#define SPR16_HZAPPER_ON 13
-#define SPR16_VZAPPER 14
-#define SPR16_VZAPPER_ON 15
-#define SPR16_FRAGGER 32
-#define SPR16_FRAG_NW 33
-#define SPR16_FRAG_NE 34
-#define SPR16_FRAG_SW 35
-#define SPR16_FRAG_SE 36
-
-#define SPR32_AMOEBA_BIG 0
-
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
@@ -238,27 +219,6 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
     ++sprcnt;
 }
-
-const uint8_t shot_spr[16] = {
-    0,              // 0000
-    SPR16_SHOT+2,   // 0001 DIR_RIGHT
-    SPR16_SHOT+2,   // 0010 DIR_LEFT
-    0,              // 0011
-    SPR16_SHOT+0,   // 0100 DIR_DOWN
-    SPR16_SHOT+3,   // 0101 down+right           
-    SPR16_SHOT+1,   // 0110 down+left           
-    0,              // 0111
-
-    SPR16_SHOT+0,   // 1000 up
-    SPR16_SHOT+1,   // 1001 up+right
-    SPR16_SHOT+3,   // 1010 up+left
-    0,              // 1011
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111
-};
-
 
 void sys_clr()
 {
@@ -802,44 +762,7 @@ static void sfx_tick()
     }
 }
 
-void sys_player_render(int16_t x, int16_t y) {
-    sprout16(x, y, 0);
-}
-
-void sys_shot_render(int16_t x, int16_t y, uint8_t direction) {
-    sprout16(x, y, shot_spr[direction]);
-}
-void sys_block_render(int16_t x, int16_t y) {
-    sprout16(x, y, 2);
-}
-
-void sys_grunt_render(int16_t x, int16_t y) {
-    sprout16(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
-}
-
-void sys_baiter_render(int16_t x, int16_t y) {
-    sprout16(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
-}
-
-void sys_tank_render(int16_t x, int16_t y, bool highlight) {
-    if (highlight) {
-        sprout16_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
-    } else {
-        sprout16(x, y,  SPR16_TANK + ((tick >> 5) & 0x01));
-    }
-}
-
-void sys_amoeba_big_render(int16_t x, int16_t y) {
-    sprout32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
-}
-
-void sys_amoeba_med_render(int16_t x, int16_t y) {
-    sprout16(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
-}
-
-void sys_amoeba_small_render(int16_t x, int16_t y) {
-    sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
-}
+#include "../spr_common_inc.h"
 
 void sys_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
@@ -887,17 +810,6 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
             }
             break;
     }
-}
-
-void sys_fragger_render(int16_t x, int16_t y) {
-    sprout16(x, y,  SPR16_FRAGGER);
-}
-
-static int8_t frag_frames[4] = {SPR16_FRAG_NW, SPR16_FRAG_NE,
-    SPR16_FRAG_SW, SPR16_FRAG_SE};
-
-void sys_frag_render(int16_t x, int16_t y, uint8_t dir) {
-    sprout16(x, y,  frag_frames[dir]);
 }
 
 uint8_t sys_inp_dualsticks()
