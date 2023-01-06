@@ -583,15 +583,6 @@ static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
 // Draw vertical line of chars, range [cy_begin, cy_end).
 static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
-    if (cy_begin >= 64 ){
-        ch = 2;
-    }
-    if (cy_end >= 64 ){
-        ch = 3;
-    }
-    if (cy_end < cy_begin ){
-        ch=4;
-    }
     uint8_t n;
     // char
     veraaddr0(layer0addr(cx,cy_begin), VERA_INC_128);

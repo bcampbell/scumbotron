@@ -4,6 +4,18 @@
 
 #include <stdio.h>
 
+// Combining the screens into a single play area.
+// These are the screen extents (in pixels).
+#define TOP_MAIN 0
+#define BOTTOM_MAIN SCREEN_HEIGHT
+#define LEFT_MAIN 0
+#define RIGHT_MAIN SCREEN_WIDTH
+
+#define TOP_SUB SCREEN_HEIGHT
+#define BOTTOM_SUB (SCREEN_HEIGHT*2)
+#define LEFT_SUB 0
+#define RIGHT_SUB SCREEN_WIDTH
+
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
 extern unsigned char export_spr16_bin[];
@@ -20,6 +32,13 @@ extern unsigned int export_spr8x32_bin_len;
 
 volatile uint8_t tick = 0;
 
+#define MAX_EFFECTS 8
+static uint8_t ekind[MAX_EFFECTS];
+static uint8_t etimer[MAX_EFFECTS];
+static uint8_t ex[MAX_EFFECTS];
+static uint8_t ey[MAX_EFFECTS];
+static void rendereffects();
+
 // track sprite usage during frame
 int sprMain;
 int sprSub;
@@ -31,8 +50,15 @@ static void sprout32x8(int16_t x, int16_t y, uint8_t img);
 static void sprout8x32(int16_t x, int16_t y, uint8_t img);
 
 static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprSize, int pal);
+
+static void clr_bg0();
+static void clr_bg1();
 static void do_colour_cycling();
 static uint8_t glyph(char ascii);
+
+static void drawbox(int x, int y, int w, int h, uint8_t ch, uint8_t colour);
+static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour);
+static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour);
 
 static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
     {KEY_UP, INP_UP},
@@ -73,6 +99,7 @@ static uint8_t glyph(char ascii) {
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
     uint16_t* dest = BG_MAP_RAM(8) + cy*32 + cx;    // addressing 16bit words
+    // We've got a separate palette for each colour (!)
     while(*txt) {
         uint16_t i = (uint16_t)glyph(*txt++) | ((uint16_t)colour<<12);
         *dest++ = i;    //0 | 1<<12;
@@ -250,10 +277,6 @@ void sys_sfx_play(uint8_t effect)
 {
 }
 
-void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
-{
-}
-
 static void vblank()
 {
 	++tick;
@@ -263,8 +286,11 @@ static void vblank()
 
 static void init()
 {
-    videoSetMode(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE);
-    videoSetModeSub(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE);
+    // Set both displays up the same.
+    // BG0 for text
+    // BG1 for effects
+    videoSetMode(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
+    videoSetModeSub(MODE_0_2D | DISPLAY_SPR_1D_LAYOUT | DISPLAY_SPR_ACTIVE | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
 
     vramSetBankA(VRAM_A_MAIN_BG_0x06000000);
     vramSetBankB(VRAM_B_MAIN_SPRITE_0x06400000);
@@ -276,9 +302,12 @@ static void init()
 
   	// Set up backgrounds.
     // Tile base at: 0*0x4000 = 0
-    // Map0 base at:  8*0x0800 = 0x4000
+    // BG0 map base at:  8*0x0800 = 0x4000
 	REG_BG0CNT = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(8);
 	REG_BG0CNT_SUB = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(8);
+    // BG1 map base at:  9*0x0800 = 0x4800
+	REG_BG1CNT = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(9);
+	REG_BG1CNT_SUB = BG_COLOR_16 | BG_32x32 | BG_TILE_BASE(0) | BG_MAP_BASE(9);
 
 	oamInit(&oamMain, SpriteMapping_1D_32, false);
 	oamInit(&oamSub, SpriteMapping_1D_32, false);
@@ -330,7 +359,9 @@ static void init()
         destsub += nbytes;
     }
 
-    // set up BG palettes (use one palette for each colour!)
+    // set up BG palettes.
+    // First palette is the real one, the other 15 are
+    // all set to single colours, for text colouring.
     {
         int i;
         const uint16_t *src = (const uint16_t*)export_palette_bin;
@@ -424,10 +455,221 @@ static void do_colour_cycling()
     BG_PALETTE_SUB[15] = c;
 }
 
+// Clear text layer.
+static void clr_bg0()
+{
+    int i;
+    uint16_t *dest;
+    dest = BG_MAP_RAM(8);
+    for (i = 0; i < 32 * 32; ++i) {
+        *dest++ = 0x20;
+    }
+    dest = BG_MAP_RAM_SUB(8);
+    for (i = 0; i < 32 * 32; ++i) {
+        *dest++ = 0x20;
+    }
+}
+
+// Clear effects layer.
+static void clr_bg1()
+{
+    int i;
+    uint16_t *dest;
+    dest = BG_MAP_RAM_SUB(9);
+    for (i = 0; i < 32 * 32; ++i) {
+        uint16_t cc = (uint16_t)0x20 | ((uint16_t)0 << 12);
+        *dest++ = cc;
+    }
+    dest = BG_MAP_RAM(9);
+    for (i = 0; i < 32 * 32; ++i) {
+        uint16_t cc = (uint16_t)0x20 | ((uint16_t)0 << 12);
+        *dest++ = cc;
+    }
+}
+
+/*
+ * effects
+ */
+
+static int cclip(int v, int low, int high)
+{
+    if (v < low) {
+        return low;
+    } else if (v > high) {
+        return high;
+    } else {
+        return v;
+    }
+}
+
+static uint16_t* bg1_mapaddr_main(int cx, int cy)
+    { return BG_MAP_RAM(9) + ((cy - TOP_MAIN / 8) * 32) + cx; }
+
+static uint16_t* bg1_mapaddr_sub(int cx, int cy)
+    { return BG_MAP_RAM_SUB(9) + ((cy - TOP_SUB / 8) * 32) + cx; }
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour)
+{
+    int cy;
+    uint16_t *dest;
+    uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
+    int cy_begin_main = cclip(cy_begin, TOP_MAIN/8, BOTTOM_MAIN/8);
+    int cy_end_main = cclip(cy_end, TOP_MAIN/8, BOTTOM_MAIN/8);
+    int cy_begin_sub = cclip(cy_begin, TOP_SUB/8, BOTTOM_SUB/8);
+    int cy_end_sub = cclip(cy_end, TOP_SUB/8, BOTTOM_SUB/8);
+
+    // Main display
+    dest = bg1_mapaddr_main(cx, cy_begin_main);
+    for (cy = cy_begin_main; cy < cy_end_main; ++cy) {
+        *dest = out;
+        dest += 32;
+    }
+    //Sub display
+    dest = bg1_mapaddr_sub(cx, cy_begin_sub);
+    for (cy = cy_begin_sub; cy < cy_end_sub; ++cy) {
+        *dest = out; 
+        dest += 32;
+    }
+}
+
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour)
+{
+    int cx;
+    uint16_t *dest;
+    uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
+    if ( cy >= (TOP_MAIN / 8) && cy < (BOTTOM_MAIN / 8)) {
+        // Main display
+        dest = bg1_mapaddr_main(cx_begin, cy);
+        for (cx = cx_begin; cx < cx_end; ++cx) {
+            *dest++ = out;
+        }
+    }
+    if ( cy >= (TOP_SUB / 8) && cy < (BOTTOM_SUB / 8)) {
+        // Main display
+        dest = bg1_mapaddr_sub(cx_begin, cy);
+        for (cx = cx_begin; cx < cx_end; ++cx) {
+            *dest++ = out;
+        }
+    }
+}
+
+// draw box in char coords, with clipping
+// (note cx,cy can be negative)
+static void drawbox(int cx, int cy, int w, int h, uint8_t ch, uint8_t colour)
+{
+    int x0,y0,x1,y1;
+    x0 = cclip(cx, 0, SCREEN_W / 8);
+    x1 = cclip(cx + w, 0, SCREEN_W / 8);
+    y0 = cclip(cy, 0, SCREEN_H / 8);
+    y1 = cclip(cy + h, 0, SCREEN_H / 8);
+
+    // top
+    if (y0 == cy) {
+        hline_chars_noclip(x0, x1, y0, ch, colour);
+    }
+    if (h<=1) {
+        return;
+    }
+
+    // bottom
+    if (y1 - 1 == cy + h-1) {
+        hline_chars_noclip(x0, x1, y1 - 1, ch, colour);
+    }
+    if (h<=2) {
+        return;
+    }
+
+    // left (excluding top and bottom)
+    if (x0 == cx) {
+        vline_chars_noclip(x0, y0, y1, ch, colour);
+    }
+    if (w <= 1) {
+        return;
+    }
+
+    // right (excluding top and bottom)
+    if (x1 - 1 == cx + w - 1) {
+        vline_chars_noclip(x1 - 1, y0, y1, ch, colour);
+    }
+}
+
+void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
+{
+    // find free one
+    uint8_t e = 0;
+    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
+        ++e;
+    }
+    if (e==MAX_EFFECTS) {
+        return; // none free
+    }
+
+    ex[e] = (((x >> FX) + 4) / 8);
+    ey[e] = (((y >> FX) + 4) / 8);
+    ekind[e] = kind;
+    etimer[e] = 0;
+}
+
+
+
+static void do_spawneffect(uint8_t e) {
+    uint8_t t = 16-etimer[e];
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+    drawbox(cx-t, cy-t, t*2, t*2, 0, t);
+    if (++etimer[e] >= 16) {
+        ekind[e] = EK_NONE;
+    }
+}
+
+static void do_kaboomeffect(uint8_t e) {
+    uint8_t t = etimer[e];
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+    drawbox(cx-t, cy-t, t*2, t*2, 0, t);
+    if (++etimer[e] >= 16) {
+        ekind[e] = EK_NONE;
+    }
+}
+
+static void rendereffects()
+{
+    uint8_t e;
+    for(e = 0; e < MAX_EFFECTS; ++e) {
+        if (ekind[e] == EK_NONE) {
+            continue;
+        }
+        if (ekind[e] == EK_SPAWN) {
+            do_spawneffect(e);
+        }
+        if (ekind[e] == EK_KABOOM) {
+            do_kaboomeffect(e);
+        }
+    }
+}
+
+
+
+/*
+ * main
+ */
+
 int main(void) {
     init();
 
 	while(1) {
+        clr_bg0();
+        clr_bg1();
+
+        rendereffects();
+
+        //drawbox(1,1,5,10,'a',1);
+        //drawbox(2,2,10,30,'Z',3);
+
+
+        do_colour_cycling();
         //sys_render_start();
         //sys_render_finish();
         //sfx_tick();
@@ -447,15 +689,6 @@ int main(void) {
 		oamUpdate(&oamMain);
 		oamUpdate(&oamSub);
 
-        do_colour_cycling();
-        // clear text layer
-        {
-            int i;
-            uint16_t *dest = BG_MAP_RAM(8);
-            for (i = 0; i < 32 * 32; ++i) {
-                *dest++ = 0x20;
-            }
-        }
     }
 	
 	return 0;
