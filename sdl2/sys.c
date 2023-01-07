@@ -26,6 +26,8 @@ static SDL_Texture* screenTexture = NULL;
 static SDL_Surface* screen = NULL;
 static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
+static bool randominput = false;    // F12 to toggle
+static bool warp = false;           // F11 to toggle
 
 // local functions
 static void sys_init();
@@ -141,6 +143,9 @@ void waitvbl()
     pumpevents();
 
     Uint32 targtime = prevtime + TICK_INTERVAL;
+    if (warp) {
+        targtime = prevtime;
+    }
     Uint32 now = SDL_GetTicks();
     if(targtime > now) {
       //  printf("delay for %d\n", targtime-now);
@@ -162,7 +167,10 @@ static void pumpevents()
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
             case SDLK_F12:
-              //g_Display->ScreenShot();
+                randominput = !randominput;
+              break;
+            case SDLK_F11:
+                warp = !warp;
               break;
             default:
               //KeyDown(event.key);
@@ -175,11 +183,10 @@ static void pumpevents()
 
 uint8_t sys_inp_dualsticks()
 {
-
     uint8_t out = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     uint8_t i;
-    struct {
+    static const struct {
         uint8_t scancode;
         uint8_t bitmask;
     } mapping[8] = {
@@ -192,6 +199,14 @@ uint8_t sys_inp_dualsticks()
         {SDL_SCANCODE_A, INP_LEFT},
         {SDL_SCANCODE_D, INP_RIGHT},
     };
+
+    if (randominput) {
+        static uint8_t inp = 0;
+        if ((tick & 0x3f)==0) {
+            inp = rnd();
+        }
+        return inp;
+    }
    
     for (i = 0; i < 8; ++i) {
         if (keys[mapping[i].scancode]) {
@@ -305,9 +320,7 @@ static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour)
 static void drawrect(const SDL_Rect *r, uint8_t colour)
 {
     SDL_Rect b;
-    SDL_IntersectRect(&screen->clip_rect, r, &b);
-
-    if( b.h == 0 || b.w == 0) {
+    if (!SDL_IntersectRect(&screen->clip_rect, r, &b)) {
         return;
     }
 
@@ -336,7 +349,9 @@ static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int
     int y;
     SDL_Rect unclipped = {destx, desty, srcw, srch};
     SDL_Rect r;
-    SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
+    if (!SDL_IntersectRect(&dest->clip_rect, &unclipped, &r)) {
+        return;
+    }
     for (y = 0; y < r.h; ++y) {
         const uint8_t *in = src + (((r.y-desty) + y) * srcw) + (r.x-destx);
         uint8_t *out = (uint8_t*)(dest->pixels) + ((r.y + y) * dest->pitch) + r.x;
@@ -355,7 +370,9 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *des
     int y;
     SDL_Rect unclipped = {destx, desty, srcw, srch};
     SDL_Rect r;
-    SDL_IntersectRect(&dest->clip_rect, &unclipped, &r);
+    if (!SDL_IntersectRect(&dest->clip_rect, &unclipped, &r)) {
+        return;
+    }
     for (y = 0; y < r.h; ++y) {
         const uint8_t *in = src + (((r.y-desty) + y) * srcw) + (r.x-destx);
         uint8_t *out = (uint8_t*)(dest->pixels) + ((r.y + y) * dest->pitch) + r.x;
@@ -507,7 +524,7 @@ static void rendereffects()
 }
 
 
-int main(void) {
+int main(int argc, char* argv[]) {
     sys_init();
     game_init();
     while(1) {
