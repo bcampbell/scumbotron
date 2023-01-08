@@ -289,6 +289,21 @@ void gob_move_bounce_y(uint8_t d)
     goby[d] = y;
 }
 
+
+void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
+{
+    player_add_score(points);
+    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    sys_sfx_play(SFX_KABOOM);
+    gobkind[d] = GK_NONE;
+
+    if (rnd() > 250) {
+        // transform into powerup
+        powerup_create(d, gobx[d], goby[d], 0);
+    }
+}
+
+
 /*
  * block
  */
@@ -306,9 +321,7 @@ void block_init(uint8_t d)
 
 void block_shot(uint8_t d, uint8_t shot)
 {
-    player_add_score(10);
-    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-    gobkind[d] = GK_NONE;
+    gob_standard_kaboom(d, shot, 10);
 }
 
 
@@ -352,11 +365,7 @@ void grunt_tick(uint8_t d)
 
 void grunt_shot(uint8_t d, uint8_t shot)
 {
-    player_add_score(50);
-    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-    gobkind[d] = GK_NONE;
-    // transform into powerup
-    powerup_create(d, gobx[d], goby[d], 0);
+    gob_standard_kaboom(d, shot, 50);
 }
 
 
@@ -403,9 +412,7 @@ void baiter_tick(uint8_t d)
 
 void baiter_shot(uint8_t d, uint8_t shot)
 {
-    player_add_score(75);
-    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-    gobkind[d] = GK_NONE;
+    gob_standard_kaboom(d, shot, 75);
 }
 
 
@@ -480,30 +487,29 @@ void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
 void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
-        player_add_score(20);
-        gobkind[d] = GK_NONE;
-        sys_sfx_play(SFX_KABOOM);
-        sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+        gob_standard_kaboom(d, shot, 20);
         return;
     }
 
     if (gobkind[d] == GK_AMOEBA_MED) {
+        int16_t x = gobx[d];
+        int16_t y = goby[d];
         const int16_t v = FX<<5;
-        gobkind[d] = GK_NONE;
-        sys_sfx_play(SFX_KABOOM);
-        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], -v, v);
-        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], v, v);
-        amoeba_spawn(GK_AMOEBA_SMALL, gobx[d], goby[d], 0, -v);
+        gob_standard_kaboom(d, shot, 50);
+        amoeba_spawn(GK_AMOEBA_SMALL, x, y, -v, v);
+        amoeba_spawn(GK_AMOEBA_SMALL, x, y, v, v);
+        amoeba_spawn(GK_AMOEBA_SMALL, x, y, 0, -v);
         return;
     }
 
     if (gobkind[d] == GK_AMOEBA_BIG) {
+        int16_t x = gobx[d];
+        int16_t y = goby[d];
         const int16_t v = FX<<5;
-        gobkind[d] = GK_NONE;
-        sys_sfx_play(SFX_KABOOM);
-        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], -v, v);
-        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], v, v);
-        amoeba_spawn(GK_AMOEBA_MED, gobx[d], goby[d], 0, -v);
+        gob_standard_kaboom(d, shot, 75);
+        amoeba_spawn(GK_AMOEBA_MED, x, y, -v, v);
+        amoeba_spawn(GK_AMOEBA_MED, x, y, v, v);
+        amoeba_spawn(GK_AMOEBA_MED, x, y, 0, -v);
         return;
     }
 }
@@ -550,19 +556,16 @@ void tank_tick(uint8_t d)
     }
 }
 
-void tank_shot(uint8_t d, uint8_t s)
+void tank_shot(uint8_t d, uint8_t shot)
 {
     --gobdat[d];
     if (gobdat[d]==0) {
         // boom.
-        player_add_score(100);
-        gobkind[d] = GK_NONE;
-        sys_sfx_play(SFX_KABOOM);
-        sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+        gob_standard_kaboom(d, shot, 100);
     } else {
         // knockback
-        gobx[d] += (shot_xvel(s) >> 0);
-        goby[d] += (shot_yvel(s) >> 0);
+        gobx[d] += (shot_xvel(shot) >> 0);
+        goby[d] += (shot_yvel(shot) >> 0);
         gobtimer[d] = 8;
     }
 
@@ -664,16 +667,13 @@ void fragger_tick(uint8_t d)
 
 
 
-void fragger_shot(uint8_t d, uint8_t s)
+void fragger_shot(uint8_t d, uint8_t shot)
 {
     // boom.
     int16_t x = gobx[d];
     int16_t y = goby[d];
     uint8_t i;
-    player_add_score(100);
-    gobkind[d] = GK_NONE;
-    sys_sfx_play(SFX_KABOOM);
-    sys_addeffect(x+(8<<FX), y+(8<<FX), EK_KABOOM);
+    gob_standard_kaboom(d, shot, 100);
     for (i = 0; i < 4; ++i) {
         uint8_t f = gob_alloc();
         if (f >=MAX_GOBS) {
@@ -713,13 +713,10 @@ void frag_tick(uint8_t d)
     }
 }
 
-void frag_shot(uint8_t d, uint8_t s)
+void frag_shot(uint8_t d, uint8_t shot)
 {
     // boom.
-    player_add_score(20);
-    gobkind[d] = GK_NONE;
-    sys_sfx_play(SFX_KABOOM);
-    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    gob_standard_kaboom(d, shot, 20);
 }
 
 /*
