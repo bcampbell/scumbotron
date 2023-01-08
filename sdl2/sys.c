@@ -73,7 +73,7 @@ void sys_init()
         goto bailout;
     }
 
-    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_PRESENTVSYNC);
     if (!renderer) {
         goto bailout;
     }
