@@ -248,39 +248,8 @@ void shot_collisions()
                 int16_t dx0 = gobx[d];
                 int16_t dx1 = gobx[d] + gob_size(d);
                 if (sx >= dx0 && sx < dx1) {
-                    // boom.
-                    switch (gobkind[d]) {
-                        case GK_BLOCK:
-                            block_shot(d, s);
-                            break;
-                        case GK_GRUNT:
-                            grunt_shot(d, s);
-                            break;
-                        case GK_BAITER:
-                            baiter_shot(d, s);
-                            break;
-                        case GK_AMOEBA_BIG:
-                        case GK_AMOEBA_MED:
-                        case GK_AMOEBA_SMALL:
-                            amoeba_shot(d, s);
-                            break;
-                        case GK_TANK:
-                            tank_shot(d, s);
-                            break;
-                        case GK_HZAPPER:
-                        case GK_VZAPPER:
-                            zapper_shot(d, s);
-                            break;
-                        case GK_FRAGGER:
-                            fragger_shot(d, s);
-                            break;
-                        case GK_FRAG:
-                            frag_shot(d, s);
-                            break;
-                        default:
-                            break;
-                    }
-
+                    // A hit!
+                    gob_shot(d, s);
                     shotdir[s] = 0; // turn off shot.
                     break;  // next shot.
                 }

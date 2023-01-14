@@ -273,13 +273,19 @@ static void render_STATE_GAMEOVER()
 
 static void level_init(uint8_t level)
 {
-    gobs_init();
+    gobs_clear();
 
+    gobs_create(GK_BLOCK, 20);
+    gobs_create(GK_VULGON, 10);
+
+#if 0
+    // nails, but good combo :-)
     gobs_create(GK_GRUNT, 10);
     gobs_create(GK_FRAGGER, 10);
     gobs_create(GK_HZAPPER, 2);
     gobs_create(GK_VZAPPER, 2);
     gobs_create(GK_AMOEBA_BIG, 3);
+#endif
 
     gobs_reset();    // position and intro
 }
@@ -305,7 +311,7 @@ static void level_baiter_check()
                     return;
                 }
                 // TODO: spawning.
-                baiter_init(b);
+                baiter_create(b);
                 gob_randompos(b);
                 gobflags[b] |= GF_SPAWNING;
                 gobtimer[b] = 8 + (i*8);

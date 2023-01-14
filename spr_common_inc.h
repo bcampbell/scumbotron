@@ -23,6 +23,7 @@
 #define SPR16_FRAG_NE 34
 #define SPR16_FRAG_SW 35
 #define SPR16_FRAG_SE 36
+#define SPR16_VULGON 37
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -112,5 +113,14 @@ static const int8_t frag_frames[4] = {SPR16_FRAG_NW, SPR16_FRAG_NE,
 void sys_frag_render(int16_t x, int16_t y, uint8_t dir)
 {
     sprout16(x, y,  frag_frames[dir]);
+}
+
+void sys_vulgon_render(int16_t x, int16_t y, bool highlight)
+{
+    if (highlight) {
+        sprout16_highlight(x, y,  SPR16_VULGON + ((tick>>5) & 0x01));
+    } else {
+        sprout16(x, y,  SPR16_VULGON + ((tick >> 5) & 0x01));
+    }
 }
 

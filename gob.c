@@ -16,16 +16,6 @@ uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
 
 
-// gob-specific functions
-void grunt_tick(uint8_t d);
-void baiter_tick(uint8_t d);
-void amoeba_tick(uint8_t d);
-void tank_tick(uint8_t d);
-void zapper_tick(uint8_t d);
-void fragger_tick(uint8_t d);
-void frag_tick(uint8_t d);
-void powerup_tick(uint8_t d);
-
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
 uint8_t rnd() {
@@ -36,7 +26,7 @@ uint8_t rnd() {
         return s;
 }
 
-void gobs_init()
+void gobs_clear()
 {
     uint8_t i;
     for (i = 0; i < MAX_GOBS; ++i) {
@@ -106,6 +96,9 @@ void gobs_tick(bool spawnphase)
             case GK_POWERUP:
                 powerup_tick(i);
                 break;
+            case GK_VULGON:
+                vulgon_tick(i);
+                break;
             default:
                 break;
         }
@@ -158,9 +151,54 @@ void gobs_render()
             case GK_POWERUP:
                 sys_powerup_render(gobx[d], goby[d], gobdat[d]);
                 break;
+            case GK_VULGON:
+                sys_vulgon_render(gobx[d], goby[d], gobtimer[d] > 0);
+                break;
             default:
                 break;
         }
+    }
+}
+
+
+// Handle a gob being shot.
+// d: gob index
+// s: shot index
+void gob_shot(uint8_t d, uint8_t s)
+{
+    switch (gobkind[d]) {
+        case GK_BLOCK:
+            block_shot(d, s);
+            break;
+        case GK_GRUNT:
+            grunt_shot(d, s);
+            break;
+        case GK_BAITER:
+            baiter_shot(d, s);
+            break;
+        case GK_AMOEBA_BIG:
+        case GK_AMOEBA_MED:
+        case GK_AMOEBA_SMALL:
+            amoeba_shot(d, s);
+            break;
+        case GK_TANK:
+            tank_shot(d, s);
+            break;
+        case GK_HZAPPER:
+        case GK_VZAPPER:
+            zapper_shot(d, s);
+            break;
+        case GK_FRAGGER:
+            fragger_shot(d, s);
+            break;
+        case GK_FRAG:
+            frag_shot(d, s);
+            break;
+        case GK_VULGON:
+            vulgon_shot(d, s);
+            break;
+        default:
+            break;
     }
 }
 
@@ -173,30 +211,33 @@ void gobs_create(uint8_t kind, uint8_t n)
         }
         switch (kind) {
             case GK_BLOCK:
-                block_init(d);
+                block_create(d);
                 break;
             case GK_GRUNT:
-                grunt_init(d);
+                grunt_create(d);
                 break;
             case GK_BAITER:
-                baiter_init(d);
+                baiter_create(d);
                 break;
             case GK_AMOEBA_BIG:
             case GK_AMOEBA_MED:
             case GK_AMOEBA_SMALL:
-                amoeba_init(d);
+                amoeba_create(d);
                 break;
             case GK_TANK:
-                tank_init(d);
+                tank_create(d);
                 break;
             case GK_HZAPPER:
-                hzapper_init(d);
+                hzapper_create(d);
                 break;
             case GK_VZAPPER:
-                vzapper_init(d);
+                vzapper_create(d);
                 break;
             case GK_FRAGGER:
-                fragger_init(d);
+                fragger_create(d);
+                break;
+            case GK_VULGON:
+                vulgon_create(d);
                 break;
             default:
                 break;
@@ -219,7 +260,23 @@ void gobs_reset() {
             gobkind[g] = GK_NONE;
             continue;
         }
-        gob_randompos(g);
+        switch(gobkind[g]) {
+            case GK_BLOCK:        block_reset(g); break;
+            case GK_GRUNT:        grunt_reset(g); break;
+            case GK_AMOEBA_SMALL: amoeba_reset(g); break;
+            case GK_AMOEBA_MED:   amoeba_reset(g); break;
+            case GK_AMOEBA_BIG:   amoeba_reset(g); break;
+
+            case GK_TANK:
+            case GK_HZAPPER:
+            case GK_VZAPPER:
+            case GK_FRAGGER:
+            case GK_POWERUP:
+            case GK_VULGON:
+            default:
+                gob_randompos(g);
+                break;
+        }
         gobflags[g] |= GF_SPAWNING;
         gobtimer[g] = t + 8;
         t += 2;
@@ -307,16 +364,16 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 /*
  * block
  */
-void block_init(uint8_t d)
+void block_create(uint8_t d)
 {
     gobkind[d] = GK_BLOCK;
     gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
-    gobvx[d] = 0;
-    gobvy[d] = 0;
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
+    block_reset(d);
+}
+
+void block_reset(uint8_t d)
+{
+    gob_randompos(d);
 }
 
 void block_shot(uint8_t d, uint8_t shot)
@@ -329,16 +386,20 @@ void block_shot(uint8_t d, uint8_t shot)
 /*
  * grunt
  */
-void grunt_init(uint8_t d)
+void grunt_create(uint8_t d)
 {
     gobkind[d] = GK_GRUNT;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
-    gobvx[d] = (2 << FX) + (rnd() & 0x7f);
-    gobvy[d] = (2 << FX) + (rnd() & 0x7f);
     gobdat[d] = 0;
     gobtimer[d] = 0;
+    grunt_reset(d);
+}
+
+void grunt_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobvx[d] = (2 << FX) + (rnd() & 0x7f);
+    gobvy[d] = (2 << FX) + (rnd() & 0x7f);
 }
 
 
@@ -372,7 +433,7 @@ void grunt_shot(uint8_t d, uint8_t shot)
 /*
  * baiter
  */
-void baiter_init(uint8_t d)
+void baiter_create(uint8_t d)
 {
     gobkind[d] = GK_BAITER;
     gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
@@ -419,16 +480,20 @@ void baiter_shot(uint8_t d, uint8_t shot)
 /*
  * amoeba
  */
-void amoeba_init(uint8_t d)
+void amoeba_create(uint8_t d)
 {
     gobkind[d] = GK_AMOEBA_BIG;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
-    gobvx[d] = 0;
-    gobvy[d] = 0;
     gobdat[d] = 0;
     gobtimer[d] = 0;
+    amoeba_reset(d);
+}
+
+void amoeba_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobvx[d] = 0;
+    gobvy[d] = 0;
 }
 
 void amoeba_tick(uint8_t d)
@@ -517,15 +582,18 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 
 // tank
 
-void tank_init(uint8_t d)
+void tank_create(uint8_t d)
 {
     gobkind[d] = GK_TANK;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
+    gobdat[d] = 8;  // life
+}
+
+void tank_reset(uint8_t d)
+{
+    gob_randompos(d);
     gobvx[d] = 0;
     gobvy[d] = 0;
-    gobdat[d] = 8;  // life
     gobtimer[d] = 0;    // highlight timer
 }
 
@@ -568,38 +636,30 @@ void tank_shot(uint8_t d, uint8_t shot)
         goby[d] += (shot_yvel(shot) >> 0);
         gobtimer[d] = 8;
     }
-
 }
 
 /*
  * zapper
  */
-void hzapper_init(uint8_t d)
+void hzapper_create(uint8_t d)
 {
-    uint8_t foo = rnd();
     gobkind[d] = GK_HZAPPER;
     gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
-    gobvx[d] = (1<<FX)/4;
-    gobvy[d] = (1<<FX)/4;
-    if (foo & 1) {
-        gobvx[d] = -gobvx[d]; 
-    }
-    if (foo & 2) {
-        gobvy[d] = -gobvy[d]; 
-    }
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
+    zapper_reset(d);
 }
 
-void vzapper_init(uint8_t d)
+void vzapper_create(uint8_t d)
 {
-    uint8_t foo = rnd();
     gobkind[d] = GK_VZAPPER;
     gobflags[d] = GF_PERSIST | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
+    zapper_reset(d);
+}
+
+// used for both h and v zappers
+void zapper_reset(uint8_t d)
+{
+    uint8_t foo = rnd();
+    gob_randompos(d);
     gobvx[d] = (1<<FX)/4;
     gobvy[d] = (1<<FX)/4;
     if (foo & 1) {
@@ -608,7 +668,6 @@ void vzapper_init(uint8_t d)
     if (foo & 2) {
         gobvy[d] = -gobvy[d]; 
     }
-    gobdat[d] = 0;
     gobtimer[d] = 0;
 }
 
@@ -646,18 +705,21 @@ void zapper_shot(uint8_t d, uint8_t s)
  * Fragger
  */
 
-void fragger_init(uint8_t d)
+void fragger_create(uint8_t d)
 {
     gobkind[d] = GK_FRAGGER;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
+    fragger_reset(d);
+}
+
+void fragger_reset(uint8_t d)
+{
+    gob_randompos(d);
     gobvx[d] = 1<<FX;
     gobvy[d] = 1<<FX;
     gobdat[d] = 0;
     gobtimer[d] = 0;
 }
-
 
 void fragger_tick(uint8_t d)
 {
@@ -739,5 +801,65 @@ void powerup_tick(uint8_t d)
 {
     gob_move_bounce_x(d);
     gob_move_bounce_y(d);
+}
+
+/*
+ * Vulgon
+ */
+
+void vulgon_create(uint8_t d)
+{
+    gobkind[d] = GK_VULGON;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobdat[d] = 8;  // life
+    vulgon_reset(d);
+}
+
+void vulgon_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobtimer[d] = 0;    // highlight timer
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+}
+
+void vulgon_tick(uint8_t d)
+{
+    const int16_t vx = (5<<FX);
+    const int16_t vy = (5<<FX);
+    int16_t px = plrx[0];
+    int16_t py = plry[0];
+
+    if (gobtimer[d] > 0) {
+        --gobtimer[d];
+    }
+    // update every 32 frames
+    if (((tick+d) & 0x1f) != 0x00) {
+       return;
+    }
+    if (px < gobx[d]) {
+        gobx[d] -= vx;
+    } else if (px > gobx[d]) {
+        gobx[d] += vx;
+    }
+    if (py < goby[d]) {
+        goby[d] -= vy;
+    } else if (py > goby[d]) {
+        goby[d] += vy;
+    }
+}
+
+void vulgon_shot(uint8_t d, uint8_t shot)
+{
+    --gobdat[d];
+    if (gobdat[d]==0) {
+        // boom.
+        gob_standard_kaboom(d, shot, 100);
+    } else {
+        // knockback
+        gobx[d] += (shot_xvel(shot) >> 0);
+        goby[d] += (shot_yvel(shot) >> 0);
+        gobtimer[d] = 8;
+    }
 }
 
