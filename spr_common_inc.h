@@ -24,6 +24,8 @@
 #define SPR16_FRAG_SW 35
 #define SPR16_FRAG_SE 36
 #define SPR16_VULGON 37
+#define SPR16_VULGON_ANGRY 39
+#define SPR16_POOMERANG 41
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -115,12 +117,36 @@ void sys_frag_render(int16_t x, int16_t y, uint8_t dir)
     sprout16(x, y,  frag_frames[dir]);
 }
 
-void sys_vulgon_render(int16_t x, int16_t y, bool highlight)
+
+// seq -127 128 | shuf | head -n 16
+const int8_t jitter[16] = {46, -12, -125, 73, -28, -121, 51, 61, -24, 98, -32, -108, 115, 100, -46, -62};
+void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger)
 {
-    if (highlight) {
-        sprout16_highlight(x, y,  SPR16_VULGON + ((tick>>5) & 0x01));
-    } else {
-        sprout16(x, y,  SPR16_VULGON + ((tick >> 5) & 0x01));
+    uint8_t img;
+    switch (anger) {
+        case 0:
+            img = SPR16_VULGON + ((tick>>4) & 0x01);
+            break;
+        case 1:
+            img = SPR16_VULGON_ANGRY + ((tick>>3) & 0x01);
+            x += jitter[tick&0xf]>>1;
+            y += jitter[(tick+3)&0xf]>>1;
+            break;
+        default:
+            img = SPR16_VULGON_ANGRY + ((tick>>3) & 0x01);
+            x += jitter[tick&0xf];
+            y += jitter[(tick+3)&0xf];
+            break;
     }
+    if (highlight) {
+        sprout16_highlight(x, y, img);
+    } else {
+        sprout16(x, y, img);
+    }
+}
+
+void sys_poomerang_render(int16_t x, int16_t y)
+{
+    sprout16(x, y, SPR16_POOMERANG + ((tick >> 3) & 0x03));
 }
 

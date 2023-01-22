@@ -39,7 +39,8 @@ void sys_hzapper_render(int16_t x, int16_t y, uint8_t state);
 void sys_vzapper_render(int16_t x, int16_t y, uint8_t state);
 void sys_fragger_render(int16_t x, int16_t y);
 void sys_frag_render(int16_t x, int16_t y, uint8_t dir);
-void sys_vulgon_render(int16_t x, int16_t y, bool highlight);
+void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger);
+void sys_poomerang_render(int16_t x, int16_t y);
 
 // noddy profiling
 #define GATSO_OFF 0

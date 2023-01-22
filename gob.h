@@ -25,6 +25,7 @@
 #define GK_FRAG 13
 #define GK_POWERUP 14
 #define GK_VULGON 15
+#define GK_POOMERANG 16
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -133,5 +134,11 @@ void vulgon_create(uint8_t d);
 void vulgon_tick(uint8_t d);
 void vulgon_reset(uint8_t d);
 void vulgon_shot(uint8_t d, uint8_t shot);
+
+// poomerang fns
+#define POOMERANG_VEL (1<<FX)
+void poomerang_spawn(uint8_t d, int16_t x, int16_t y, int16_t vx, int16_t vy);
+void poomerang_tick(uint8_t d);
+void poomerang_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H

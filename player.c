@@ -205,7 +205,7 @@ void shot_clearall()
 // returns 0 if none free.
 static uint8_t shot_alloc()
 {
-uint8_t s;
+    uint8_t s;
     for(s = 0; s < MAX_SHOTS; ++s) {
         if(shotdir[s] == 0) {
             return s;
