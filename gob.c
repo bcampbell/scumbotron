@@ -85,6 +85,7 @@ void gobs_tick(bool spawnphase)
             case GK_POWERUP: powerup_tick(i); break;
             case GK_VULGON:  vulgon_tick(i); break;
             case GK_POOMERANG: poomerang_tick(i); break;
+            case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
             default:
                 break;
         }
@@ -143,6 +144,9 @@ void gobs_render()
             case GK_POOMERANG:
                 sys_poomerang_render(gobx[d], goby[d]);
                 break;
+            case GK_HAPPYSLAPPER:
+                sys_happyslapper_render(gobx[d], goby[d], gobtimer[d] < HAPPYSLAPPER_SLEEP_TIME);
+                break;
             default:
                 break;
         }
@@ -168,7 +172,8 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_FRAGGER:      fragger_shot(d, s); break;
         case GK_FRAG:         frag_shot(d, s); break;
         case GK_VULGON:       vulgon_shot(d, s); break;
-        case GK_POOMERANG:      poomerang_shot(d, s); break;
+        case GK_POOMERANG:    poomerang_shot(d, s); break;
+        case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
         default:
             break;
     }
@@ -195,7 +200,9 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_VZAPPER: vzapper_create(d); break;
             case GK_FRAGGER: fragger_create(d); break;
             case GK_VULGON: vulgon_create(d); break;
+            case GK_HAPPYSLAPPER: happyslapper_create(d); break;
             default:
+                // Not all kinds can be created. Some are spawned by others.
                 break;
         }
     }
@@ -226,6 +233,7 @@ void gobs_reset() {
             case GK_VZAPPER:      zapper_reset(g); break;
             case GK_FRAGGER:      fragger_reset(g); break;
             case GK_VULGON:       vulgon_reset(g); break;
+            case GK_HAPPYSLAPPER: happyslapper_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -862,5 +870,55 @@ void poomerang_tick(uint8_t d)
 void poomerang_shot(uint8_t d, uint8_t shot)
 {
     gob_standard_kaboom(d, shot, 20);
+}
+
+/*
+ * HappySlapper
+ */
+
+void happyslapper_create(uint8_t d)
+{
+    gobkind[d] = GK_HAPPYSLAPPER;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    happyslapper_reset(d);
+}
+
+void happyslapper_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobtimer[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    // reset time - add a little random variation to disperse them.
+    gobdat[d] = HAPPYSLAPPER_SLEEP_TIME + HAPPYSLAPPER_RUN_TIME + (rnd() % 0x0f);
+}
+
+void happyslapper_tick(uint8_t d)
+{
+    ++gobtimer[d];
+    if (gobtimer[d] < HAPPYSLAPPER_SLEEP_TIME) {
+        return;
+    }
+    if (gobtimer[d] > gobdat[d]) {
+        // Go back to sleep.
+        gobtimer[d] = 0;
+        gobvx[d] = 0;
+        gobvy[d] = 0;
+        return;
+    }
+    // Charge! (but only every 4 frames)
+    if (((tick+d) & 0x03) != 0x00) {
+       return;
+    }
+    // home in on player
+    gob_seek_x(d, plrx[0], 1<<FX, 8<<FX);
+    gob_seek_y(d, plry[0], 1<<FX, 8<<FX);
+    gob_move_bounce_x(d);
+    gob_move_bounce_y(d);
+}
+
+void happyslapper_shot(uint8_t d, uint8_t shot)
+{
+    gob_standard_kaboom(d, shot, 75);
 }
 

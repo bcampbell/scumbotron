@@ -275,8 +275,10 @@ static void level_init(uint8_t level)
 {
     gobs_clear();
 
-    gobs_create(GK_BLOCK, 20);
-    gobs_create(GK_VULGON, 10);
+    gobs_create(GK_BLOCK, 10);
+    //gobs_create(GK_VULGON, 2);
+    gobs_create(GK_GRUNT, 10);
+    gobs_create(GK_HAPPYSLAPPER, 20);
 
 #if 0
     // nails, but good combo :-)

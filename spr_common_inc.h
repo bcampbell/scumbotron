@@ -26,6 +26,8 @@
 #define SPR16_VULGON 37
 #define SPR16_VULGON_ANGRY 39
 #define SPR16_POOMERANG 41
+#define SPR16_HAPPYSLAPPER 45
+#define SPR16_HAPPYSLAPPER_SLEEP 47
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -148,5 +150,16 @@ void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger)
 void sys_poomerang_render(int16_t x, int16_t y)
 {
     sprout16(x, y, SPR16_POOMERANG + ((tick >> 3) & 0x03));
+}
+
+void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping)
+{
+    uint8_t img;
+    if (sleeping) {
+        img = SPR16_HAPPYSLAPPER_SLEEP;
+    } else {
+        img = SPR16_HAPPYSLAPPER + ((tick >> 3) & 0x01);
+    }
+    sprout16(x, y, img);
 }
 

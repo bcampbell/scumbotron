@@ -26,6 +26,7 @@
 #define GK_POWERUP 14
 #define GK_VULGON 15
 #define GK_POOMERANG 16
+#define GK_HAPPYSLAPPER 17
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -140,5 +141,13 @@ void vulgon_shot(uint8_t d, uint8_t shot);
 void poomerang_spawn(uint8_t d, int16_t x, int16_t y, int16_t vx, int16_t vy);
 void poomerang_tick(uint8_t d);
 void poomerang_shot(uint8_t d, uint8_t shot);
+
+// happyslapper fns
+#define HAPPYSLAPPER_SLEEP_TIME 50
+#define HAPPYSLAPPER_RUN_TIME 50
+void happyslapper_create(uint8_t d);
+void happyslapper_tick(uint8_t d);
+void happyslapper_reset(uint8_t d);
+void happyslapper_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H
