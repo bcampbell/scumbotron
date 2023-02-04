@@ -562,6 +562,7 @@ void tank_create(uint8_t d)
     gobkind[d] = GK_TANK;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobdat[d] = 8;  // life
+    tank_reset(d);
 }
 
 void tank_reset(uint8_t d)

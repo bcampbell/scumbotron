@@ -275,21 +275,71 @@ static void level_init(uint8_t level)
 {
     gobs_clear();
 
-    gobs_create(GK_BLOCK, 10);
-    //gobs_create(GK_VULGON, 2);
-    gobs_create(GK_GRUNT, 10);
-    gobs_create(GK_HAPPYSLAPPER, 20);
+    switch (level) {
+        case 0:
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_FRAGGER, 4);
+            break;
+        case 1:
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_GRUNT, 15);
+            gobs_create(GK_TANK, 2);
+            break;
+        case 2:
+            gobs_create(GK_BLOCK, 5);
+            gobs_create(GK_HAPPYSLAPPER, 3);
+            gobs_create(GK_GRUNT, 10);
+            break;
+        case 3:
+            gobs_create(GK_BLOCK, 20);
+            gobs_create(GK_AMOEBA_BIG, 2);
+            gobs_create(GK_GRUNT, 10);
+            break;
+        case 5:
+            gobs_create(GK_BLOCK, 5);
+            gobs_create(GK_FRAGGER, 4);
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_HZAPPER, 1);
+            break;
+        case 9:
+            gobs_create(GK_BLOCK, 15);
+            gobs_create(GK_TANK, 2);
+            gobs_create(GK_GRUNT, 15);
+            gobs_create(GK_VZAPPER, 1);
+            break;
+        case 10:
+            gobs_create(GK_BLOCK, 20);
+            gobs_create(GK_HAPPYSLAPPER, 20);
+            break;
+        case 13:
+            gobs_create(GK_BLOCK, 15);
+            gobs_create(GK_GRUNT, 15);
+            gobs_create(GK_AMOEBA_BIG, 2);
+            gobs_create(GK_VZAPPER, 1);
+            gobs_create(GK_HZAPPER, 1);
+            break;
+        case 14:
+            gobs_create(GK_HAPPYSLAPPER, 40);
+            break;
+        case 20:
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_HAPPYSLAPPER, 20);
+            break;
 
-#if 0
-    // nails, but good combo :-)
-    gobs_create(GK_GRUNT, 10);
-    gobs_create(GK_FRAGGER, 10);
-    gobs_create(GK_HZAPPER, 2);
-    gobs_create(GK_VZAPPER, 2);
-    gobs_create(GK_AMOEBA_BIG, 3);
-#endif
-
-    gobs_reset();    // position and intro
+        case 21:
+            // nails, but good combo :-)
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_FRAGGER, 10);
+            gobs_create(GK_HZAPPER, 2);
+            gobs_create(GK_VZAPPER, 2);
+            gobs_create(GK_AMOEBA_BIG, 3);
+            break;
+        default:
+            gobs_create(GK_BAITER,1);
+            break;
+    }
 }
 
 static void level_baiter_check()
