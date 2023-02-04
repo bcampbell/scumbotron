@@ -28,6 +28,10 @@
 #define SPR16_POOMERANG 41
 #define SPR16_HAPPYSLAPPER 45
 #define SPR16_HAPPYSLAPPER_SLEEP 47
+#define SPR16_PLR_U 48
+#define SPR16_PLR_D 50
+#define SPR16_PLR_L 52
+#define SPR16_PLR_R 54
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -52,9 +56,18 @@ const uint8_t shot_spr[16] = {
 };
 
 
-void sys_player_render(int16_t x, int16_t y)
+void sys_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
 {
-    sprout16(x, y, 0);
+    uint8_t img = SPR16_PLR_R;
+    if (facing & DIR_UP) { img = SPR16_PLR_U; }
+    if (facing & DIR_DOWN) { img = SPR16_PLR_D; }
+    if (facing & DIR_LEFT) { img = SPR16_PLR_L; }
+    if (facing & DIR_RIGHT) { img = SPR16_PLR_R; }
+
+    if (moving) {
+        img += (tick >> 3) & 0x01;
+    }
+    sprout16(x, y, img);
 }
 
 void sys_powerup_render(int16_t x, int16_t y, uint8_t kind)

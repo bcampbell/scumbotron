@@ -8,6 +8,8 @@ uint32_t player_score;
 // player vars
 int16_t plrx[MAX_PLAYERS];
 int16_t plry[MAX_PLAYERS];
+int16_t plrvx[MAX_PLAYERS];
+int16_t plrvy[MAX_PLAYERS];
 uint8_t plrtimer[MAX_PLAYERS];
 uint8_t plrfacing[MAX_PLAYERS]; // 0xff = dead, else DIR_ bits
 
@@ -30,6 +32,8 @@ void player_add_score(uint8_t points)
 void player_create(uint8_t p, int16_t x, int16_t y) {
     plrx[p] = x;
     plry[p] = y;
+    plrvx[p] = 0;
+    plrvy[p] = 0;
     plrfacing[p] = 0;
     plrtimer[p] = 0;
 }
@@ -43,7 +47,8 @@ void player_renderall()
             // dead.
             continue;
         }
-        sys_player_render(plrx[p], plry[p]);
+        bool moving = (plrvx[p] != 0) || (plrvy[p] != 0);
+        sys_player_render(plrx[p], plry[p], plrfacing[p] & 0x0F, moving);
     }
 
     for (s = 0; s < MAX_SHOTS; ++s) {
@@ -139,16 +144,21 @@ void player_tick(uint8_t d) {
     uint8_t dir = sticks & 0x0F;
     ++plrtimer[d];
 
+    plrvx[d] = 0;
+    plrvy[d] = 0;
     if (sticks & INP_UP) {
-        plry[d] -= PLAYER_SPD;
+        plrvy[d] = -PLAYER_SPD;
     } else if (sticks & INP_DOWN) {
-        plry[d] += PLAYER_SPD;
+        plrvy[d] = PLAYER_SPD;
     }
     if (sticks & INP_LEFT) {
-        plrx[d] -= PLAYER_SPD;
+        plrvx[d] = -PLAYER_SPD;
     } else if (sticks & INP_RIGHT) {
-        plrx[d] += PLAYER_SPD;
+        plrvx[d] = PLAYER_SPD;
     }
+
+    plrx[d] += plrvx[d];
+    plry[d] += plrvy[d];
 
     if (sticks & 0xF0) {
         if (!plrfacing[d]) {
