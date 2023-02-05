@@ -51,6 +51,8 @@ extern uint8_t gobtimer[MAX_GOBS];
 extern uint8_t gobs_lockcnt;   // num gobs holding level open.
 extern uint8_t gobs_spawncnt;  // num gobs spawning.
 
+// table to filter out illegal directions (left+right etc)
+extern const uint8_t dir_fix[16];
 
 // gob functions
 void gobs_clear();

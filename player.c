@@ -11,7 +11,8 @@ int16_t plry[MAX_PLAYERS];
 int16_t plrvx[MAX_PLAYERS];
 int16_t plrvy[MAX_PLAYERS];
 uint8_t plrtimer[MAX_PLAYERS];
-uint8_t plrfacing[MAX_PLAYERS]; // 0xff = dead, else DIR_ bits
+uint8_t plrfacing[MAX_PLAYERS]; // DIR_ bits
+uint8_t plralive[MAX_PLAYERS]; // 0=dead
 
 // shot vars
 int16_t shotx[MAX_SHOTS];
@@ -36,6 +37,7 @@ void player_create(uint8_t p, int16_t x, int16_t y) {
     plrvy[p] = 0;
     plrfacing[p] = 0;
     plrtimer[p] = 0;
+    plralive[p] = 1;
 }
 
 void player_renderall()
@@ -43,12 +45,12 @@ void player_renderall()
     uint8_t p;
     uint8_t s;
     for (p = 0; p < MAX_PLAYERS; ++p) {
-        if (plrfacing[p] == 0xff) {
+        if (!plralive[p]) {
             // dead.
             continue;
         }
         bool moving = (plrvx[p] != 0) || (plrvy[p] != 0);
-        sys_player_render(plrx[p], plry[p], plrfacing[p] & 0x0F, moving);
+        sys_player_render(plrx[p], plry[p], plrfacing[p], moving);
     }
 
     for (s = 0; s < MAX_SHOTS; ++s) {
@@ -65,7 +67,7 @@ void player_tickall()
     uint8_t p;
     uint8_t s;
     for (p = 0; p < MAX_PLAYERS; ++p) {
-        if (plrfacing[p] == 0xff) {
+        if (!plralive[p]) {
             // dead.
             continue;
         }
@@ -80,7 +82,7 @@ void player_tickall()
     }
 }
 
-
+// return true if ranges overlap
 static inline bool overlap(int16_t amin, int16_t amax, int16_t bmin, int16_t bmax)
 {
     return (amin <= bmax) && (amax >= bmin);
@@ -130,7 +132,7 @@ bool player_collisions()
             }
         }
         if (norwegian_blue) {
-            plrfacing[p] = 0xff;    // mark as dead
+            plralive[p] = 0;    // mark as dead
             sys_addeffect(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
         }
     }
@@ -141,30 +143,34 @@ bool player_collisions()
 
 void player_tick(uint8_t d) {
     uint8_t sticks = sys_inp_dualsticks();
-    uint8_t dir = sticks & 0x0F;
+    uint8_t move = dir_fix[sticks & 0x0F];
+    uint8_t fire = dir_fix[(sticks>>4) & 0x0F];
+
     ++plrtimer[d];
 
+    // move
     plrvx[d] = 0;
     plrvy[d] = 0;
-    if (sticks & INP_UP) {
+    if (move & DIR_UP) {
         plrvy[d] = -PLAYER_SPD;
-    } else if (sticks & INP_DOWN) {
+    } else if (move & DIR_DOWN) {
         plrvy[d] = PLAYER_SPD;
     }
-    if (sticks & INP_LEFT) {
+    if (move & DIR_LEFT) {
         plrvx[d] = -PLAYER_SPD;
-    } else if (sticks & INP_RIGHT) {
+    } else if (move & DIR_RIGHT) {
         plrvx[d] = PLAYER_SPD;
     }
 
     plrx[d] += plrvx[d];
     plry[d] += plrvy[d];
 
-    if (sticks & 0xF0) {
-        if (!plrfacing[d]) {
-            plrfacing[d] = dir;
-        }
+    if (move) {
+        plrfacing[d] =  move;
+    }
 
+    // fire
+    if (fire) {
         if (plrtimer[d]>8) {
             uint8_t shot = shot_alloc();
             // FIRE!
@@ -173,14 +179,9 @@ void player_tick(uint8_t d) {
             if (shot < MAX_SHOTS) {
                 shotx[shot] = plrx[d];
                 shoty[shot] = plry[d];
-//                shotdir[shot] = plrfacing[d];   // direction
-                shotdir[shot] = (sticks >> 4);  // fire direction
+                shotdir[shot] = fire;
                 shottimer[shot] = 16;
             }
-        }
-    } else {
-        if (dir) {
-            plrfacing[d] = dir;
         }
     }
 

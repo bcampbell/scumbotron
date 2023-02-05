@@ -14,6 +14,7 @@ extern int16_t plrx[MAX_PLAYERS];
 extern int16_t plry[MAX_PLAYERS];
 extern uint8_t plrtimer[MAX_PLAYERS];
 extern uint8_t plrfacing[MAX_PLAYERS];
+extern uint8_t plralive[MAX_PLAYERS]; // 0=dead
 
 void player_renderall();
 void player_tickall();
