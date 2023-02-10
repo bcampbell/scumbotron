@@ -20,6 +20,9 @@ void game_render();
 #define FX_ONE (1<<FX)
 
 void sys_clr();
+// draw len number of chars
+void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour);
+// draw null-terminated string
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score);

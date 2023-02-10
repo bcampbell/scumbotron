@@ -98,15 +98,25 @@ static uint8_t glyph(char ascii) {
     return 0;
 }
 
-void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
     uint16_t* dest = BG_MAP_RAM(8) + cy*32 + cx;    // addressing 16bit words
     // We've got a separate palette for each colour (!)
-    while(*txt) {
+    while(len--) {
         uint16_t i = (uint16_t)glyph(*txt++) | ((uint16_t)colour<<12);
         *dest++ = i;    //0 | 1<<12;
     }
 }
+
+void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+{
+    uint8_t len = 0;
+    while(txt[len] != '\0') {
+        ++len;
+    }
+    sys_textn(cx, cy, txt, len, colour);
+}
+
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 {

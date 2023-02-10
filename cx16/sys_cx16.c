@@ -2,6 +2,7 @@
 
 #include "../sys.h"
 #include "../gob.h" // for ZAPPER_*
+#include "../misc.h"
 
 // Platform-specifics for cx16
 
@@ -406,43 +407,24 @@ static uint8_t screencode(char asc)
     return (uint8_t)asc;
 }
 
-void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
-    const char* p = txt;
     veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
-    while(*p) {
-        VERA.data0 = screencode(*p);
+    while(len--) {
+        VERA.data0 = screencode(*txt);
         VERA.data0 = colour;
-        ++p;
+        ++txt;
     }
 }
 
-
-// double dabble: 8 decimal digits in 32 bits BCD
-// from https://stackoverflow.com/a/64955167
-uint32_t bin2bcd(uint32_t in) {
-  uint32_t bit = 0x4000000; //  99999999 max binary
-  uint32_t bcd = 0;
-  uint32_t carry = 0;
-  if (!in) return 0;
-  while (!(in & bit)) bit >>= 1;  // skip to MSB
-
-  while (1) {
-    bcd <<= 1;
-    bcd += carry; // carry 6s to next BCD digits (10 + 6 = 0x10 = LSB of next BCD digit)
-    if (bit & in) bcd |= 1;
-    if (!(bit >>= 1)) return bcd;
-    carry = ((bcd + 0x33333333) & 0x88888888) >> 1; // carrys: 8s -> 4s
-    carry += carry >> 1; // carrys 6s  
-  }
+void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+{
+    uint8_t len = 0;
+    while(txt[len] != '\0') {
+        ++len;
+    }
+    sys_textn(cx, cy, txt, len, colour);
 }
-
-static const char* hexdigits = "0123456789ABCDEF";
-static void hex8(uint8_t v, char *dest) {
-    dest[0] = hexdigits[v >> 4];
-    dest[1] = hexdigits[v & 0xf];
-}
-
 
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)

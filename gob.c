@@ -1,5 +1,6 @@
 #include "gob.h"
 #include "player.h"
+#include "misc.h"
 
 // gob tables
 uint8_t gobkind[MAX_GOBS];
@@ -14,17 +15,6 @@ uint8_t gobtimer[MAX_GOBS];
 // these two set by gobs_tick()
 uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
-
-
-// by darsie,
-// https://www.avrfreaks.net/forum/tiny-fast-prng
-uint8_t rnd() {
-        static uint8_t s=0xaa,a=0;
-        s^=s<<3;
-        s^=s>>5;
-        s^=a++>>2;
-        return s;
-}
 
 void gobs_clear()
 {

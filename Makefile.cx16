@@ -8,7 +8,7 @@ BUILD_DIR=build_cx16
 EXPORT_DIR=$(BUILD_DIR)/export
 
 SRCS = cx16/sys_cx16.c \
-	game.c gob.c player.c \
+	game.c gob.c player.c highscore.c misc.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c)
 SRCS_ASM = cx16/irq.s cx16/glue.s 
 

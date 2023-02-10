@@ -1,31 +1,16 @@
 // mos-cx16-clang -Os -o game.prg game.c
 
-#include <stdint.h>
-#include <stdbool.h>
 
 #include "sys.h"
 #include "gob.h"
 #include "player.h"
+#include "game.h"
 
-#define STATE_TITLESCREEN 0
-#define STATE_GETREADY 1   // pause, get ready
-#define STATE_PLAY 2       // main gameplay
-#define STATE_CLEARED 3    // level is cleared of bad dudes
-#define STATE_KILLED 4     // player just died (but has another life)
-#define STATE_GAMEOVER 5
-
-static uint8_t state;
-static uint8_t statetimer;
+uint8_t state;
+uint8_t statetimer;
 static uint8_t level;
 static uint8_t baiter_timer;
 static uint8_t baiter_count;
-
-static void enter_STATE_TITLESCREEN();
-static void enter_STATE_GETREADY();
-static void enter_STATE_PLAY();
-static void enter_STATE_CLEARED();
-static void enter_STATE_KILLED();
-static void enter_STATE_GAMEOVER();
 
 static void tick_STATE_TITLESCREEN();
 static void tick_STATE_GETREADY();
@@ -58,6 +43,7 @@ void game_tick()
     case STATE_CLEARED:     tick_STATE_CLEARED(); break;
     case STATE_KILLED:      tick_STATE_KILLED(); break;
     case STATE_GAMEOVER:    tick_STATE_GAMEOVER(); break;
+    case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
     }
 }
 
@@ -82,13 +68,14 @@ void game_render()
         case STATE_CLEARED:     render_STATE_CLEARED(); break;
         case STATE_KILLED:      render_STATE_KILLED(); break;
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
+        case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
     }
 }
 
 /*
  * STATE_TITLESCREEN
  */
-static void enter_STATE_TITLESCREEN()
+void enter_STATE_TITLESCREEN()
 {
     state = STATE_TITLESCREEN;
     statetimer=0;
@@ -105,6 +92,10 @@ static void tick_STATE_TITLESCREEN()
         player_score = 0;
         level_init(level);
         enter_STATE_GETREADY();
+    } else {
+        if (++statetimer > 200 || sys_inp_dualsticks()) {
+            enter_STATE_HIGHSCORES();
+        }
     }
 }
 
@@ -120,7 +111,7 @@ static void render_STATE_TITLESCREEN()
 /*
  * STATE_GETREADY
  */
-static void enter_STATE_GETREADY()
+void enter_STATE_GETREADY()
 {
     state = STATE_GETREADY;
     statetimer = 0;
@@ -153,7 +144,7 @@ static void render_STATE_GETREADY()
  * STATE_PLAY
  */
 
-static void enter_STATE_PLAY()
+void enter_STATE_PLAY()
 {
     state = STATE_PLAY;
     statetimer = 0;
@@ -188,7 +179,7 @@ static void render_STATE_PLAY()
 /*
  * STATE_KILLED
  */
-static void enter_STATE_KILLED()
+void enter_STATE_KILLED()
 {
     state = STATE_KILLED;
     statetimer = 0;
@@ -219,7 +210,7 @@ static void render_STATE_KILLED()
 /*
  * STATE_CLEARED
  */
-static void enter_STATE_CLEARED()
+void enter_STATE_CLEARED()
 {
     state = STATE_CLEARED;
     statetimer = 0;
@@ -247,7 +238,7 @@ static void render_STATE_CLEARED()
 /*
  * STATE_GAMEOVER
  */
-static void enter_STATE_GAMEOVER()
+void enter_STATE_GAMEOVER()
 {
     state = STATE_GAMEOVER;
     statetimer = 0;
@@ -265,7 +256,6 @@ static void render_STATE_GAMEOVER()
 {
     sys_text(10, 10, "GAME OVER", (tick/2) & 0x0f);
 }
-
 
 /*
  * Game fns

@@ -255,16 +255,25 @@ static uint8_t glyph(char ascii) {
     return 0;
 }
 
-void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
     int x = cx*8;
     int y = cy*8;
 
-    while(*txt) {
+    while(len--) {
         uint8_t i = glyph(*txt++);
         blit8_matte(export_chars_bin + (8 * 8 * i), 8, 8, screen, x, y, colour);
         x += 8;
     }
+}
+
+void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+{
+    uint8_t len = 0;
+    while(txt[len] != '\0') {
+        ++len;
+    }
+    sys_textn(cx, cy, txt, len, colour);
 }
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
