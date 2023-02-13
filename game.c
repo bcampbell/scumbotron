@@ -31,7 +31,8 @@ static void level_baiter_check();
 
 void game_init()
 {
-    enter_STATE_TITLESCREEN();
+//    enter_STATE_TITLESCREEN();
+    enter_STATE_ENTERHIGHSCORE(1234567);
 }
 
 void game_tick()
@@ -44,6 +45,7 @@ void game_tick()
     case STATE_KILLED:      tick_STATE_KILLED(); break;
     case STATE_GAMEOVER:    tick_STATE_GAMEOVER(); break;
     case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
+    case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
     }
 }
 
@@ -69,6 +71,7 @@ void game_render()
         case STATE_KILLED:      render_STATE_KILLED(); break;
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
+        case STATE_ENTERHIGHSCORE:    render_STATE_ENTERHIGHSCORE(); break;
     }
 }
 
@@ -85,7 +88,8 @@ void enter_STATE_TITLESCREEN()
 
 static void tick_STATE_TITLESCREEN()
 {
-    if (sys_inp_dualsticks()) {
+    uint8_t inp = sys_inp_menu();
+    if (inp & INP_MENU_ACTION) {
         // init new game
         uint8_t level = 0;
         player_lives = 3;
@@ -93,7 +97,7 @@ static void tick_STATE_TITLESCREEN()
         level_init(level);
         enter_STATE_GETREADY();
     } else {
-        if (++statetimer > 200 || sys_inp_dualsticks()) {
+        if (++statetimer > 200 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
             enter_STATE_HIGHSCORES();
         }
     }

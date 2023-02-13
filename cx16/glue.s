@@ -1,20 +1,20 @@
 ; Assorted glue asm
 
-.global inp_joystate
-.global inp_tick
+;.global inp_joystate
+;.global inp_tick
 
 ; kernal
-joystick_get=$FF56
+;joystick_get=$FF56
 
-inp_joystate: .byte 0,0
+;inp_joystate: .byte 0,0
 
-inp_tick:
-	; update joystate
-	lda #0
-	jsr joystick_get
-	sta inp_joystate+0
-	stx inp_joystate+1
-	rts
+;inp_tick:
+;	; update joystate
+;	lda #0
+;	jsr joystick_get
+;	sta inp_joystate+0
+;	stx inp_joystate+1
+;	rts
 
 
 ; uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);

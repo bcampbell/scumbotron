@@ -3,6 +3,9 @@
 
 #include "plat_details.h"    // platform-specific details (screen size etc...)
 
+#define SCREEN_TEXT_W (SCREEN_W/8)
+#define SCREEN_TEXT_H (SCREEN_H/8)
+
 // provided by game.c:
 void game_init();
 void game_tick();
@@ -19,6 +22,8 @@ void game_render();
 #define FX 6
 #define FX_ONE (1<<FX)
 
+// text layer. This is persistent - if you draw text it'll stay onscreen until
+// overwritten, or sys_clr() is called.
 void sys_clr();
 // draw len number of chars
 void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour);
@@ -26,6 +31,8 @@ void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t col
 void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
 void sys_hud(uint8_t level, uint8_t lives, uint32_t score);
+
+// Incremented every frame.
 extern volatile uint8_t tick;
 
 void sys_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
@@ -78,8 +85,14 @@ void sys_addeffect(int16_t x, int16_t y, uint8_t kind);
 #define INP_FIRE_DOWN 0x40
 #define INP_FIRE_LEFT 0x20
 #define INP_FIRE_RIGHT 0x10
+#define INP_MENU_ACTION 0x10
 
+// Returns direction + FIRE_ bits.
 uint8_t sys_inp_dualsticks();
 
+
+// Returns direction + MENU_ bits.
+// Latched, so only returns when buttons are pressed (not held).
+uint8_t sys_inp_menu();
 
 #endif // SYS_H

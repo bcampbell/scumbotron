@@ -87,7 +87,7 @@ inp_virtpad_map_out_lo:
 
 ; The virtual gamepad, driven by keyboard.
 ; not sure of correct bit order here...
-; Aalso bits are inverted compared to HW I think.
+; Also bits are inverted compared to HW I think.
 ; In any case, revisit!
 inp_virtpad: .byte 0,0
 

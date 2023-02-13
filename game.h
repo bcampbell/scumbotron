@@ -11,6 +11,7 @@
 #define STATE_KILLED 4     // player just died (but has another life)
 #define STATE_GAMEOVER 5
 #define STATE_HIGHSCORES 6 // show high scores
+#define STATE_ENTERHIGHSCORE 7 // enter a new high score
 
 extern uint8_t state;
 extern uint8_t statetimer;
@@ -26,5 +27,8 @@ void enter_STATE_GAMEOVER();
 void enter_STATE_HIGHSCORES();
 void tick_STATE_HIGHSCORES();
 void render_STATE_HIGHSCORES();
+void enter_STATE_ENTERHIGHSCORE(uint32_t score);
+void tick_STATE_ENTERHIGHSCORE();
+void render_STATE_ENTERHIGHSCORE();
 
 #endif // GAME_H

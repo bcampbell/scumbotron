@@ -26,10 +26,15 @@ static SDL_Texture* screenTexture = NULL;
 static SDL_Surface* screen = NULL;
 static SDL_Surface* conversionSurface = NULL;
 static SDL_Palette *palette;
-static bool randominput = false;    // F12 to toggle
 static bool warp = false;           // F11 to toggle
 
-// local functions
+
+static uint8_t inp_dualstick_state = 0;
+static uint8_t inp_menu_state = 0;
+static uint8_t inp_menu_pressed = 0;
+static void update_inp_menu();
+static void update_inp_dualstick();
+
 static void sys_init();
 static void waitvbl();
 static void sys_render_start();
@@ -138,9 +143,8 @@ bailout:
 #define TICK_INTERVAL (1000/60)
 
 static Uint32 prevtime = 0;
-void waitvbl()
+static void waitvbl()
 {
-    pumpevents();
 
     Uint32 targtime = prevtime + TICK_INTERVAL;
     if (warp) {
@@ -167,7 +171,6 @@ static void pumpevents()
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
             case SDLK_F12:
-                randominput = !randominput;
               break;
             case SDLK_F11:
                 warp = !warp;
@@ -181,9 +184,10 @@ static void pumpevents()
     }
 }
 
-uint8_t sys_inp_dualsticks()
+// 
+static update_inp_dualstick()
 {
-    uint8_t out = 0;
+    uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
     uint8_t i;
     static const struct {
@@ -199,21 +203,53 @@ uint8_t sys_inp_dualsticks()
         {SDL_SCANCODE_A, INP_LEFT},
         {SDL_SCANCODE_D, INP_RIGHT},
     };
-
-    if (randominput) {
-        static uint8_t inp = 0;
-        if ((tick & 0x3f)==0) {
-            inp = rnd();
-        }
-        return inp;
-    }
    
     for (i = 0; i < 8; ++i) {
         if (keys[mapping[i].scancode]) {
-            out |= mapping[i].bitmask;
+            state |= mapping[i].bitmask;
         }
     }
-    return out;
+    inp_dualstick_state = state;
+}
+
+static update_inp_menu()
+{
+    uint8_t state = 0;
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    uint8_t i;
+    static const struct {
+        uint8_t scancode;
+        uint8_t bitmask;
+    } mapping[8] = {
+        {SDL_SCANCODE_UP, INP_UP},
+        {SDL_SCANCODE_DOWN, INP_DOWN},
+        {SDL_SCANCODE_LEFT, INP_LEFT},
+        {SDL_SCANCODE_RIGHT, INP_RIGHT},
+        {SDL_SCANCODE_RETURN, INP_MENU_ACTION},
+        {SDL_SCANCODE_SPACE, INP_MENU_ACTION},
+        {SDL_SCANCODE_RCTRL, INP_MENU_ACTION},
+    };
+   
+    for (i = 0; i < 8; ++i) {
+        if (keys[mapping[i].scancode]) {
+            state |= mapping[i].bitmask;
+        }
+    }
+    // Which ones were pressed since last check?
+    inp_menu_pressed = (~inp_menu_state) & state;
+    inp_menu_state = state;
+}
+
+
+
+uint8_t sys_inp_dualsticks()
+{
+    return inp_dualstick_state;
+}
+
+uint8_t sys_inp_menu()
+{
+    return inp_menu_pressed;
 }
 
 void sys_render_start()
@@ -537,7 +573,10 @@ int main(int argc, char* argv[]) {
     sys_init();
     game_init();
     while(1) {
+        pumpevents();
         waitvbl();
+        update_inp_dualstick();
+        update_inp_menu();
         sys_render_start();
         game_render();
         sys_render_finish();

@@ -62,28 +62,68 @@ static void drawbox(int x, int y, int w, int h, uint8_t ch, uint8_t colour);
 static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour);
 static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour);
 
-static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
-    {KEY_UP, INP_UP},
-    {KEY_DOWN, INP_DOWN},
-    {KEY_LEFT, INP_LEFT},
-    {KEY_RIGHT, INP_RIGHT},
-    {KEY_X, INP_FIRE_UP},    // X
-    {KEY_B, INP_FIRE_DOWN},  // B
-    {KEY_Y, INP_FIRE_LEFT},  // Y
-    {KEY_A, INP_FIRE_RIGHT}, // A
-};
+static uint8_t inp_dualstick_state = 0;
+static uint8_t inp_menu_state = 0;
+static uint8_t inp_menu_pressed = 0;
+static void update_inp_dualstick();
+static void update_inp_menu();
 
-uint8_t sys_inp_dualsticks()
+static void update_inp_dualstick()
 {
+    static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
+        {KEY_UP, INP_UP},
+        {KEY_DOWN, INP_DOWN},
+        {KEY_LEFT, INP_LEFT},
+        {KEY_RIGHT, INP_RIGHT},
+        {KEY_X, INP_FIRE_UP},    // X
+        {KEY_B, INP_FIRE_DOWN},  // B
+        {KEY_Y, INP_FIRE_LEFT},  // Y
+        {KEY_A, INP_FIRE_RIGHT}, // A
+    };
+
     int i;
-    uint8_t out = 0;
+    uint8_t state = 0;
     uint32 curr = keysCurrent();
     for (i = 0; i < 8; ++i) {
         if ((curr & key_mapping[i].hw)) {
-            out |= key_mapping[i].bitmask;
+            state |= key_mapping[i].bitmask;
         }
     }
-    return out;
+    inp_dualstick_state = state;
+}
+
+static void update_inp_menu()
+{
+    static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
+        {KEY_UP, INP_UP},
+        {KEY_DOWN, INP_DOWN},
+        {KEY_LEFT, INP_LEFT},
+        {KEY_RIGHT, INP_RIGHT},
+        {KEY_START, INP_MENU_ACTION},
+        {KEY_A, INP_MENU_ACTION},
+    };
+
+    int i;
+    uint8_t state = 0;
+    uint32 curr = keysCurrent();
+    for (i = 0; i < 8; ++i) {
+        if ((curr & key_mapping[i].hw)) {
+            state |= key_mapping[i].bitmask;
+        }
+    }
+    // Which ones were pressed since last check?
+    inp_menu_pressed = (~inp_menu_state) & state;
+    inp_menu_state = state;
+}
+
+uint8_t sys_inp_dualsticks()
+{
+    return inp_dualstick_state;
+}
+
+uint8_t sys_inp_menu()
+{
+    return inp_menu_pressed;
 }
 
 void sys_clr()
@@ -613,6 +653,8 @@ int main(void) {
         //sys_render_finish();
         //sfx_tick();
 		scanKeys();
+        update_inp_dualstick();
+        update_inp_menu();
         game_tick();
 
         sprMain = 0;

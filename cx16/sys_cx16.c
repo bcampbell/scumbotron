@@ -7,18 +7,18 @@
 // Platform-specifics for cx16
 
 // irq.s, glue.s
-extern void inp_tick();
 extern void irq_init();
 extern void keyhandler_init();
 extern uint16_t inp_virtpad;
+
+static uint8_t inp_dualstick_state = 0;
+static uint8_t inp_menu_state = 0;
+static uint8_t inp_menu_pressed = 0;
+static void update_inp_dualstick();
+static void update_inp_menu();
+
 extern void waitvbl();
 
-//  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-//              SNES | B | Y |SEL|STA|UP |DN |LT |RT |
-//
-//  .X, byte 1:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-//              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
-extern volatile uint16_t inp_joystate;
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
@@ -95,28 +95,6 @@ static inline void veraaddr1(uint32_t addr, uint8_t inc) {
     VERA.control = 0x01;
     VERA.address = ((addr)&0xffff);
     VERA.address_hi = (inc) | (((addr)>>16)&1);
-}
-
-void testum() {
-    uint16_t b;
-    uint8_t i;
-
-    VERA.control = 0x00;
-    // Writing to 0x1b000 onward.
-    VERA.address = 0xB000;
-    VERA.address_hi = 0x11; // increment = 1
-    b = inp_joystate;
-    for (i=0; i<16; ++i) {
-        // char, then colour
-        VERA.data0 = (b & 0x8000) ? '.' : 'X';
-        VERA.data0 = COLOR_BLACK<<4 | COLOR_GREEN;
-        b = b<<1;
-    }
-
-        VERA.data0 = ekind[0] + '0';
-        VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
-        VERA.data0 = etimer[0] + '0';
-        VERA.data0 = COLOR_BLACK<<4 | COLOR_RED;
 }
 
 void sys_render_start()
@@ -794,9 +772,10 @@ void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
     }
 }
 
-uint8_t sys_inp_dualsticks()
+
+static void update_inp_dualstick()
 {
-    uint8_t out = 0;
+    uint8_t state = 0;
     uint8_t i;
     struct {uint16_t hw; uint8_t bitmask; } mapping[8] = {
         {JOY_UP_MASK, INP_FIRE_UP},
@@ -810,11 +789,46 @@ uint8_t sys_inp_dualsticks()
     };
     for (i = 0; i < 8; ++i) {
         if ((inp_virtpad & mapping[i].hw)) {
-            out |= mapping[i].bitmask;
+            state |= mapping[i].bitmask;
         }
     }
-    return out;
+    inp_dualstick_state = state;
 }
+
+
+static void update_inp_menu()
+{
+    uint8_t state = 0;
+    uint8_t i;
+    struct {uint16_t hw; uint8_t bitmask; } mapping[8] = {
+        {JOY_UP_MASK, INP_UP},
+        {JOY_DOWN_MASK, INP_DOWN},
+        {JOY_LEFT_MASK, INP_LEFT},
+        {JOY_RIGHT_MASK, INP_RIGHT},
+        {0x8000 /*A*/, INP_MENU_ACTION},
+    };
+    for (i = 0; i < 8; ++i) {
+        if ((inp_virtpad & mapping[i].hw)) {
+            state |= mapping[i].bitmask;
+        }
+    }
+    // Which ones were pressed since last check?
+    inp_menu_pressed = (~inp_menu_state) & state;
+    inp_menu_state = state;
+}
+
+
+uint8_t sys_inp_dualsticks()
+{
+    return inp_dualstick_state;
+}
+
+uint8_t sys_inp_menu()
+{
+    return inp_menu_pressed;
+}
+
+
 
 int main(void) {
     sys_init();
@@ -825,7 +839,8 @@ int main(void) {
         game_render();
         sys_render_finish();
         sfx_tick();
-        inp_tick(); // update inp_joystate
+        update_inp_dualstick();
+        update_inp_menu();
         game_tick();
     }
 }
