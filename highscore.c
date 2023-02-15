@@ -10,19 +10,12 @@ static uint8_t entry_slot;
 static uint8_t entry_cursor;
 
 static char names[NUM_HIGHSCORES][HIGHSCORE_NAME_SIZE] = {
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'},
-    {'a','c','e'}
+    {'A','C','E'}, {'A','C','E'}, {'A','C','E'}, {'A','C','E'},
+    {'A','C','E'}, {'A','C','E'}, {'A','C','E'}, {'A','C','E'},
+    {'A','C','E'}, {'A','C','E'},
 };
 
-static uint32_t scores[NUM_HIGHSCORES] = {9000000,8000000,70000,60000,50000,40000,30000,20000,10000,0};
+static uint32_t scores[NUM_HIGHSCORES] = {10000,9000,8000,7000,6000,5000,4000,3000,2000,1000};
 
 
 static void draw() {
@@ -39,8 +32,8 @@ static void draw() {
         sys_textn(cx, cy + slot*2, names[slot], HIGHSCORE_NAME_SIZE, c);
         if (slot == entry_slot) {
             // Flash the cursor.
-            if (tick & 0x08) {
-                sys_textn(cx + entry_cursor, cy + slot*2, "*", 1, 15);
+            if ((tick & 0x3f) > 0x20) {
+                sys_textn(cx + entry_cursor, cy + slot*2, &names[slot][entry_cursor], 1, 10);
             }
         }
 
@@ -125,32 +118,70 @@ void enter_STATE_ENTERHIGHSCORE(uint32_t score)
         return;
     }
     insert_new_score(entry_slot, score);
+    names[entry_slot][0] = 'A';
+}
+
+
+static const char *validchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789*[]! ";
+
+static char nextchar(char c)
+{
+    const char *p = validchars;
+    while( *p != c && *p != '\0') {
+        ++p;
+    }
+    if (*p == '\0') {
+        return validchars[0];
+    }
+    ++p;    // next char
+    if (*p == '\0') {
+        p = validchars; // wrapped.
+    }
+    return *p;
+}
+
+static char prevchar(char c)
+{
+    const char *p = validchars;
+    while( *p != c && *p != '\0') {
+        ++p;
+    }
+    if (p == validchars) {
+        return ' '; // wrap
+    }
+    --p;
+    return *p;
 }
 
 void tick_STATE_ENTERHIGHSCORE()
 {
+    char c;
     uint8_t inp = sys_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if ((inp & INP_MENU_ACTION || inp & INP_RIGHT) &&
+        entry_cursor == (HIGHSCORE_NAME_SIZE - 1)) {
         enter_STATE_HIGHSCORES();
         return;
     }
 
-
-    if (inp & INP_UP) {
-        --names[entry_slot][entry_cursor];
-    }
     if (inp & INP_DOWN) {
-        ++names[entry_slot][entry_cursor];
+        c = names[entry_slot][entry_cursor];
+        names[entry_slot][entry_cursor] = nextchar(c);
+    }
+    if (inp & INP_UP) {
+        c = names[entry_slot][entry_cursor];
+        names[entry_slot][entry_cursor] = prevchar(c);
     }
 
     if (inp & INP_LEFT) {
         if (entry_cursor > 0) {
+            names[entry_slot][entry_cursor] = ' ';
             --entry_cursor;
         }
     }
-    if (inp & INP_RIGHT) {
+    if (inp & INP_RIGHT || inp & INP_MENU_ACTION) {
         if (entry_cursor < HIGHSCORE_NAME_SIZE - 1) {
             ++entry_cursor;
+            names[entry_slot][entry_cursor] = 'A';
         }
     }
 }

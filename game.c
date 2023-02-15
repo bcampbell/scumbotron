@@ -31,8 +31,7 @@ static void level_baiter_check();
 
 void game_init()
 {
-//    enter_STATE_TITLESCREEN();
-    enter_STATE_ENTERHIGHSCORE(1234567);
+    enter_STATE_TITLESCREEN();
 }
 
 void game_tick()
@@ -252,7 +251,8 @@ void enter_STATE_GAMEOVER()
 static void tick_STATE_GAMEOVER()
 {
     if (++statetimer > 60) {
-        enter_STATE_TITLESCREEN();
+        // enter_STATE_TITLESCREEN();
+        enter_STATE_ENTERHIGHSCORE(player_score);
     }
 }
 
