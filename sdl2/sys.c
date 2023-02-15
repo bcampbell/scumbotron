@@ -185,7 +185,7 @@ static void pumpevents()
 }
 
 // 
-static update_inp_dualstick()
+static void update_inp_dualstick()
 {
     uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -212,7 +212,7 @@ static update_inp_dualstick()
     inp_dualstick_state = state;
 }
 
-static update_inp_menu()
+static void update_inp_menu()
 {
     uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);

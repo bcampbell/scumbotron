@@ -263,7 +263,7 @@ static void vblank()
 
 
 
-static void init()
+static void sys_init()
 {
     // Set both displays up the same.
     // BG0 for text
@@ -636,7 +636,8 @@ static void rendereffects()
  */
 
 int main(void) {
-    init();
+    sys_init();
+    game_init();
 
 	while(1) {
         clr_bg0();
