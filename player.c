@@ -109,6 +109,8 @@ bool player_collisions()
                 if (gobkind[d] == GK_POWERUP) {
                     player_lives++;
                     gobkind[d] = GK_NONE;
+                } else if (gobkind[d] == GK_MARINE) {
+                    gobkind[d] = GK_NONE;
                 } else {
                     // boom
                     norwegian_blue = true;

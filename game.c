@@ -274,6 +274,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_FRAGGER, 4);
+            gobs_create(GK_MARINE, 4);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);

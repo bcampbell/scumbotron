@@ -32,6 +32,7 @@
 #define SPR16_PLR_D 50
 #define SPR16_PLR_L 52
 #define SPR16_PLR_R 54
+#define SPR16_MARINE 56
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -174,5 +175,10 @@ void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping)
         img = SPR16_HAPPYSLAPPER + ((tick >> 3) & 0x01);
     }
     sprout16(x, y, img);
+}
+
+void sys_marine_render(int16_t x, int16_t y)
+{
+    sprout16(x, y, SPR16_MARINE + ((tick >> 3) & 0x01));
 }
 

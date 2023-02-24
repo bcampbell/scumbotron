@@ -16,6 +16,28 @@ uint8_t gobtimer[MAX_GOBS];
 uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
 
+
+// Force direction into valid bits (no up+down, for example)
+const uint8_t dir_fix[16] = {
+    0,              // 0000
+    DIR_RIGHT,      // 0001 right
+    DIR_LEFT,       // 0010 left
+    0,              // 0011 left+right
+    DIR_DOWN,       // 0100 down
+    DIR_DOWN|DIR_RIGHT,   // 0101 down+right           
+    DIR_DOWN|DIR_LEFT,   // 0110 down+left           
+    0,              // 0111 down+left+right
+
+    DIR_UP,         // 1000 up
+    DIR_UP|DIR_RIGHT,   // 1001 up+right
+    DIR_UP|DIR_LEFT,   // 1010 up+left
+    0,              // 1011 up+left+right
+    0,              // 1100 up+down
+    0,              // 1101 up+down+right           
+    0,              // 1110 up+down+left           
+    0,              // 1111 all
+};
+
 void gobs_clear()
 {
     uint8_t i;
@@ -76,6 +98,7 @@ void gobs_tick(bool spawnphase)
             case GK_VULGON:  vulgon_tick(i); break;
             case GK_POOMERANG: poomerang_tick(i); break;
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
+            case GK_MARINE:  marine_tick(i); break;
             default:
                 break;
         }
@@ -137,6 +160,9 @@ void gobs_render()
             case GK_HAPPYSLAPPER:
                 sys_happyslapper_render(gobx[d], goby[d], gobtimer[d] < HAPPYSLAPPER_SLEEP_TIME);
                 break;
+            case GK_MARINE:
+                sys_marine_render(gobx[d], goby[d]);
+                break;
             default:
                 break;
         }
@@ -164,6 +190,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_VULGON:       vulgon_shot(d, s); break;
         case GK_POOMERANG:    poomerang_shot(d, s); break;
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
+        case GK_MARINE:       marine_shot(d, s); break;
         default:
             break;
     }
@@ -191,6 +218,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_FRAGGER: fragger_create(d); break;
             case GK_VULGON: vulgon_create(d); break;
             case GK_HAPPYSLAPPER: happyslapper_create(d); break;
+            case GK_MARINE: marine_create(d); break;
             default:
                 // Not all kinds can be created. Some are spawned by others.
                 break;
@@ -224,6 +252,7 @@ void gobs_reset() {
             case GK_FRAGGER:      fragger_reset(g); break;
             case GK_VULGON:       vulgon_reset(g); break;
             case GK_HAPPYSLAPPER: happyslapper_reset(g); break;
+            case GK_MARINE:       marine_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -913,23 +942,29 @@ void happyslapper_shot(uint8_t d, uint8_t shot)
     gob_standard_kaboom(d, shot, 75);
 }
 
-const uint8_t dir_fix[16] = {
-    0,              // 0000
-    DIR_RIGHT,      // 0001 right
-    DIR_LEFT,       // 0010 left
-    0,              // 0011 left+right
-    DIR_DOWN,       // 0100 down
-    DIR_DOWN|DIR_RIGHT,   // 0101 down+right           
-    DIR_DOWN|DIR_LEFT,   // 0110 down+left           
-    0,              // 0111 down+left+right
+/*
+ * Heavily Armoured Space Marine
+ */
 
-    DIR_UP,         // 1000 up
-    DIR_UP|DIR_RIGHT,   // 1001 up+right
-    DIR_UP|DIR_LEFT,   // 1010 up+left
-    0,              // 1011 up+left+right
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111 all
-};
+void marine_create(uint8_t d)
+{
+    gobkind[d] = GK_MARINE;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
+    marine_reset(d);
+}
+
+void marine_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+}
+
+void marine_tick(uint8_t d)
+{
+}
+
+void marine_shot(uint8_t d, uint8_t shot)
+{
+}
 

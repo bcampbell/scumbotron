@@ -27,6 +27,7 @@
 #define GK_VULGON 15
 #define GK_POOMERANG 16
 #define GK_HAPPYSLAPPER 17
+#define GK_MARINE 18
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -151,5 +152,11 @@ void happyslapper_create(uint8_t d);
 void happyslapper_tick(uint8_t d);
 void happyslapper_reset(uint8_t d);
 void happyslapper_shot(uint8_t d, uint8_t shot);
+
+// heavily armoured space marine fns
+void marine_create(uint8_t d);
+void marine_tick(uint8_t d);
+void marine_reset(uint8_t d);
+void marine_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H
