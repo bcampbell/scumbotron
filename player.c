@@ -14,6 +14,10 @@ uint8_t plrtimer[MAX_PLAYERS];
 uint8_t plrfacing[MAX_PLAYERS]; // DIR_ bits
 uint8_t plralive[MAX_PLAYERS]; // 0=dead
 
+int16_t plrhistx[MAX_PLAYERS][PLR_HIST_LEN];
+int16_t plrhisty[MAX_PLAYERS][PLR_HIST_LEN];
+uint8_t plrhistidx[MAX_PLAYERS];
+
 // shot vars
 int16_t shotx[MAX_SHOTS];
 int16_t shoty[MAX_SHOTS];
@@ -31,6 +35,7 @@ void player_add_score(uint8_t points)
 }
 
 void player_create(uint8_t p, int16_t x, int16_t y) {
+    uint8_t i;
     plrx[p] = x;
     plry[p] = y;
     plrvx[p] = 0;
@@ -38,6 +43,13 @@ void player_create(uint8_t p, int16_t x, int16_t y) {
     plrfacing[p] = 0;
     plrtimer[p] = 0;
     plralive[p] = 1;
+
+    // reset the history list
+    for (i = 0; i < PLR_HIST_LEN; ++i) {
+        plrhistx[p][i] = x;
+        plrhisty[p][i] = y;
+    }
+    plrhistidx[p] = 0;
 }
 
 void player_renderall()
@@ -106,18 +118,13 @@ bool player_collisions()
             }
             if (overlap(px0, px1, gobx[d], gobx[d] + gob_size(d)) &&
                 overlap(py0, py1, goby[d], goby[d] + gob_size(d))) {
-                if (gobkind[d] == GK_POWERUP) {
-                    player_lives++;
-                    gobkind[d] = GK_NONE;
-                } else if (gobkind[d] == GK_MARINE) {
-                    gobkind[d] = GK_NONE;
-                } else {
+                if (gob_playercollide(d, p)) {
                     // boom
                     norwegian_blue = true;
+                    break;
                 }
-                break;
             }
-            // special checks for zapper beams
+            // Zapper beams are a special case.
             if (gobkind[d] == GK_VZAPPER && zapper_state(d) == ZAPPER_ON) {
                 int16_t xzap = gobx[d] + (8<<FX);
                 if (px0 <= xzap && px1 >= xzap) {
@@ -203,6 +210,20 @@ void player_tick(uint8_t d) {
         } else if (plry[d] > ymax) {
             plry[d] = ymax;
         }
+    }
+
+    // Update position history array (every second frame)
+//    if ((tick & 0x01) == 0 ) {
+    {
+        uint8_t idx = plrhistidx[d];
+        if (plrx[d] != plrhistx[d][idx] || plry[d] != plrhisty[d][idx]) {
+            // add new entry
+            idx = (idx + 1) & (PLR_HIST_LEN-1);
+            plrhistidx[d] = idx;
+            plrhistx[d][idx] = plrx[d];
+            plrhisty[d][idx] = plry[d];
+        }
+
     }
 }
 

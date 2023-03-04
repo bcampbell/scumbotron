@@ -136,8 +136,8 @@ static void tick_STATE_GETREADY()
 
 static void render_STATE_GETREADY()
 {
-    player_renderall();
     gobs_render();
+    player_renderall();
     sys_hud(level, player_lives, player_score);
     sys_text(10,10,"GET READY", (tick/2) & 0x0f);
 }
@@ -173,8 +173,8 @@ static void tick_STATE_PLAY()
 
 static void render_STATE_PLAY()
 {
-    player_renderall();
     gobs_render();
+    player_renderall();
     sys_hud(level, player_lives, player_score);
 }
 
@@ -204,8 +204,8 @@ static void tick_STATE_KILLED()
 
 static void render_STATE_KILLED()
 {
-    player_renderall();
     gobs_render();
+    player_renderall();
     sys_hud(level, player_lives, player_score);
     sys_text(10,10,"OWWWWWWWW", (tick/2) & 0x0f);
 }
@@ -232,8 +232,8 @@ static void tick_STATE_CLEARED()
 
 static void render_STATE_CLEARED()
 {
-    player_renderall();
     gobs_render();
+    player_renderall();
     sys_hud(level, player_lives, player_score);
     sys_text(10,10,"CLEAR     ", (tick/2) & 0x0f);
 }
@@ -273,39 +273,45 @@ static void level_init(uint8_t level)
         case 0:
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_GRUNT, 10);
-            gobs_create(GK_FRAGGER, 4);
-            gobs_create(GK_MARINE, 4);
+            //gobs_create(GK_FRAGGER, 4);
+            gobs_create(GK_MARINE, 3);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_GRUNT, 15);
             gobs_create(GK_TANK, 2);
+            gobs_create(GK_MARINE, 3);
             break;
         case 2:
             gobs_create(GK_BLOCK, 5);
             gobs_create(GK_HAPPYSLAPPER, 3);
             gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_MARINE, 3);
             break;
         case 3:
             gobs_create(GK_BLOCK, 20);
             gobs_create(GK_AMOEBA_BIG, 2);
             gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_MARINE, 3);
             break;
         case 5:
             gobs_create(GK_BLOCK, 5);
             gobs_create(GK_FRAGGER, 4);
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_HZAPPER, 1);
+            gobs_create(GK_MARINE, 3);
             break;
         case 9:
             gobs_create(GK_BLOCK, 15);
             gobs_create(GK_TANK, 2);
             gobs_create(GK_GRUNT, 15);
             gobs_create(GK_VZAPPER, 1);
+            gobs_create(GK_MARINE, 3);
             break;
         case 10:
             gobs_create(GK_BLOCK, 20);
             gobs_create(GK_HAPPYSLAPPER, 20);
+            gobs_create(GK_MARINE, 3);
             break;
         case 13:
             gobs_create(GK_BLOCK, 15);
@@ -313,14 +319,17 @@ static void level_init(uint8_t level)
             gobs_create(GK_AMOEBA_BIG, 2);
             gobs_create(GK_VZAPPER, 1);
             gobs_create(GK_HZAPPER, 1);
+            gobs_create(GK_MARINE, 3);
             break;
         case 14:
             gobs_create(GK_HAPPYSLAPPER, 40);
+            gobs_create(GK_MARINE, 3);
             break;
         case 20:
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_HAPPYSLAPPER, 20);
+            gobs_create(GK_MARINE, 3);
             break;
 
         case 21:
@@ -330,9 +339,11 @@ static void level_init(uint8_t level)
             gobs_create(GK_HZAPPER, 2);
             gobs_create(GK_VZAPPER, 2);
             gobs_create(GK_AMOEBA_BIG, 3);
+            gobs_create(GK_MARINE, 3);
             break;
         default:
             gobs_create(GK_BAITER,1);
+            gobs_create(GK_MARINE, 3);
             break;
     }
 }

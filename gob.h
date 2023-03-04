@@ -60,6 +60,7 @@ void gobs_clear();
 void gobs_tick(bool spawnphase);
 void gobs_render();
 void gob_shot(uint8_t g, uint8_t shot);
+bool gob_playercollide(uint8_t g, uint8_t plr);
 uint8_t gob_alloc();
 void gob_randompos(uint8_t d);
 void gobs_reset();
@@ -132,6 +133,7 @@ void frag_shot(uint8_t d, uint8_t shot);
 // powerup fns
 void powerup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind);
 void powerup_tick(uint8_t d);
+bool powerup_playercollide(uint8_t g, uint8_t plr);
 
 // vulgon fns
 void vulgon_create(uint8_t d);
@@ -154,9 +156,9 @@ void happyslapper_reset(uint8_t d);
 void happyslapper_shot(uint8_t d, uint8_t shot);
 
 // heavily armoured space marine fns
-void marine_create(uint8_t d);
-void marine_tick(uint8_t d);
-void marine_reset(uint8_t d);
-void marine_shot(uint8_t d, uint8_t shot);
+void marine_create(uint8_t g);
+void marine_tick(uint8_t g);
+void marine_reset(uint8_t g);
+bool marine_playercollide(uint8_t g, uint8_t plr);
 
 #endif // GOB_H

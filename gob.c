@@ -190,10 +190,22 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_VULGON:       vulgon_shot(d, s); break;
         case GK_POOMERANG:    poomerang_shot(d, s); break;
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
-        case GK_MARINE:       marine_shot(d, s); break;
         default:
             break;
     }
+}
+
+// Handle a gob colliding with a player.
+// d: gob index
+// plr: player index
+bool gob_playercollide(uint8_t g, uint8_t plr)
+{
+    switch (gobkind[g]) {
+        case GK_POWERUP:  return powerup_playercollide(g, plr);
+        case GK_MARINE:   return marine_playercollide(g, plr);
+        default:          return true;    // Kill player.
+    }
+    return false;
 }
 
 void gobs_create(uint8_t kind, uint8_t n)
@@ -798,6 +810,14 @@ void powerup_tick(uint8_t d)
     gob_move_bounce_y(d);
 }
 
+bool powerup_playercollide(uint8_t g, uint8_t plr)
+{
+    player_lives++;
+    gobkind[g] = GK_NONE;
+    return false;   // Don't kill player.
+}
+
+
 /*
  * Vulgon
  */
@@ -946,25 +966,67 @@ void happyslapper_shot(uint8_t d, uint8_t shot)
  * Heavily Armoured Space Marine
  */
 
-void marine_create(uint8_t d)
+void marine_create(uint8_t g)
 {
-    gobkind[d] = GK_MARINE;
-    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
-    marine_reset(d);
+    gobkind[g] = GK_MARINE;
+    gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER;  //| GF_LOCKS_LEVEL 
+    gobdat[g] = 0;
+    marine_reset(g);
 }
 
-void marine_reset(uint8_t d)
+static int16_t rndspd(int16_t s)
 {
-    gob_randompos(d);
-    gobvx[d] = 0;
-    gobvy[d] = 0;
+    if (rnd() >= 0x80) {
+        return -s;
+    } else {
+        return s;
+    }
 }
 
-void marine_tick(uint8_t d)
+
+void marine_reset(uint8_t g)
 {
+    gob_randompos(g);
+    gobvx[g] = rndspd(1<<(FX/2));
+    gobvy[g] = rndspd(1<<(FX/2));
 }
 
-void marine_shot(uint8_t d, uint8_t shot)
+void marine_tick(uint8_t g)
 {
+    if ((gobflags[g] & GF_COLLIDES_PLAYER)) {
+        // Random walking.
+        if ((tick & 0x3f) == 0) {
+            // New direction.
+            gobvx[g] = rndspd(1<<(FX/2));
+            gobvy[g] = rndspd(1<<(FX/2));
+        }
+        gob_move_bounce_x(g);
+        gob_move_bounce_y(g);
+
+    } else {
+        uint8_t p = 0;  // Player to follow.
+        uint8_t idx = plrhistidx[p] - gobdat[g];
+        gobx[g] = plrhistx[p][idx & (PLR_HIST_LEN-1)];
+        goby[g] = plrhisty[p][idx & (PLR_HIST_LEN-1)];
+    }
 }
+
+bool marine_playercollide(uint8_t g, uint8_t plr)
+{
+    gobflags[g] = 0;    // Turn off further collisions etc.
+    // Add this marine to the end of the queue already following the player.
+    uint8_t i;
+    uint8_t idx = 0;
+    for(i = 0; i < MAX_GOBS; ++i) {
+        if (gobkind[i] != GK_MARINE) {
+            continue;
+        }
+        if (gobdat[i] > idx) {
+            idx = gobdat[i];
+        }
+    }
+    gobdat[g] = idx + 3;
+    return false;   // Don't kill player.
+}
+
 

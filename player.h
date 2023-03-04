@@ -8,13 +8,19 @@
 extern uint8_t player_lives;
 extern uint32_t player_score;
 
-#define MAX_PLAYERS 1
 // player vars
+#define MAX_PLAYERS 1
 extern int16_t plrx[MAX_PLAYERS];
 extern int16_t plry[MAX_PLAYERS];
 extern uint8_t plrtimer[MAX_PLAYERS];
 extern uint8_t plrfacing[MAX_PLAYERS];
 extern uint8_t plralive[MAX_PLAYERS]; // 0=dead
+
+// record previous positions of players
+#define PLR_HIST_LEN 32
+extern int16_t plrhistx[MAX_PLAYERS][PLR_HIST_LEN];
+extern int16_t plrhisty[MAX_PLAYERS][PLR_HIST_LEN];
+extern uint8_t plrhistidx[MAX_PLAYERS];
 
 void player_renderall();
 void player_tickall();
