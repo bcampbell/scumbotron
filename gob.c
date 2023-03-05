@@ -99,6 +99,7 @@ void gobs_tick(bool spawnphase)
             case GK_POOMERANG: poomerang_tick(i); break;
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
             case GK_MARINE:  marine_tick(i); break;
+            case GK_WIBBLER:  wibbler_tick(i); break;
             default:
                 break;
         }
@@ -107,8 +108,8 @@ void gobs_tick(bool spawnphase)
 
 void gobs_render()
 {
-    uint8_t d;
-    for (d = 0; d < MAX_GOBS; ++d) {
+    uint8_t d = MAX_GOBS-1;
+    do {
         if (gobflags[d] & GF_SPAWNING) {
             continue;
         }
@@ -163,10 +164,13 @@ void gobs_render()
             case GK_MARINE:
                 sys_marine_render(gobx[d], goby[d]);
                 break;
+            case GK_WIBBLER:
+                sys_wibbler_render(gobx[d], goby[d], gobdat[d] == 0xff);
+                break;
             default:
                 break;
         }
-    }
+    } while(d-- > 0);
 }
 
 
@@ -190,6 +194,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_VULGON:       vulgon_shot(d, s); break;
         case GK_POOMERANG:    poomerang_shot(d, s); break;
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
+        case GK_WIBBLER:      wibbler_shot(d, s); break;
         default:
             break;
     }
@@ -231,6 +236,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_VULGON: vulgon_create(d); break;
             case GK_HAPPYSLAPPER: happyslapper_create(d); break;
             case GK_MARINE: marine_create(d); break;
+            case GK_WIBBLER: wibbler_create(d); break;
             default:
                 // Not all kinds can be created. Some are spawned by others.
                 break;
@@ -265,6 +271,7 @@ void gobs_reset() {
             case GK_VULGON:       vulgon_reset(g); break;
             case GK_HAPPYSLAPPER: happyslapper_reset(g); break;
             case GK_MARINE:       marine_reset(g); break;
+            case GK_WIBBLER:      wibbler_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -1029,4 +1036,90 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
     return false;   // Don't kill player.
 }
 
+/*
+ * Wibbler
+ */
+
+void wibbler_create(uint8_t g)
+{
+    uint8_t i;
+    gobkind[g] = GK_WIBBLER;
+    gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL;
+    gobdat[g] = 0xff;  // parent
+    wibbler_reset(g);
+   
+    for (i = 0; i < 15; ++i) {
+        uint8_t c = gob_alloc();
+        if (c >= MAX_GOBS) {
+            return;
+        }
+        gobkind[c] = GK_WIBBLER;
+        gobflags[c] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL; 
+        gobdat[c] = g;
+        gobx[c] = gobx[g];
+        goby[c] = goby[g];
+        gobvx[c] = 0;
+        gobvx[c] = 0;
+        //wibbler_reset(i);
+        g = c;
+    }
+}
+
+void wibbler_reset(uint8_t g)
+{
+    if (gobdat[g] == 0xff) {
+        gob_randompos(g);
+    } else {
+        gobx[g] = gobx[gobdat[g]];
+        goby[g] = goby[gobdat[g]];
+    }
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+}
+
+void wibbler_shot(uint8_t g, uint8_t shot)
+{
+    if(gobdat[g] == 0xff) {
+        uint8_t child;
+        // make the first child the new head.
+        for( child=0; child<MAX_GOBS; ++child) {
+            if(gobkind[child] == GK_WIBBLER && gobdat[child] == g) {
+                gobdat[child] = 0xff;
+                gobvx[child] = shot_xvel(shot);
+                gobvy[child] = shot_yvel(shot);
+                break;
+            }
+        }
+        gob_standard_kaboom(g, shot, 50);
+    }
+}
+
+void wibbler_tick(uint8_t g)
+{
+    const int16_t WIBBLER_MAX_SPD = 2 << FX;
+    const int16_t WIBBLER_ACCEL = 3;
+
+    uint8_t parent = gobdat[g];
+    if (parent == 0xff) {
+        /*
+        if (((g+tick) & 0x31) == 0) {
+            //gobvx[g] >>= 1;
+            //gobvy[g] >>= 1;
+            gobvx[g] += (rnd() - 128)>>1;
+            gobvy[g] += (rnd() - 128)>>1;
+        }
+        */
+        gob_seek_x(g, plrx[0], (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
+        gob_seek_y(g, plry[0], (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
+    } else {
+        if ((tick & 0x3) == 0) {
+            gobvx[g] >>= 1;
+            gobvy[g] >>= 1;
+        }
+        gob_seek_x(g, gobx[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
+        gob_seek_y(g, goby[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
+    }
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
+}
 

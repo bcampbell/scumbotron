@@ -53,6 +53,7 @@ void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger);
 void sys_poomerang_render(int16_t x, int16_t y);
 void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping);
 void sys_marine_render(int16_t x, int16_t y);
+void sys_wibbler_render(int16_t x, int16_t y, bool head);
 
 // noddy profiling
 #define GATSO_OFF 0

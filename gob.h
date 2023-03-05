@@ -28,6 +28,7 @@
 #define GK_POOMERANG 16
 #define GK_HAPPYSLAPPER 17
 #define GK_MARINE 18
+#define GK_WIBBLER 19
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -160,5 +161,11 @@ void marine_create(uint8_t g);
 void marine_tick(uint8_t g);
 void marine_reset(uint8_t g);
 bool marine_playercollide(uint8_t g, uint8_t plr);
+
+// Wibbler fns.
+void wibbler_create(uint8_t g);
+void wibbler_shot(uint8_t g, uint8_t shot);
+void wibbler_tick(uint8_t g);
+void wibbler_reset(uint8_t g);
 
 #endif // GOB_H

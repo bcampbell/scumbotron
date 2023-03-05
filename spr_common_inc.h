@@ -33,6 +33,7 @@
 #define SPR16_PLR_L 52
 #define SPR16_PLR_R 54
 #define SPR16_MARINE 56
+#define SPR16_WIBBLER 58
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -180,5 +181,10 @@ void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping)
 void sys_marine_render(int16_t x, int16_t y)
 {
     sprout16(x, y, SPR16_MARINE + ((tick >> 3) & 0x01));
+}
+
+void sys_wibbler_render(int16_t x, int16_t y, bool head)
+{
+    sprout16(x, y, head ? SPR16_WIBBLER+4 : (SPR16_WIBBLER + ((tick>>2) & 0x03)));
 }
 
