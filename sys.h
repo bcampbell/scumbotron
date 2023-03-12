@@ -54,6 +54,7 @@ void sys_poomerang_render(int16_t x, int16_t y);
 void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping);
 void sys_marine_render(int16_t x, int16_t y);
 void sys_wibbler_render(int16_t x, int16_t y, bool head);
+void sys_bub_render(int16_t x, int16_t y, uint8_t bubidx);
 
 // noddy profiling
 #define GATSO_OFF 0

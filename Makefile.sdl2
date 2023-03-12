@@ -2,8 +2,8 @@ BUILD_DIR=build_sdl2
 EXPORT_DIR=$(BUILD_DIR)/export
 
 SRCS = sdl2/sys.c \
-	game.c gob.c player.c highscore.c misc.c \
-	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
+	game.c gob.c player.c highscore.c misc.c bub.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 
@@ -37,6 +37,11 @@ $(EXPORT_DIR)/spr16.bin: sprites16.png
 $(EXPORT_DIR)/spr32.bin: sprites32.png
 	mkdir -p $(dir $@)
 	tools/png2sprites -w 32 -h 32 -num 8 -fmt 8bpp $< $@
+
+# speech bubble sprites
+$(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
+	mkdir -p $(dir $@)
+	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp $< $@
 
 $(EXPORT_DIR)/chars.bin: chars.png
 	mkdir -p $(dir $@)

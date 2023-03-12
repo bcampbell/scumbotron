@@ -5,6 +5,7 @@
 // sprout16()
 // sprout32()
 // sprout16_highlight()
+// sprout64x8()
 
 // sprite image defs
 #define SPR16_EXTRALIFE 8
@@ -36,6 +37,8 @@
 #define SPR16_WIBBLER 58
 
 #define SPR32_AMOEBA_BIG 0
+
+#define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
 const uint8_t shot_spr[16] = {
     0,              // 0000
@@ -186,5 +189,10 @@ void sys_marine_render(int16_t x, int16_t y)
 void sys_wibbler_render(int16_t x, int16_t y, bool head)
 {
     sprout16(x, y, head ? SPR16_WIBBLER+4 : (SPR16_WIBBLER + ((tick>>2) & 0x03)));
+}
+
+void sys_bub_render(int16_t x, int16_t y, uint8_t bubidx)
+{
+    sprout64x8(x, y, SPR64x8_BUB + bubidx);
 }
 

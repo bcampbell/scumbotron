@@ -22,18 +22,24 @@ extern void waitvbl();
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
+#define SPR16_NUM 64
 #define SPR32_SIZE (16*32)   // 32x32, 4 bpp
-
+#define SPR32_NUM 2
+#define SPR64x8_SIZE (32*8) // 64x8, 4bpp
+#define SPR64x8_NUM 4
 extern unsigned char export_palette_zbin[];
 extern unsigned int export_palette_zbin_len;
 extern unsigned char export_spr16_zbin[];
 extern unsigned int export_spr16_zbin_len;
 extern unsigned char export_spr32_zbin[];
 extern unsigned int export_spr32_zbin_len;
+extern unsigned char export_spr64x8_zbin[];
+extern unsigned int export_spr64x8_zbin_len;
 
 // Our VERA memory map
 #define VRAM_SPRITES16 0x10000
-#define VRAM_SPRITES32 (VRAM_SPRITES16 + (64 * SPR16_SIZE))
+#define VRAM_SPRITES32 (VRAM_SPRITES16 + (SPR16_NUM * SPR16_SIZE))
+#define VRAM_SPRITES64x8 (VRAM_SPRITES32 + (SPR32_NUM * SPR32_SIZE))
 #define VRAM_LAYER1_MAP 0x1b000
 #define VRAM_LAYER1_TILES 0x1F000
 // layer0 is double-buffered
@@ -199,6 +205,21 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     ++sprcnt;
 }
 
+static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
+    const uint32_t addr = VRAM_SPRITES64x8 + (SPR64x8_SIZE * img);
+    VERA.data1 = (addr>>5) & 0xFF;
+    VERA.data1 = (0 << 7) | (addr>>13);
+    VERA.data1 = (x >> FX) & 0xff;  // x lo
+    VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    VERA.data1 = (y >> FX) & 0xff;  // y lo
+    VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    // wwhhpppp
+    VERA.data1 = (0 << 6) | (3 << 4);  // 64x8, 0 palette offset.
+    ++sprcnt;
+}
+
+
 void sys_clr()
 {
     uint8_t y;
@@ -282,23 +303,34 @@ void sys_init()
     }
 
     {
-        // 64 16x16 images
+        // Uncompress 16x16 sprites
         const volatile uint8_t* src = BANK_RAM;
         int i;
         cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_SPRITES16, VERA_INC_1);
-        for (i = 0; i < 64 * SPR16_SIZE; ++i) {
+        for (i = 0; i < SPR16_NUM * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }
     {
-        // Uncompress 8 32x32 sprites
+        // Uncompress 32x32 sprites
         const volatile uint8_t* src = BANK_RAM;
         int i;
         cx16_k_memory_decompress(export_spr32_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_SPRITES32, VERA_INC_1);
         // 8 32x32 images
-        for (i = 0; i < 8 * SPR32_SIZE; ++i) {
+        for (i = 0; i < SPR32_NUM * SPR32_SIZE; ++i) {
+            VERA.data0 = *src++;
+        }
+    }
+    {
+        // Uncompress 64x8 sprites
+        const volatile uint8_t* src = BANK_RAM;
+        int i;
+        cx16_k_memory_decompress(export_spr64x8_zbin, (uint8_t*)BANK_RAM);
+        veraaddr0(VRAM_SPRITES64x8, VERA_INC_1);
+        // 8 32x32 images
+        for (i = 0; i < SPR64x8_NUM * SPR64x8_SIZE; ++i) {
             VERA.data0 = *src++;
         }
     }

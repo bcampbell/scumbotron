@@ -11,6 +11,8 @@ extern unsigned char export_spr16_bin[];
 extern unsigned int export_spr16_bin_len;
 extern unsigned char export_spr32_bin[];
 extern unsigned int export_spr32_bin_len;
+extern unsigned char export_spr64x8_bin[];
+extern unsigned int export_spr64x8_bin_len;
 extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
 
@@ -19,6 +21,7 @@ extern unsigned int export_chars_bin_len;
 
 #define BYTESIZE_SPR16 (16*16)   // 16x16 8bpp
 #define BYTESIZE_SPR32 (32*32)   // 32x32 8bpp
+#define BYTESIZE_SPR64x8 (64*8)   // 64x8 8bpp
 
 static SDL_Window* fenster = NULL;
 static SDL_Renderer* renderer = NULL;
@@ -53,6 +56,7 @@ static void drawrect(const SDL_Rect *r, uint8_t colour);
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout32(int16_t x, int16_t y, uint8_t img);
+static inline void sprout64x8(int16_t x, int16_t y, uint8_t img);
 static void rendereffects();
 
 void sys_gatso(uint8_t t)
@@ -455,6 +459,14 @@ static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
     x = x >> FX;
     y = y >> FX;
     blit8_matte(pix, 16, 16, screen, x, y, 1);
+}
+
+static inline void sprout64x8(int16_t x, int16_t y, uint8_t img)
+{
+    const uint8_t *pix = export_spr64x8_bin + (img * BYTESIZE_SPR64x8);
+    x = x >> FX;
+    y = y >> FX;
+    blit8(pix, 64, 8, screen, x, y);
 }
 
 

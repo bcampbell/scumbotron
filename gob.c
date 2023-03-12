@@ -1,6 +1,7 @@
 #include "gob.h"
 #include "player.h"
 #include "misc.h"
+#include "bub.h"
 
 // gob tables
 uint8_t gobkind[MAX_GOBS];
@@ -46,6 +47,7 @@ void gobs_clear()
     }
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
+    bub_clear();
 }
 
 void gobs_tick(bool spawnphase)
@@ -104,6 +106,7 @@ void gobs_tick(bool spawnphase)
                 break;
         }
     }
+    bub_tick();
 }
 
 void gobs_render()
@@ -171,6 +174,7 @@ void gobs_render()
                 break;
         }
     } while(d-- > 0);
+    bub_render();
 }
 
 
@@ -250,6 +254,7 @@ void gobs_create(uint8_t kind, uint8_t n)
 void gobs_reset() {
     uint8_t t=0;
     uint8_t g;
+    bub_clear();
     for (g = 0; g < MAX_GOBS; ++g) {
         if (gobkind[g] == GK_NONE) {
             continue;

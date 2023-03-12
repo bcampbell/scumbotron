@@ -24,8 +24,12 @@ extern unsigned char export_spr16_bin[];
 extern unsigned int export_spr16_bin_len;
 extern unsigned char export_spr32_bin[];
 extern unsigned int export_spr32_bin_len;
+// NDS doesn't support 64x8 sprites, so these will be arranged as 32x8 pairs.
+extern unsigned char export_spr64x8_bin[];
+extern unsigned int export_spr64x8_bin_len;
 extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
+
 
 extern unsigned char export_spr32x8_bin[];
 extern unsigned int export_spr32x8_bin_len;
@@ -48,6 +52,7 @@ int sprSub;
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
+static void sprout64x8(int16_t x, int16_t y, uint8_t img);
 static void sprout32x8(int16_t x, int16_t y, uint8_t img);
 static void sprout8x32(int16_t x, int16_t y, uint8_t img);
 
@@ -179,17 +184,29 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
 }
 
 
-#define NUM_SPR16 64
-#define NUM_SPR32 8
+// 32x8 and 8x32 are DS-specific sprites for zapper beams
+#define SPR16_NUM 64
+#define SPR32_NUM 2
+#define SPR64x8_NUM 4
+#define SPR32x8_NUM 1
+#define SPR8x32_NUM 1
 
-#define BYTESIZE_SPR16 (16*16/2)   // 16x16 4bpp
-#define BYTESIZE_SPR32 (32*32/2)   // 32x32 4bpp
+// Number of tiles per sprite.
+#define SPR16_NTILES 4
+#define SPR32_NTILES 16
+#define SPR64x8_NTILES (4+4)
+#define SPR32x8_NTILES 4
+#define SPR8x32_NTILES 4
 
-// DS-specific sprites for zapper beams
-#define NUM_SPR32x8 1
-#define BYTESIZE_SPR32x8 (32*8/2)   // 32x8 4bpp
-#define NUM_SPR8x32 1
-#define BYTESIZE_SPR8x32 (8*32/2)   // 8x32 4bpp
+// Bytes per tile.
+#define TILE_BYTESIZE (8*4)   // 8x8 4bpp
+
+// First tile for each type of sprite.
+#define SPR16_BASETILE 0
+#define SPR32_BASETILE (SPR16_BASETILE + (SPR16_NUM * SPR16_NTILES))
+#define SPR64x8_BASETILE (SPR32_BASETILE + (SPR32_NUM * SPR32_NTILES))
+#define SPR32x8_BASETILE (SPR64x8_BASETILE + (SPR64x8_NUM * SPR64x8_NTILES))
+#define SPR8x32_BASETILE (SPR32x8_BASETILE + (SPR32x8_NUM * SPR32x8_NTILES))
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour)
 {
@@ -311,27 +328,33 @@ static void sys_init()
         size_t nbytes;
         uint8_t *destmain = (uint8_t*)SPRITE_GFX;
         uint8_t *destsub = (uint8_t*)SPRITE_GFX_SUB;
-        nbytes = NUM_SPR16 * BYTESIZE_SPR16;
+        nbytes = SPR16_NUM * SPR16_NTILES * TILE_BYTESIZE;
         dmaCopy(export_spr16_bin, destmain, nbytes);
         dmaCopy(export_spr16_bin, destsub, nbytes);
         destmain += nbytes;
         destsub += nbytes;
 
-        nbytes = NUM_SPR32 * BYTESIZE_SPR32;
+        nbytes = SPR32_NUM * SPR32_NTILES * TILE_BYTESIZE;
         dmaCopy(export_spr32_bin, destmain, nbytes);
         dmaCopy(export_spr32_bin, destsub, nbytes);
         destmain += nbytes;
         destsub += nbytes;
  
+        nbytes = SPR64x8_NUM * SPR64x8_NTILES * TILE_BYTESIZE;
+        dmaCopy(export_spr64x8_bin, destmain, nbytes);
+        dmaCopy(export_spr64x8_bin, destsub, nbytes);
+        destmain += nbytes;
+        destsub += nbytes;
+ 
         // load zapper beam sprites into vram
         // (would prefer 64x8 but GBA/DS doesn't support it)
-        nbytes = NUM_SPR32x8 * BYTESIZE_SPR32x8;
+        nbytes = SPR32x8_NUM * SPR32x8_NTILES * TILE_BYTESIZE;
         dmaCopy(export_spr32x8_bin, destmain, nbytes);
         dmaCopy(export_spr32x8_bin, destsub, nbytes);
         destmain += nbytes;
         destsub += nbytes;
 
-        nbytes = NUM_SPR8x32 * BYTESIZE_SPR8x32;
+        nbytes = SPR8x32_NUM * SPR8x32_NTILES * TILE_BYTESIZE;
         dmaCopy(export_spr8x32_bin, destmain, nbytes);
         dmaCopy(export_spr8x32_bin, destsub, nbytes);
         destmain += nbytes;
@@ -395,31 +418,40 @@ static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int s
 
 static void sprout16(int16_t x, int16_t y, uint8_t img)
 {
-    int tile = img * 4;    // 4 tiles/sprite
+    int tile = SPR16_BASETILE + (img * SPR16_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 0);
 }
 
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
-    int tile = img * 4;    // 4 tiles/sprite
+    int tile = SPR16_BASETILE + (img * SPR16_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 1);
 }
 
 static void sprout32(int16_t x, int16_t y, uint8_t img)
 {
-    int tile = (4 * NUM_SPR16) + img * 16;    // 16 tiles/sprite
+    int tile = SPR32_BASETILE + (img * SPR32_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 32,32, SpriteSize_32x32, 0);
 }
 
+// NDS doesn't support 64x8, so we use a 32x8 pair instead.
+static void sprout64x8(int16_t x, int16_t y, uint8_t img)
+{
+    int tile = SPR64x8_BASETILE + (img * SPR64x8_NTILES);
+    internal_sprout(x >> FX, y >> FX, tile, 32, 8, SpriteSize_32x8, 0);
+    internal_sprout((x >> FX) + 32, y >> FX, tile + 4, 32, 8, SpriteSize_32x8, 0);
+}
+
+
 static void sprout32x8(int16_t x, int16_t y, uint8_t img)
 {
-    int tile = (4 * NUM_SPR16) + (16 * NUM_SPR32) + (4*img);
+    int tile = SPR32x8_BASETILE + (img * SPR32x8_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 32,8, SpriteSize_32x8, 0);
 }
 
 static void sprout8x32(int16_t x, int16_t y, uint8_t img)
 {
-    int tile = (4 * NUM_SPR16) + (16 * NUM_SPR32) + (4 * NUM_SPR32x8) + (4*img);
+    int tile = SPR8x32_BASETILE + (img * SPR8x32_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 8,32, SpriteSize_8x32, 0);
 }
 

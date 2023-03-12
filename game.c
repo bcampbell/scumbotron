@@ -271,11 +271,12 @@ static void level_init(uint8_t level)
 
     switch (level) {
         case 0:
-            //gobs_create(GK_BLOCK, 5);
-            //gobs_create(GK_GRUNT, 10);
-            //gobs_create(GK_FRAGGER, 4);
+            gobs_create(GK_BLOCK, 5);
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_FRAGGER, 4);
+            gobs_create(GK_VULGON, 2);
             gobs_create(GK_MARINE, 3);
-            gobs_create(GK_WIBBLER, 1);
+            //gobs_create(GK_WIBBLER, 1);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);
