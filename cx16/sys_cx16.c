@@ -77,10 +77,10 @@ static uint8_t ey[MAX_EFFECTS];
 
 static void rendereffects();
 
-// Number of sprites used so far in current frame
-static uint8_t sprcnt;
-// ...and previous frame.
-static uint8_t sprcntprev;
+// Number of free hw sprites left.
+static uint8_t sprremaining;
+// from previous frame
+static uint8_t sprremainingprev;
 
 static void sfx_init();
 static void sfx_tick();
@@ -124,28 +124,33 @@ void sys_render_start()
     VERA.data1 = VERA.data0;
 
     // Set up for writing sprites.
-    // Use vera channel 1 exclusively for writing sprite attrs,
-    sprcnt = 0;
-    veraaddr1(VRAM_SPRITE_ATTRS, VERA_INC_1);
+    sprremaining = 128;
 }
 
 void sys_render_finish()
 {
-    uint8_t cnt;
-    // clear sprites which were used last frame, but not in this one.
-    for(cnt = sprcnt; cnt<sprcntprev; ++cnt) {
+    if (sprremainingprev < sprremaining) {
+        // Clear sprites used last frame but not this one.
         uint8_t i;
-        for (i=0; i<8; ++i) {
+        // Set zdepth=0 for disable (in 6th byte of sprite attr)
+        veraaddr1(VRAM_SPRITE_ATTRS + (sprremainingprev*8) + 6, VERA_INC_8);
+        for (i = 0; i < sprremaining - sprremainingprev; ++i) {
             VERA.data1 = 0x00;
         }
     }
-    sprcntprev = sprcnt;
+    sprremainingprev = sprremaining;
 
     //testum();
     rendereffects();
 }
 
 static void sprout16(int16_t x, int16_t y, uint8_t img ) {
+    if (sprremaining == 0) {
+        return;
+    }
+    --sprremaining;
+    veraaddr1(VRAM_SPRITE_ATTRS + (sprremaining*8), VERA_INC_1);
+
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     // 0: aaaaaaaa
     //    a: img address (bits 12:5) so always 16-byte aligned.
@@ -174,10 +179,14 @@ static void sprout16(int16_t x, int16_t y, uint8_t img ) {
     //    w: width
     //    p: palette offset
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
-    ++sprcnt;
 }
 
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
+    if (sprremaining == 0) {
+        return;
+    }
+    --sprremaining;
+    veraaddr1(VRAM_SPRITE_ATTRS + (sprremaining*8), VERA_INC_1);
     const uint32_t addr = VRAM_SPRITES16 + (SPR16_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -188,10 +197,14 @@ static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
-    ++sprcnt;
 }
 
 static void sprout32(int16_t x, int16_t y, uint8_t img ) {
+    if (sprremaining == 0) {
+        return;
+    }
+    --sprremaining;
+    veraaddr1(VRAM_SPRITE_ATTRS + (sprremaining*8), VERA_INC_1);
     const uint32_t addr = VRAM_SPRITES32 + (SPR32_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -202,10 +215,14 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
-    ++sprcnt;
 }
 
 static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
+    if (sprremaining == 0) {
+        return;
+    }
+    --sprremaining;
+    veraaddr1(VRAM_SPRITE_ATTRS + (sprremaining*8), VERA_INC_1);
     const uint32_t addr = VRAM_SPRITES64x8 + (SPR64x8_SIZE * img);
     VERA.data1 = (addr>>5) & 0xFF;
     VERA.data1 = (0 << 7) | (addr>>13);
@@ -216,7 +233,6 @@ static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (0 << 6) | (3 << 4);  // 64x8, 0 palette offset.
-    ++sprcnt;
 }
 
 
@@ -374,8 +390,8 @@ void sys_init()
                 VERA.data0 = 0x00;
             }
         }
-        sprcnt = 0;
-        sprcntprev = 0;
+        sprremaining = 128;
+        sprremainingprev = 128;
     }
 
     // clear effect table
@@ -863,6 +879,7 @@ uint8_t sys_inp_menu()
 
 
 int main(void) {
+
     sys_init();
     game_init();
     while(1) {
