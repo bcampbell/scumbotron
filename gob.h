@@ -3,8 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "sys.h"
+#include "plat.h"   // for FX
 
 //
 // Game object (gob) Stuff

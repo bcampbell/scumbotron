@@ -1,6 +1,6 @@
 #include <cx16.h>
 
-#include "../sys.h"
+#include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
 #include "../misc.h"
 
@@ -62,9 +62,9 @@ static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uin
 
 static void clr_layer0();
 
-static void sys_init();
-static void sys_render_start();
-static void sys_render_finish();
+static void plat_init();
+static void plat_render_start();
+static void plat_render_finish();
 
 // which layer0 buffer we're displaying (we'll draw into the other one)
 static uint8_t layer0_displaybuf;
@@ -86,7 +86,7 @@ static void sfx_init();
 static void sfx_tick();
 
 // set the border colour for raster-timing
-void sys_gatso(uint8_t g)
+void plat_gatso(uint8_t g)
 {
     VERA.display.border = g;
 }
@@ -103,7 +103,7 @@ static inline void veraaddr1(uint32_t addr, uint8_t inc) {
     VERA.address_hi = (inc) | (((addr)>>16)&1);
 }
 
-void sys_render_start()
+void plat_render_start()
 {
     // Toggle the layer0 buffer.
     if(layer0_displaybuf) {
@@ -127,7 +127,7 @@ void sys_render_start()
     sprremaining = 128;
 }
 
-void sys_render_finish()
+void plat_render_finish()
 {
     if (sprremainingprev < sprremaining) {
         // Clear sprites used last frame but not this one.
@@ -236,7 +236,7 @@ static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
 }
 
 
-void sys_clr()
+void plat_clr()
 {
     uint8_t y;
     int i;
@@ -250,7 +250,7 @@ void sys_clr()
 }
 
 
-void sys_init()
+void plat_init()
 {
     uint8_t vid;
     irq_init();
@@ -418,7 +418,7 @@ void sys_init()
     }
 
     // clear layer1 (text layer)
-    sys_clr();
+    plat_clr();
 }
 
 /*
@@ -433,7 +433,7 @@ static uint8_t screencode(char asc)
     return (uint8_t)asc;
 }
 
-void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
+void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
     veraaddr0(VRAM_LAYER1_MAP + cy*64*2 + cx*2, VERA_INC_1);
     while(len--) {
@@ -443,17 +443,17 @@ void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t col
     }
 }
 
-void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
     uint8_t len = 0;
     while(txt[len] != '\0') {
         ++len;
     }
-    sys_textn(cx, cy, txt, len, colour);
+    plat_textn(cx, cy, txt, len, colour);
 }
 
 
-void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
+void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     const uint8_t cx = 0;
     const uint8_t cy = 0;
@@ -644,7 +644,7 @@ static void clr_layer0()
     }
 }
 
-void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
+void plat_addeffect(int16_t x, int16_t y, uint8_t kind)
 {
     // find free one
     uint8_t e = 0;
@@ -719,7 +719,7 @@ static void sfx_init()
     }
 }
 
-void sys_sfx_play(uint8_t effect)
+void plat_sfx_play(uint8_t effect)
 {
     uint8_t ch = sfx_next++;
     if (sfx_next >= MAX_SFX) {
@@ -772,7 +772,7 @@ static void sfx_tick()
 
 #include "../spr_common_inc.h"
 
-void sys_hzapper_render(int16_t x, int16_t y, uint8_t state)
+void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
     switch(state) {
         case ZAPPER_OFF:
@@ -796,7 +796,7 @@ void sys_hzapper_render(int16_t x, int16_t y, uint8_t state)
     }
 }
 
-void sys_vzapper_render(int16_t x, int16_t y, uint8_t state)
+void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
     switch(state) {
         case ZAPPER_OFF:
@@ -866,12 +866,12 @@ static void update_inp_menu()
 }
 
 
-uint8_t sys_inp_dualsticks()
+uint8_t plat_inp_dualsticks()
 {
     return inp_dualstick_state;
 }
 
-uint8_t sys_inp_menu()
+uint8_t plat_inp_menu()
 {
     return inp_menu_pressed;
 }
@@ -880,13 +880,13 @@ uint8_t sys_inp_menu()
 
 int main(void) {
 
-    sys_init();
+    plat_init();
     game_init();
     while(1) {
         waitvbl();
-        sys_render_start();
+        plat_render_start();
         game_render();
-        sys_render_finish();
+        plat_render_finish();
         sfx_tick();
         update_inp_dualstick();
         update_inp_menu();

@@ -61,7 +61,7 @@ const uint8_t shot_spr[16] = {
 };
 
 
-void sys_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
+void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
 {
     uint8_t img = SPR16_PLR_R;
     if (facing & DIR_UP) { img = SPR16_PLR_U; }
@@ -75,32 +75,32 @@ void sys_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
     sprout16(x, y, img);
 }
 
-void sys_powerup_render(int16_t x, int16_t y, uint8_t kind)
+void plat_powerup_render(int16_t x, int16_t y, uint8_t kind)
 {
     sprout16(x, y, SPR16_EXTRALIFE);
 }
 
-void sys_shot_render(int16_t x, int16_t y, uint8_t direction)
+void plat_shot_render(int16_t x, int16_t y, uint8_t direction)
 {
     sprout16(x, y, shot_spr[direction]);
 }
 
-void sys_block_render(int16_t x, int16_t y)
+void plat_block_render(int16_t x, int16_t y)
 {
     sprout16(x, y, 2);
 }
 
-void sys_grunt_render(int16_t x, int16_t y)
+void plat_grunt_render(int16_t x, int16_t y)
 {
     sprout16(x, y,  SPR16_GRUNT + ((tick >> 5) & 0x01));
 }
 
-void sys_baiter_render(int16_t x, int16_t y)
+void plat_baiter_render(int16_t x, int16_t y)
 {
     sprout16(x, y,  SPR16_BAITER + ((tick >> 2) & 0x03));
 }
 
-void sys_tank_render(int16_t x, int16_t y, bool highlight)
+void plat_tank_render(int16_t x, int16_t y, bool highlight)
 {
     if (highlight) {
         sprout16_highlight(x, y,  SPR16_TANK + ((tick>>5) & 0x01));
@@ -109,22 +109,22 @@ void sys_tank_render(int16_t x, int16_t y, bool highlight)
     }
 }
 
-void sys_amoeba_big_render(int16_t x, int16_t y)
+void plat_amoeba_big_render(int16_t x, int16_t y)
 {
     sprout32(x, y,  SPR32_AMOEBA_BIG + ((tick >> 3) & 0x01));
 }
 
-void sys_amoeba_med_render(int16_t x, int16_t y)
+void plat_amoeba_med_render(int16_t x, int16_t y)
 {
     sprout16(x, y, SPR16_AMOEBA_MED + ((tick >> 3) & 0x03));
 }
 
-void sys_amoeba_small_render(int16_t x, int16_t y)
+void plat_amoeba_small_render(int16_t x, int16_t y)
 {
     sprout16(x, y,  SPR16_AMOEBA_SMALL + ((tick >> 3) & 0x03));
 }
 
-void sys_fragger_render(int16_t x, int16_t y)
+void plat_fragger_render(int16_t x, int16_t y)
 {
     sprout16(x, y,  SPR16_FRAGGER);
 }
@@ -132,7 +132,7 @@ void sys_fragger_render(int16_t x, int16_t y)
 static const int8_t frag_frames[4] = {SPR16_FRAG_NW, SPR16_FRAG_NE,
     SPR16_FRAG_SW, SPR16_FRAG_SE};
 
-void sys_frag_render(int16_t x, int16_t y, uint8_t dir)
+void plat_frag_render(int16_t x, int16_t y, uint8_t dir)
 {
     sprout16(x, y,  frag_frames[dir]);
 }
@@ -140,7 +140,7 @@ void sys_frag_render(int16_t x, int16_t y, uint8_t dir)
 
 // seq -127 128 | shuf | head -n 16
 const int8_t jitter[16] = {46, -12, -125, 73, -28, -121, 51, 61, -24, 98, -32, -108, 115, 100, -46, -62};
-void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger)
+void plat_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger)
 {
     uint8_t img;
     switch (anger) {
@@ -165,12 +165,12 @@ void sys_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger)
     }
 }
 
-void sys_poomerang_render(int16_t x, int16_t y)
+void plat_poomerang_render(int16_t x, int16_t y)
 {
     sprout16(x, y, SPR16_POOMERANG + ((tick >> 3) & 0x03));
 }
 
-void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping)
+void plat_happyslapper_render(int16_t x, int16_t y, bool sleeping)
 {
     uint8_t img;
     if (sleeping) {
@@ -181,17 +181,17 @@ void sys_happyslapper_render(int16_t x, int16_t y, bool sleeping)
     sprout16(x, y, img);
 }
 
-void sys_marine_render(int16_t x, int16_t y)
+void plat_marine_render(int16_t x, int16_t y)
 {
     sprout16(x, y, SPR16_MARINE + ((tick >> 3) & 0x01));
 }
 
-void sys_wibbler_render(int16_t x, int16_t y, bool head)
+void plat_wibbler_render(int16_t x, int16_t y, bool head)
 {
     sprout16(x, y, head ? SPR16_WIBBLER+4 : (SPR16_WIBBLER + ((tick>>2) & 0x03)));
 }
 
-void sys_bub_render(int16_t x, int16_t y, uint8_t bubidx)
+void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx)
 {
     sprout64x8(x, y, SPR64x8_BUB + bubidx);
 }

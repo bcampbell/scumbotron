@@ -1,5 +1,5 @@
 #include "player.h"
-#include "sys.h"
+#include "plat.h"
 #include "gob.h"
 
 uint8_t player_lives;
@@ -62,7 +62,7 @@ void player_renderall()
             continue;
         }
         bool moving = (plrvx[p] != 0) || (plrvy[p] != 0);
-        sys_player_render(plrx[p], plry[p], plrfacing[p], moving);
+        plat_player_render(plrx[p], plry[p], plrfacing[p], moving);
     }
 
     for (s = 0; s < MAX_SHOTS; ++s) {
@@ -70,7 +70,7 @@ void player_renderall()
             // inactive.
             continue;
         }
-        sys_shot_render(shotx[s], shoty[s], shotdir[s]);
+        plat_shot_render(shotx[s], shoty[s], shotdir[s]);
     }
 }
 
@@ -142,7 +142,7 @@ bool player_collisions()
         }
         if (norwegian_blue) {
             plralive[p] = 0;    // mark as dead
-            sys_addeffect(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+            plat_addeffect(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
         }
     }
     return norwegian_blue;
@@ -151,7 +151,7 @@ bool player_collisions()
 
 
 void player_tick(uint8_t d) {
-    uint8_t sticks = sys_inp_dualsticks();
+    uint8_t sticks = plat_inp_dualsticks();
     uint8_t move = dir_fix[sticks & 0x0F];
     uint8_t fire = dir_fix[(sticks>>4) & 0x0F];
 
@@ -183,7 +183,7 @@ void player_tick(uint8_t d) {
         if (plrtimer[d]>8) {
             uint8_t shot = shot_alloc();
             // FIRE!
-            sys_sfx_play(SFX_LASER);
+            plat_sfx_play(SFX_LASER);
             plrtimer[d] = 0;
             if (shot < MAX_SHOTS) {
                 shotx[shot] = plrx[d];

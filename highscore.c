@@ -1,4 +1,4 @@
-#include "sys.h"
+#include "plat.h"
 #include "game.h"
 #include "misc.h"
 
@@ -29,17 +29,17 @@ static void draw() {
             c = 1;
         }
         // Draw the name.
-        sys_textn(cx, cy + slot*2, names[slot], HIGHSCORE_NAME_SIZE, c);
+        plat_textn(cx, cy + slot*2, names[slot], HIGHSCORE_NAME_SIZE, c);
         if (slot == entry_slot) {
             // Flash the cursor.
             if ((tick & 0x3f) > 0x20) {
-                sys_textn(cx + entry_cursor, cy + slot*2, &names[slot][entry_cursor], 1, 10);
+                plat_textn(cx + entry_cursor, cy + slot*2, &names[slot][entry_cursor], 1, 10);
             }
         }
 
         // Draw the score (8 digits).
         hex32(bin2bcd(scores[slot]), buf);
-        sys_textn(cx + 2 + HIGHSCORE_NAME_SIZE, cy + slot*2, buf, 8, c );
+        plat_textn(cx + 2 + HIGHSCORE_NAME_SIZE, cy + slot*2, buf, 8, c );
 
     }
 }
@@ -86,12 +86,12 @@ void enter_STATE_HIGHSCORES()
     // for drawing
     entry_slot = NUM_HIGHSCORES;
     entry_cursor = HIGHSCORE_NAME_SIZE;
-    sys_clr();
+    plat_clr();
 }
 
 void tick_STATE_HIGHSCORES()
 {
-    if (++statetimer > 200 || sys_inp_menu()) {
+    if (++statetimer > 200 || plat_inp_menu()) {
         enter_STATE_TITLESCREEN();
     }
 }
@@ -109,7 +109,7 @@ void enter_STATE_ENTERHIGHSCORE(uint32_t score)
 {
     state = STATE_ENTERHIGHSCORE;
     statetimer = 0;
-    sys_clr();
+    plat_clr();
     entry_slot = pick_slot(score);
     entry_cursor = 0;
     if (entry_slot >= NUM_HIGHSCORES) {
@@ -156,7 +156,7 @@ static char prevchar(char c)
 void tick_STATE_ENTERHIGHSCORE()
 {
     char c;
-    uint8_t inp = sys_inp_menu();
+    uint8_t inp = plat_inp_menu();
     if ((inp & INP_MENU_ACTION || inp & INP_RIGHT) &&
         entry_cursor == (HIGHSCORE_NAME_SIZE - 1)) {
         enter_STATE_HIGHSCORES();

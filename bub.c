@@ -1,5 +1,5 @@
 #include "gob.h"
-#include "sys.h"
+#include "plat.h"
 #include "misc.h"
 
 
@@ -68,11 +68,11 @@ void bub_render()
     switch (gobkind[bub_targ]) {
         case GK_GRUNT:
             // 2-phase message for grunts.
-            sys_bub_render(x, y, (bub_timer > 100) ? 0 : 1);
+            plat_bub_render(x, y, (bub_timer > 100) ? 0 : 1);
             break;
         case GK_MARINE:
             // 2 alternatives for marine. Use gobindex to decide.
-            sys_bub_render(x, y, 2 + (bub_targ & 0x01));
+            plat_bub_render(x, y, 2 + (bub_targ & 0x01));
             break;
     }
 }

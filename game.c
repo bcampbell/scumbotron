@@ -1,7 +1,7 @@
 // mos-cx16-clang -Os -o game.prg game.c
 
 
-#include "sys.h"
+#include "plat.h"
 #include "gob.h"
 #include "player.h"
 #include "game.h"
@@ -81,13 +81,13 @@ void enter_STATE_TITLESCREEN()
 {
     state = STATE_TITLESCREEN;
     statetimer=0;
-    sys_clr();
+    plat_clr();
 }
 
 
 static void tick_STATE_TITLESCREEN()
 {
-    uint8_t inp = sys_inp_menu();
+    uint8_t inp = plat_inp_menu();
     if (inp & INP_MENU_ACTION) {
         // init new game
         uint8_t level = 0;
@@ -106,7 +106,7 @@ static void render_STATE_TITLESCREEN()
 {
     uint8_t i;
     for (i=0; i<20; ++i) {
-        sys_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
+        plat_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
     }
 }
 
@@ -123,7 +123,7 @@ void enter_STATE_GETREADY()
     baiter_timer = 0;
     player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
     shot_clearall();
-    sys_clr();
+    plat_clr();
 }
 
 static void tick_STATE_GETREADY()
@@ -138,8 +138,8 @@ static void render_STATE_GETREADY()
 {
     gobs_render();
     player_renderall();
-    sys_hud(level, player_lives, player_score);
-    sys_text(10,10,"GET READY", (tick/2) & 0x0f);
+    plat_hud(level, player_lives, player_score);
+    plat_text(10,10,"GET READY", (tick/2) & 0x0f);
 }
 
 
@@ -151,7 +151,7 @@ void enter_STATE_PLAY()
 {
     state = STATE_PLAY;
     statetimer = 0;
-    sys_clr();
+    plat_clr();
 }
 
 static void tick_STATE_PLAY()
@@ -175,7 +175,7 @@ static void render_STATE_PLAY()
 {
     gobs_render();
     player_renderall();
-    sys_hud(level, player_lives, player_score);
+    plat_hud(level, player_lives, player_score);
 }
 
 
@@ -186,7 +186,7 @@ void enter_STATE_KILLED()
 {
     state = STATE_KILLED;
     statetimer = 0;
-    sys_clr();
+    plat_clr();
 }
 
 static void tick_STATE_KILLED()
@@ -206,8 +206,8 @@ static void render_STATE_KILLED()
 {
     gobs_render();
     player_renderall();
-    sys_hud(level, player_lives, player_score);
-    sys_text(10,10,"OWWWWWWWW", (tick/2) & 0x0f);
+    plat_hud(level, player_lives, player_score);
+    plat_text(10,10,"OWWWWWWWW", (tick/2) & 0x0f);
 }
 
 /*
@@ -217,7 +217,7 @@ void enter_STATE_CLEARED()
 {
     state = STATE_CLEARED;
     statetimer = 0;
-    sys_clr();
+    plat_clr();
 }
 
 static void tick_STATE_CLEARED()
@@ -234,8 +234,8 @@ static void render_STATE_CLEARED()
 {
     gobs_render();
     player_renderall();
-    sys_hud(level, player_lives, player_score);
-    sys_text(10,10,"CLEAR     ", (tick/2) & 0x0f);
+    plat_hud(level, player_lives, player_score);
+    plat_text(10,10,"CLEAR     ", (tick/2) & 0x0f);
 }
 
 /*
@@ -245,7 +245,7 @@ void enter_STATE_GAMEOVER()
 {
     state = STATE_GAMEOVER;
     statetimer = 0;
-    sys_clr();
+    plat_clr();
 }
 
 static void tick_STATE_GAMEOVER()
@@ -258,7 +258,7 @@ static void tick_STATE_GAMEOVER()
 
 static void render_STATE_GAMEOVER()
 {
-    sys_text(10, 10, "GAME OVER", (tick/2) & 0x0f);
+    plat_text(10, 10, "GAME OVER", (tick/2) & 0x0f);
 }
 
 /*

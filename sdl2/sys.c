@@ -1,4 +1,4 @@
-#include "../sys.h"
+#include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
 
 #include <SDL.h>
@@ -38,10 +38,10 @@ static uint8_t inp_menu_pressed = 0;
 static void update_inp_menu();
 static void update_inp_dualstick();
 
-static void sys_init();
+static void plat_init();
 static void waitvbl();
-static void sys_render_start();
-static void sys_render_finish();
+static void plat_render_start();
+static void plat_render_finish();
 
 static void pumpevents();
 static void blit8(const uint8_t *src, int srcw, int srch,
@@ -59,11 +59,11 @@ static inline void sprout32(int16_t x, int16_t y, uint8_t img);
 static inline void sprout64x8(int16_t x, int16_t y, uint8_t img);
 static void rendereffects();
 
-void sys_gatso(uint8_t t)
+void plat_gatso(uint8_t t)
 {
 }
 
-void sys_init()
+void plat_init()
 {
     Uint32 flags = SDL_WINDOW_RESIZABLE;
 
@@ -246,17 +246,17 @@ static void update_inp_menu()
 
 
 
-uint8_t sys_inp_dualsticks()
+uint8_t plat_inp_dualsticks()
 {
     return inp_dualstick_state;
 }
 
-uint8_t sys_inp_menu()
+uint8_t plat_inp_menu()
 {
     return inp_menu_pressed;
 }
 
-void sys_render_start()
+void plat_render_start()
 {
     uint8_t i;
     // clear the screen
@@ -268,7 +268,7 @@ void sys_render_start()
     rendereffects();
 }
 
-void sys_render_finish()
+void plat_render_finish()
 {
 
     // Convert screen to argb.
@@ -282,7 +282,7 @@ void sys_render_finish()
     SDL_RenderPresent(renderer);
 }
 
-void sys_clr()
+void plat_clr()
 {
 }
 
@@ -295,7 +295,7 @@ static uint8_t glyph(char ascii) {
     return 0;
 }
 
-void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
+void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
     int x = cx*8;
     int y = cy*8;
@@ -307,24 +307,24 @@ void sys_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t col
     }
 }
 
-void sys_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
+void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 {
     uint8_t len = 0;
     while(txt[len] != '\0') {
         ++len;
     }
-    sys_textn(cx, cy, txt, len, colour);
+    plat_textn(cx, cy, txt, len, colour);
 }
 
-void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
+void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     char buf[40];
     uint8_t i;
     sprintf(buf, "LV %" PRIu8 "", level);
-    sys_text(0, 0, buf, 1);
+    plat_text(0, 0, buf, 1);
 
     sprintf(buf,"%08" PRIu32 "", score);
-    sys_text(8, 0, buf, 1);
+    plat_text(8, 0, buf, 1);
 
     for (i = 0; i < 7 && i < lives; ++i) {
         buf[i] = '*';
@@ -333,10 +333,10 @@ void sys_hud(uint8_t level, uint8_t lives, uint32_t score)
         buf[i++] = '+';
     }
     buf[i] = '\0';
-    sys_text(18, 0, buf, 3);
+    plat_text(18, 0, buf, 3);
 }
 
-void sys_sfx_play(uint8_t effect)
+void plat_sfx_play(uint8_t effect)
 {
 }
 
@@ -472,7 +472,7 @@ static inline void sprout64x8(int16_t x, int16_t y, uint8_t img)
 
 #include "../spr_common_inc.h"
 
-void sys_hzapper_render(int16_t x, int16_t y, uint8_t state) {
+void plat_hzapper_render(int16_t x, int16_t y, uint8_t state) {
     switch(state) {
         case ZAPPER_OFF:
             sprout16(x, y, SPR16_HZAPPER);
@@ -490,7 +490,7 @@ void sys_hzapper_render(int16_t x, int16_t y, uint8_t state) {
     }
 }
 
-void sys_vzapper_render(int16_t x, int16_t y, uint8_t state) {
+void plat_vzapper_render(int16_t x, int16_t y, uint8_t state) {
     switch(state) {
         case ZAPPER_OFF:
             sprout16(x, y, SPR16_VZAPPER);
@@ -519,7 +519,7 @@ static int16_t ex[MAX_EFFECTS];
 static int16_t ey[MAX_EFFECTS];
 
 
-void sys_addeffect(int16_t x, int16_t y, uint8_t kind)
+void plat_addeffect(int16_t x, int16_t y, uint8_t kind)
 {
     // find free one
     uint8_t e = 0;
@@ -582,16 +582,16 @@ static void rendereffects()
 
 
 int main(int argc, char* argv[]) {
-    sys_init();
+    plat_init();
     game_init();
     while(1) {
         pumpevents();
         waitvbl();
         update_inp_dualstick();
         update_inp_menu();
-        sys_render_start();
+        plat_render_start();
         game_render();
-        sys_render_finish();
+        plat_render_finish();
         game_tick();
     }
 }

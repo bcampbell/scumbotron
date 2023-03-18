@@ -1,4 +1,5 @@
 #include "gob.h"
+#include "plat.h"
 #include "player.h"
 #include "misc.h"
 #include "bub.h"
@@ -63,7 +64,7 @@ void gobs_tick(bool spawnphase)
         if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
             if( gobtimer[i] == 8) {
-                sys_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
+                plat_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
             } else if( gobtimer[i] == 0) {
                 // done spawning.
                 gobflags[i] &= ~GF_SPAWNING;
@@ -120,55 +121,55 @@ void gobs_render()
             case GK_NONE:
                 break;
             case GK_BLOCK:
-                sys_block_render(gobx[d], goby[d]);
+                plat_block_render(gobx[d], goby[d]);
                 break;
             case GK_GRUNT:
-                sys_grunt_render(gobx[d], goby[d]);
+                plat_grunt_render(gobx[d], goby[d]);
                 break;
             case GK_BAITER:
-                sys_baiter_render(gobx[d], goby[d]);
+                plat_baiter_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_BIG:
-                sys_amoeba_big_render(gobx[d], goby[d]);
+                plat_amoeba_big_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_MED:
-                sys_amoeba_med_render(gobx[d], goby[d]);
+                plat_amoeba_med_render(gobx[d], goby[d]);
                 break;
             case GK_AMOEBA_SMALL:
-                sys_amoeba_small_render(gobx[d], goby[d]);
+                plat_amoeba_small_render(gobx[d], goby[d]);
                 break;
             case GK_TANK:
-                sys_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
+                plat_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
                 break;
             case GK_HZAPPER:
-                sys_hzapper_render(gobx[d], goby[d], zapper_state(d));
+                plat_hzapper_render(gobx[d], goby[d], zapper_state(d));
                 break;
             case GK_VZAPPER:
-                sys_vzapper_render(gobx[d], goby[d], zapper_state(d));
+                plat_vzapper_render(gobx[d], goby[d], zapper_state(d));
                 break;
             case GK_FRAGGER:
-                sys_fragger_render(gobx[d], goby[d]);
+                plat_fragger_render(gobx[d], goby[d]);
                 break;
             case GK_FRAG:
-                sys_frag_render(gobx[d], goby[d], gobdat[d]);
+                plat_frag_render(gobx[d], goby[d], gobdat[d]);
                 break;
             case GK_POWERUP:
-                sys_powerup_render(gobx[d], goby[d], gobdat[d]);
+                plat_powerup_render(gobx[d], goby[d], gobdat[d]);
                 break;
             case GK_VULGON:
-                sys_vulgon_render(gobx[d], goby[d], gobtimer[d] > 0, gobdat[d]);
+                plat_vulgon_render(gobx[d], goby[d], gobtimer[d] > 0, gobdat[d]);
                 break;
             case GK_POOMERANG:
-                sys_poomerang_render(gobx[d], goby[d]);
+                plat_poomerang_render(gobx[d], goby[d]);
                 break;
             case GK_HAPPYSLAPPER:
-                sys_happyslapper_render(gobx[d], goby[d], gobtimer[d] < HAPPYSLAPPER_SLEEP_TIME);
+                plat_happyslapper_render(gobx[d], goby[d], gobtimer[d] < HAPPYSLAPPER_SLEEP_TIME);
                 break;
             case GK_MARINE:
-                sys_marine_render(gobx[d], goby[d]);
+                plat_marine_render(gobx[d], goby[d]);
                 break;
             case GK_WIBBLER:
-                sys_wibbler_render(gobx[d], goby[d], gobdat[d] == 0xff);
+                plat_wibbler_render(gobx[d], goby[d], gobdat[d] == 0xff);
                 break;
             default:
                 break;
@@ -383,8 +384,8 @@ void gob_seek_y(uint8_t d, int16_t target, int16_t accel, int16_t maxspd)
 void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 {
     player_add_score(points);
-    sys_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-    sys_sfx_play(SFX_KABOOM);
+    plat_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
     if (rnd() > 250) {
