@@ -1,5 +1,7 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
+#include "plat_sdl2.h"
+#include "vera_psg.h"
 
 #include <SDL.h>
 
@@ -39,7 +41,6 @@ static void update_inp_menu();
 static void update_inp_dualstick();
 
 static void plat_init();
-static void waitvbl();
 static void plat_render_start();
 static void plat_render_finish();
 
@@ -136,6 +137,17 @@ void plat_init()
     if (conversionSurface == NULL) {
         goto bailout;
     }
+
+    psg_reset();
+    if (!audio_init()) {
+        goto bailout;
+    }
+    sfx_init();
+ 
+    psg_writereg(0, 1181 & 0xff);
+    psg_writereg(1, 1181>>8);
+    psg_writereg(2, 0xff);
+    psg_writereg(3, 63);
     return;
 
 bailout:
@@ -144,24 +156,6 @@ bailout:
 }
 
 
-#define TICK_INTERVAL (1000/60)
-
-static Uint32 prevtime = 0;
-static void waitvbl()
-{
-
-    Uint32 targtime = prevtime + TICK_INTERVAL;
-    if (warp) {
-        targtime = prevtime;
-    }
-    Uint32 now = SDL_GetTicks();
-    if(targtime > now) {
-      //  printf("delay for %d\n", targtime-now);
-      SDL_Delay(targtime - now);
-    }
-    prevtime = targtime;
-    ++tick;
-}
 
 static void pumpevents()
 {
@@ -334,10 +328,6 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
     }
     buf[i] = '\0';
     plat_text(18, 0, buf, 3);
-}
-
-void plat_sfx_play(uint8_t effect)
-{
 }
 
 static inline uint8_t* pixptr(SDL_Surface* s, int x, int y)
@@ -584,15 +574,32 @@ static void rendereffects()
 int main(int argc, char* argv[]) {
     plat_init();
     game_init();
+
+    uint64_t starttime = SDL_GetTicks64();
+    int frame = 0;
     while(1) {
         pumpevents();
-        waitvbl();
         update_inp_dualstick();
         update_inp_menu();
         plat_render_start();
         game_render();
         plat_render_finish();
+
         game_tick();
+        ++tick; // The 8bit byte ticker.
+
+        sfx_tick();
+        audio_render();
+
+        ++frame;
+
+        uint64_t now = SDL_GetTicks64();
+        uint64_t target = starttime + ((frame*1000) / TARGET_FPS);
+        int64_t delta = target - now;
+        if (delta > 0) {
+            SDL_Delay(delta);
+        }
+
     }
 }
 

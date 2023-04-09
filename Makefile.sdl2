@@ -1,7 +1,7 @@
 BUILD_DIR=build_sdl2
 EXPORT_DIR=$(BUILD_DIR)/export
 
-SRCS = sdl2/sys.c \
+SRCS = sdl2/sys.c sdl2/vera_psg.c sdl2/audio.c sdl2/sfx.c \
 	game.c gob.c player.c highscore.c misc.c bub.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
