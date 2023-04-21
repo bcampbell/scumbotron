@@ -144,10 +144,6 @@ void plat_init()
     }
     sfx_init();
  
-    psg_writereg(0, 1181 & 0xff);
-    psg_writereg(1, 1181>>8);
-    psg_writereg(2, 0xff);
-    psg_writereg(3, 63);
     return;
 
 bailout:
