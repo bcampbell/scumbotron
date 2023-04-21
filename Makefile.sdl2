@@ -9,7 +9,7 @@ OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 
 CC := gcc
 LDFLAGS =
-LDLIBS = `sdl2-config --libs` -lSDL2_mixer
+LDLIBS = `sdl2-config --libs`
 CFLAGS = -ggdb `sdl2-config --cflags` -Wall -Isdl2
 DEPFLAGS = -MMD -MP -MF $@.d
 
