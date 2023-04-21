@@ -74,7 +74,7 @@ void plat_init()
 
 
 //    if (fullscreen)
-//        flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
     fenster = SDL_CreateWindow("ZapZapZappityZapZap",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
