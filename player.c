@@ -27,7 +27,19 @@ uint8_t shottimer[MAX_SHOTS];
 static uint8_t shot_alloc();
 
 // player
-#define PLAYER_SPD (2*FX_ONE);
+#define PLAYER_ACCEL (FX_ONE/4)
+#define PLAYER_MAXSPD (2*FX_ONE)
+
+// Dampen the player velocity
+static inline int16_t dampvel(int16_t v) {
+    int16_t f = (v>>3); // subtract 1/8th of speed
+    if (f == 0) {
+        v = 0;
+    } else {
+        v -= f;
+    }
+    return v;
+}
 
 void player_add_score(uint8_t points)
 {
@@ -149,7 +161,6 @@ bool player_collisions()
 }
 
 
-
 void player_tick(uint8_t d) {
     uint8_t sticks = plat_inp_dualsticks();
     uint8_t move = dir_fix[sticks & 0x0F];
@@ -158,21 +169,41 @@ void player_tick(uint8_t d) {
     ++plrtimer[d];
 
     // move
-    plrvx[d] = 0;
-    plrvy[d] = 0;
-    if (move & DIR_UP) {
-        plrvy[d] = -PLAYER_SPD;
-    } else if (move & DIR_DOWN) {
-        plrvy[d] = PLAYER_SPD;
-    }
-    if (move & DIR_LEFT) {
-        plrvx[d] = -PLAYER_SPD;
-    } else if (move & DIR_RIGHT) {
-        plrvx[d] = PLAYER_SPD;
+    {
+        int16_t vy = plrvy[d];
+        if (move & DIR_UP) {
+            vy -= PLAYER_ACCEL;
+            if (vy < -PLAYER_MAXSPD) {
+                vy = -PLAYER_MAXSPD;
+            }
+        } else if (move & DIR_DOWN) {
+            vy += PLAYER_ACCEL;
+            if (vy > PLAYER_MAXSPD) {
+                vy = PLAYER_MAXSPD;
+            }
+        }
+        plry[d] += vy;
+        vy = dampvel(vy);
+        plrvy[d] = vy;
     }
 
-    plrx[d] += plrvx[d];
-    plry[d] += plrvy[d];
+    {
+        int16_t vx = plrvx[d];
+        if (move & DIR_LEFT) {
+            vx -= PLAYER_ACCEL;
+            if (vx < -PLAYER_MAXSPD) {
+                vx = -PLAYER_MAXSPD;
+            }
+        } else if (move & DIR_RIGHT) {
+            vx += PLAYER_ACCEL;
+            if (vx > PLAYER_MAXSPD) {
+                vx = PLAYER_MAXSPD;
+            }
+        }
+        plrx[d] += vx;
+        vx = dampvel(vx);
+        plrvx[d] = vx;
+    }
 
     if (move) {
         plrfacing[d] =  move;
@@ -223,7 +254,6 @@ void player_tick(uint8_t d) {
             plrhistx[d][idx] = plrx[d];
             plrhisty[d][idx] = plry[d];
         }
-
     }
 }
 
