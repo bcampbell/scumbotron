@@ -9,14 +9,14 @@
 // Combining the screens into a single play area.
 // These are the screen extents (in pixels).
 #define TOP_MAIN 0
-#define BOTTOM_MAIN SCREEN_HEIGHT
+#define BOTTOM_MAIN (TOP_MAIN + SCREEN_HEIGHT)
 #define LEFT_MAIN 0
-#define RIGHT_MAIN SCREEN_WIDTH
+#define RIGHT_MAIN (LEFT_MAIN + SCREEN_WIDTH)
 
-#define TOP_SUB SCREEN_HEIGHT
-#define BOTTOM_SUB (SCREEN_HEIGHT*2)
+#define TOP_SUB (SCREEN_HEIGHT-32)
+#define BOTTOM_SUB (TOP_SUB + SCREEN_HEIGHT)
 #define LEFT_SUB 0
-#define RIGHT_SUB SCREEN_WIDTH
+#define RIGHT_SUB (LEFT_SUB + SCREEN_WIDTH)
 
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
@@ -397,17 +397,16 @@ static void plat_init()
 static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int sprsize, int pal)
 {
     // On main screen?
-    if (x > -w && x < SCREEN_W && y >-h && y < (SCREEN_H/2)) {
-        oamSet(&oamMain, sprMain, x, y, 0, pal,
+    if ((x + w) >= LEFT_MAIN && x < RIGHT_MAIN && (y + h) >= TOP_MAIN && y < BOTTOM_MAIN) {
+        oamSet(&oamMain, sprMain, x - LEFT_MAIN, y - TOP_MAIN, 0, pal,
             sprsize, SpriteColorFormat_16Color,
             oamGetGfxPtr(&oamMain, tile),
             -1, false, false, false, false, false);
         ++sprMain;
     }
     // On sub screen?
-    y -= (SCREEN_H/2);
-    if (x > -w && x < SCREEN_W && y >-h && y < (SCREEN_H/2)) {
-        oamSet(&oamSub, sprSub, x, y, 0, pal,
+    if ((x + w) >= LEFT_SUB && x < RIGHT_SUB && (y + h) >= TOP_SUB && y < BOTTOM_SUB) {
+        oamSet(&oamSub, sprSub, x - LEFT_SUB, y - TOP_SUB, 0, pal,
             sprsize, SpriteColorFormat_16Color,
             oamGetGfxPtr(&oamSub, tile),
             -1, false, false, false, false, false);
