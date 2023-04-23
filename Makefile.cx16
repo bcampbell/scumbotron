@@ -5,14 +5,14 @@
 # llvm-objdump -dSr game.prg.elf >/tmp/game.s
 
 BUILD_DIR=build_cx16
-EXPORT_DIR=$(BUILD_DIR)/export
+EXPORT_DIR=export_cx16
 
-SRCS = cx16/sys_cx16.c \
-	game.c gob.c player.c highscore.c misc.c bub.c \
-	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c)
+SRCS = cx16/sys_cx16.c game.c gob.c player.c highscore.c misc.c bub.c
+SRCS_EXPORTED = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c)
 SRCS_ASM = cx16/irq.s cx16/glue.s 
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_EXPORTED:.c=.o))
 OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
 
 CC := mos-cx16-clang
@@ -38,21 +38,16 @@ $(BUILD_DIR)/%.o: %.s
 
 # graphics exporting
 $(EXPORT_DIR)/palette.bin: sprites16.png
-	mkdir -p $(dir $@)
 	tools/png2sprites -palette cx16 $< $@
 
 $(EXPORT_DIR)/spr16.bin: sprites16.png
-	mkdir -p $(dir $@)
 	tools/png2sprites -w 16 -h 16 -num 64 -fmt 4bpp $< $@
 
 $(EXPORT_DIR)/spr32.bin: sprites32.png
-	mkdir -p $(dir $@)
 	tools/png2sprites -w 32 -h 32 -num 2 -fmt 4bpp $< $@
 
 $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
-	mkdir -p $(dir $@)
 	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp $< $@
-
 
 # These two rules compress .bin files then convert them to .c source.
 %.zbin: %.bin
@@ -60,6 +55,10 @@ $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 
 %.c: %.zbin
 	xxd -i -n export_`basename $<` $< $@
+
+# Tell make not to delete the intermediate .c files - we want to check them
+# into git.
+.PRECIOUS: $(SRCS_EXPORTED)
 
 .PHONY: run
 run: $(BUILD_DIR)/game.prg

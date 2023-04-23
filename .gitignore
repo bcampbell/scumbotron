@@ -8,3 +8,5 @@ log
 tools/png2sprites
 todo.txt
 done.txt
+export_cx16/*.bin
+export_cx16/*.zbin

@@ -8,13 +8,12 @@ export PATH	:=	$(DEVKITPATH)/tools/bin:$(DEVKITPATH)/devkitARM/bin:$(PATH)
 #include $(DEVKITARM)/ds_rules
 
 BUILD_DIR=build_nds
-EXPORT_DIR=$(BUILD_DIR)/export
+EXPORT_DIR=export_nds
 
-SRCS = nds/main.c game.c gob.c player.c highscore.c misc.c bub.c
-SRCS_EXPORT = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c spr32x8.c spr8x32.c chars.c)
+SRCS = nds/main.c game.c gob.c player.c highscore.c misc.c bub.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c spr32x8.c spr8x32.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
-OBJ_FILES += $(SRCS_EXPORT:.c=.o)
 
 PREFIX := arm-none-eabi-
 CC := $(PREFIX)gcc
@@ -60,37 +59,27 @@ $(BUILD_DIR)/%.o: %.c
 -include $(DEP_FILES)
 
 # graphics exporting
-$(EXPORT_DIR)/palette.bin: sprites16.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -palette nds $< $@
+$(EXPORT_DIR)/palette.c: sprites16.png
+	tools/png2sprites -palette nds -c -var export_palette_bin $< $@
 
-$(EXPORT_DIR)/spr16.bin: sprites16.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 16 -h 16 -num 64 -fmt nds4bpp $< $@
+$(EXPORT_DIR)/spr16.c: sprites16.png
+	tools/png2sprites -w 16 -h 16 -num 64 -fmt nds4bpp -c -var export_spr16_bin $< $@
 
-$(EXPORT_DIR)/spr32.bin: sprites32.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 32 -num 2 -fmt nds4bpp $< $@
+$(EXPORT_DIR)/spr32.c: sprites32.png
+	tools/png2sprites -w 32 -h 32 -num 2 -fmt nds4bpp -c -var export_spr32_bin $< $@
 
 # have to use pairs of 32x8 sprites (nds doesn't do 64x8)
-$(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 8 -num 8 -fmt nds4bpp $< $@
+$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
+	tools/png2sprites -w 32 -h 8 -num 8 -fmt nds4bpp -c -var export_spr64x8_bin $< $@
 
-$(EXPORT_DIR)/spr32x8.bin: hzapperbeam.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 8 -num 1 -fmt nds4bpp $< $@
+$(EXPORT_DIR)/spr32x8.c: hzapperbeam.png
+	tools/png2sprites -w 32 -h 8 -num 1 -fmt nds4bpp -c -var export_spr32x8_bin $< $@
 
-$(EXPORT_DIR)/spr8x32.bin: vzapperbeam.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 8 -h 32 -num 1 -fmt nds4bpp $< $@
+$(EXPORT_DIR)/spr8x32.c: vzapperbeam.png
+	tools/png2sprites -w 8 -h 32 -num 1 -fmt nds4bpp -c -var export_spr8x32_bin $< $@
 
-$(EXPORT_DIR)/chars.bin: chars.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 8 -h 8 -num 256 -fmt nds4bpp $< $@
-
-%.c: %.bin
-	xxd -i -n export_`basename $<` $< $@
+$(EXPORT_DIR)/chars.c: chars.png
+	tools/png2sprites -w 8 -h 8 -num 256 -fmt nds4bpp -c -var export_chars_bin $< $@
 
 GAME_ICON      :=      $(DEVKITPRO)/libnds/icon.bmp
 

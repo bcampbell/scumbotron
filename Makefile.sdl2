@@ -1,5 +1,5 @@
 BUILD_DIR=build_sdl2
-EXPORT_DIR=$(BUILD_DIR)/export
+EXPORT_DIR=export_sdl2
 
 SRCS = sdl2/sys.c sdl2/vera_psg.c sdl2/audio.c sdl2/sfx.c \
 	game.c gob.c player.c highscore.c misc.c bub.c \
@@ -26,29 +26,21 @@ $(BUILD_DIR)/%.o: %.c
 -include $(DEP_FILES)
 
 # graphics exporting
-$(EXPORT_DIR)/palette.bin: sprites16.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -palette rgba $< $@
+$(EXPORT_DIR)/palette.c: sprites16.png
+	tools/png2sprites -palette rgba -c -var export_palette_bin $< $@
 
-$(EXPORT_DIR)/spr16.bin: sprites16.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 16 -h 16 -num 64 -fmt 8bpp -num 64 $< $@
+$(EXPORT_DIR)/spr16.c: sprites16.png
+	tools/png2sprites -w 16 -h 16 -num 64 -fmt 8bpp -num 64 -c -var export_spr16_bin $< $@
 
-$(EXPORT_DIR)/spr32.bin: sprites32.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 32 -h 32 -num 8 -fmt 8bpp $< $@
+$(EXPORT_DIR)/spr32.c: sprites32.png
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt 8bpp -c -var export_spr32_bin $< $@
 
 # speech bubble sprites
-$(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp $< $@
+$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
+	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp -c -var export_spr64x8_bin $< $@
 
-$(EXPORT_DIR)/chars.bin: chars.png
-	mkdir -p $(dir $@)
-	tools/png2sprites -w 8 -h 8 -num 256 -fmt 8bpp $< $@
-
-%.c: %.bin
-	xxd -i -n export_`basename $<` $< $@
+$(EXPORT_DIR)/chars.c: chars.png
+	tools/png2sprites -w 8 -h 8 -num 256 -fmt 8bpp -c -var export_chars_bin $< $@
 
 .PHONY: clean
 clean:

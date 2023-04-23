@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -19,6 +20,7 @@ var opts struct {
 	numFrames int
 	fmt       string
 	csource   bool
+	varName   string
 }
 
 func main() {
@@ -34,11 +36,12 @@ Flags:
 	}
 
 	flag.StringVar(&opts.palette, "palette", "", "Output palette only (RGBA, nds, cx16)")
-	flag.IntVar(&opts.width, "w", 8, "sprite width")
-	flag.IntVar(&opts.height, "h", 8, "sprite height")
-	flag.IntVar(&opts.numFrames, "num", 1, "number of sprites to export")
-	flag.StringVar(&opts.fmt, "fmt", "8bpp", "output format (8bpp, 4bpp, 1bpp, nds4bpp)")
-	flag.BoolVar(&opts.csource, "c", false, "Output C source instead of raw binary")
+	flag.IntVar(&opts.width, "w", 8, "Sprite width")
+	flag.IntVar(&opts.height, "h", 8, "Sprite height")
+	flag.IntVar(&opts.numFrames, "num", 1, "Number of sprites to export")
+	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format (8bpp, 4bpp, 1bpp, nds4bpp)")
+	flag.BoolVar(&opts.csource, "c", false, "Output C src instead of raw binary")
+	flag.StringVar(&opts.varName, "var", "", "Set variable name used for C source output (-c) (defaults to munged filename)")
 	flag.Parse()
 
 	if len(flag.Args()) < 1 {
@@ -46,7 +49,8 @@ Flags:
 		os.Exit(2)
 	}
 
-	img, err := loadImg(flag.Arg(0))
+	inFile := flag.Arg(0)
+	img, err := loadImg(inFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 		os.Exit(1)
@@ -57,7 +61,7 @@ Flags:
 	if len(flag.Args()) >= 2 {
 		outFile = flag.Arg(1)
 	}
-	dumper, err := initDumper(outFile)
+	dumper, err := initDumper(inFile, outFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ERR: %s\n", err)
 		os.Exit(1)
@@ -81,7 +85,7 @@ Flags:
 	}
 }
 
-func initDumper(outFile string) (Dumper, error) {
+func initDumper(inFile string, outFile string) (Dumper, error) {
 	var f *os.File
 
 	if outFile == "-" || outFile == "" {
@@ -95,7 +99,18 @@ func initDumper(outFile string) (Dumper, error) {
 	}
 
 	if opts.csource {
-		return &SrcDumper{NumPerRow: 8, Out: f, Indent: "\t"}, nil
+		v := opts.varName
+		if v == "" {
+			v = inFile
+		}
+		// Sanitise name for C.
+		re := regexp.MustCompile("[^a-zA-Z0-9_]")
+		v = re.ReplaceAllLiteralString(v, "_")
+		if len(v) > 0 && v[0] >= '0' && v[0] <= '9' {
+			v = "__" + v
+		}
+		d := &SrcDumper{VarName: v, NumPerRow: 8, Out: f, Indent: "\t"}
+		return d, nil
 	} else {
 		return &BinDumper{f}, nil
 	}
@@ -316,23 +331,34 @@ func (b *BinDumper) Commentf(format string, args ...interface{}) error { return 
 
 // SrcDumper writes bytes out as C source code.
 // implements io.WriteCloser and Commenter
+//
+// unsigned char export_foo[] = {
+//     ...hex bytes...
+// };
+// unsigned int export_foo_len = 16384;
+//
+
 type SrcDumper struct {
-	NumPerRow int
-	Out       io.WriteCloser
-	Indent    string
-	parts     []string
+	VarName       string // Name for output array & length
+	NumPerRow     int
+	Out           io.WriteCloser
+	Indent        string
+	parts         []string
+	bytesWritten  int
+	headerWritten bool // array definition written out?
 }
 
 func (d *SrcDumper) Write(p []byte) (n int, err error) {
 	for _, b := range p {
 		d.parts = append(d.parts, fmt.Sprintf("0x%02x,", b))
 		if len(d.parts) >= d.NumPerRow {
-			err := d.flush()
+			err = d.flush()
 			if err != nil {
 				return 0, err
 			}
 		}
 	}
+	d.bytesWritten += len(p)
 	return len(p), nil
 }
 
@@ -348,6 +374,10 @@ func (d *SrcDumper) Commentf(format string, args ...interface{}) error {
 
 func (d *SrcDumper) Close() error {
 	err := d.flush()
+	if err == nil {
+		// The footer.
+		_, err = fmt.Fprintf(d.Out, "};\nunsigned int %s_len = %d;\n", d.VarName, d.bytesWritten)
+	}
 	err2 := d.Out.Close()
 	if err != nil {
 		return err
@@ -356,10 +386,19 @@ func (d *SrcDumper) Close() error {
 }
 
 func (d *SrcDumper) flush() error {
+	var err error
+	if !d.headerWritten {
+		d.headerWritten = true
+		_, err = fmt.Fprintf(d.Out, "unsigned char %s[] = {\n", d.VarName)
+		if err != nil {
+			return err
+		}
+	}
+
 	if len(d.parts) == 0 {
 		return nil
 	}
-	_, err := fmt.Fprintf(d.Out, "%s%s\n", d.Indent,
+	_, err = fmt.Fprintf(d.Out, "%s%s\n", d.Indent,
 		strings.Join(d.parts, " "))
 	d.parts = []string{}
 	return err
