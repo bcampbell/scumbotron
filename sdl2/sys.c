@@ -27,9 +27,18 @@ extern unsigned int export_chars_bin_len;
 
 static SDL_Window* fenster = NULL;
 static SDL_Renderer* renderer = NULL;
-static SDL_Texture* screenTexture = NULL;
+
+// screen is our virtual screen (8bit indexed)
 static SDL_Surface* screen = NULL;
+// conversionSurface and screenTexture are used to get screen to
+// the renderer.
 static SDL_Surface* conversionSurface = NULL;
+static SDL_Texture* screenTexture = NULL;
+
+//
+uint16_t screen_w;
+uint16_t screen_h;
+
 static SDL_Palette *palette;
 static bool warp = false;           // F11 to toggle
 
@@ -44,6 +53,7 @@ static void plat_init();
 static void plat_render_start();
 static void plat_render_finish();
 
+static bool screen_rethink();
 static void pumpevents();
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
@@ -78,26 +88,10 @@ void plat_init()
 
     fenster = SDL_CreateWindow("ZapZapZappityZapZap",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                              SCREEN_W, SCREEN_H, flags);
+                              640, 480, flags);
     if (!fenster) {
         goto bailout;
     }
-
-    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) {
-        goto bailout;
-    }
-
-    SDL_RenderSetLogicalSize(renderer, SCREEN_W, SCREEN_H);
-
-    screenTexture = SDL_CreateTexture(renderer,
-                               SDL_PIXELFORMAT_ARGB8888,
-                               SDL_TEXTUREACCESS_STREAMING,
-                               SCREEN_W, SCREEN_H);
-    if (screenTexture == NULL) {
-        goto bailout;
-    }
-
 
     // Set up palette
     {
@@ -121,23 +115,16 @@ void plat_init()
         SDL_SetPaletteColors(palette, colors, 0, 256);
     }
 
-    // Set up screen
-    screen = SDL_CreateRGBSurfaceWithFormat(0, SCREEN_W, SCREEN_H, 8,
-        SDL_PIXELFORMAT_INDEX8);
-    if (screen == NULL) {
-        goto bailout;
-    }
-    SDL_SetSurfacePalette(screen, palette);
-    //SDL_SetColorKey(screen, SDL_TRUE, 0);
-
-
-    // set up intermediate surface to convert to argb to update texture.
-    conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, SCREEN_W, SCREEN_H, 32,
-                               SDL_PIXELFORMAT_ARGB8888);
-    if (conversionSurface == NULL) {
+    //
+    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) {
         goto bailout;
     }
 
+    if (!screen_rethink()) {
+        goto bailout;
+    }
+    
     psg_reset();
     if (!audio_init()) {
         goto bailout;
@@ -151,6 +138,74 @@ bailout:
     exit(1);
 }
 
+// Sets up screen on startup, or reconfigures screen when window is resized.
+static bool screen_rethink()
+{
+    // Free old stuff if we're already running.
+    SDL_FreeSurface(screen);
+    screen = NULL;
+    SDL_FreeSurface(conversionSurface); 
+    conversionSurface = NULL;
+    if (screenTexture) {
+        SDL_DestroyTexture(screenTexture); 
+        screenTexture = NULL;
+    }
+
+    // Peek at the window size to get the aspect ratio and use
+    // that to decide our virtual screen size.
+    int w,h;
+    SDL_GetWindowSize(fenster, &w, &h);
+
+    // could use floating point, but why start now?
+    int aspect = (1024 * w) / h;
+
+    // We'll clip aspect ratio to reasonable bounds.
+    const int min_aspect = (1024 * 4)/3;    // 4:3 eg 640x480
+    const int max_aspect = (1024 * 16)/9;   // 16:9 eg 1280x768
+    if (aspect < min_aspect) {
+        aspect = min_aspect;
+    } else if (aspect > max_aspect) {
+        aspect = max_aspect;
+    }
+
+    // We'll allow wider playfield, but always 240 high.
+    screen_h = 240;
+    screen_w = (512 + (screen_h * aspect)) / 1024;
+
+    //printf("screen_rethink: window: %dx%d screen: %dx%d (aspect=%f)\n",w,h,screen_w, screen_h, (float)aspect/1024.0f);
+
+    SDL_RenderSetLogicalSize(renderer, screen_w, screen_h);
+
+    screenTexture = SDL_CreateTexture(renderer,
+                               SDL_PIXELFORMAT_ARGB8888,
+                               SDL_TEXTUREACCESS_STREAMING,
+                               screen_w, screen_h);
+    if (screenTexture == NULL) {
+        goto bailout;
+    }
+
+
+    // Set up screen
+    screen = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 8,
+        SDL_PIXELFORMAT_INDEX8);
+    if (screen == NULL) {
+        goto bailout;
+    }
+    SDL_SetSurfacePalette(screen, palette);
+    //SDL_SetColorKey(screen, SDL_TRUE, 0);
+
+
+    // set up intermediate surface to convert to argb to update texture.
+    conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 32,
+                               SDL_PIXELFORMAT_ARGB8888);
+    if (conversionSurface == NULL) {
+        goto bailout;
+    }
+    return true;
+
+bailout:
+    return false;
+}
 
 
 static void pumpevents()
@@ -167,13 +222,29 @@ static void pumpevents()
             case SDLK_F12:
               break;
             case SDLK_F11:
-                warp = !warp;
+              if (SDL_GetWindowFlags(fenster) & SDL_WINDOW_FULLSCREEN_DESKTOP) {
+                SDL_SetWindowFullscreen(fenster, 0);
+              } else {
+                SDL_SetWindowFullscreen(fenster, SDL_WINDOW_FULLSCREEN_DESKTOP);
+              }
+              //warp = !warp;
               break;
             default:
               //KeyDown(event.key);
               break;
           }
           break;
+        case SDL_WINDOWEVENT:
+          {
+            SDL_WindowEvent* wev = &event.window;
+            if ( wev->event == SDL_WINDOWEVENT_RESIZED) {
+              int w = wev->data1;
+              int h = wev->data2;
+              screen_rethink();
+            }
+          }
+          break;
+
       }
     }
 }
@@ -466,11 +537,11 @@ void plat_hzapper_render(int16_t x, int16_t y, uint8_t state) {
         case ZAPPER_WARMING_UP:
             sprout16(x, y, SPR16_HZAPPER_ON);
             //if (tick & 0x01) {
-            //    hline_noclip(0, SCREEN_W, (y >> FX) + 8, 3);
+            //    hline_noclip(0, screen_w, (y >> FX) + 8, 3);
             //}
             break;
         case ZAPPER_ON:
-            hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
+            hline_noclip(0, screen_w, (y >> FX) + 8, 15);
             sprout16(x, y, SPR16_HZAPPER_ON);
             break;
     }

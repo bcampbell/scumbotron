@@ -3,7 +3,14 @@
 
 // Platform specific details for use by common code.
 
-#define SCREEN_W 320
-#define SCREEN_H 240
+#include <stdint.h>
+
+// For sdl2 version, screen size can change on the fly.
+// We'll aim to keep it to a reasonable aspect ratio.
+extern uint16_t screen_w;
+extern uint16_t screen_h;
+
+#define SCREEN_W screen_w
+#define SCREEN_H screen_h
 
 #endif // PLAT_DETAILS_H
