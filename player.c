@@ -21,6 +21,8 @@ uint8_t plrhistidx[MAX_PLAYERS];
 // shot vars
 int16_t shotx[MAX_SHOTS];
 int16_t shoty[MAX_SHOTS];
+int16_t shotvx[MAX_SHOTS];
+int16_t shotvy[MAX_SHOTS];
 uint8_t shotdir[MAX_SHOTS];
 uint8_t shottimer[MAX_SHOTS];
 
@@ -212,15 +214,29 @@ void player_tick(uint8_t d) {
     // fire
     if (fire) {
         if (plrtimer[d]>8) {
-            uint8_t shot = shot_alloc();
+            uint8_t s = shot_alloc();
             // FIRE!
             plat_sfx_play(SFX_LASER);
             plrtimer[d] = 0;
-            if (shot < MAX_SHOTS) {
-                shotx[shot] = plrx[d];
-                shoty[shot] = plry[d];
-                shotdir[shot] = fire;
-                shottimer[shot] = 16;
+            if (s < MAX_SHOTS) {
+                shotx[s] = plrx[d];
+                shoty[s] = plry[d];
+                if (fire & DIR_LEFT) {
+                    shotvx[s] = -SHOT_SPD;
+                } else if (fire & DIR_RIGHT) {
+                    shotvx[s] = SHOT_SPD;
+                } else {
+                    shotvx[s] = 0;
+                }
+                if (fire & DIR_UP) {
+                    shotvy[s] = -SHOT_SPD;
+                } else if (fire & DIR_DOWN) {
+                    shotvy[s] = SHOT_SPD;
+                } else {
+                    shotvy[s] = 0;
+                }
+                shotdir[s] = fire;
+                shottimer[s] = 16;
             }
         }
     }
@@ -287,8 +303,8 @@ void shot_tick(uint8_t s)
         shotdir[s] = 0; // inactive.
         return;
     }
-    shotx[s] += shot_xvel(s);
-    shoty[s] += shot_yvel(s);
+    shotx[s] += shotvx[s];
+    shoty[s] += shotvy[s];
 }
 
 void shot_collisions()

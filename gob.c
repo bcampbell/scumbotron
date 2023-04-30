@@ -652,8 +652,8 @@ void tank_shot(uint8_t d, uint8_t shot)
         gob_standard_kaboom(d, shot, 100);
     } else {
         // knockback
-        gobx[d] += (shot_xvel(shot) >> 0);
-        goby[d] += (shot_yvel(shot) >> 0);
+        gobx[d] += shotvx[shot];
+        goby[d] += shotvy[shot];
         gobtimer[d] = 8;
     }
 }
@@ -717,8 +717,8 @@ uint8_t zapper_state(uint8_t d)
 void zapper_shot(uint8_t d, uint8_t s)
 {
     // knockback
-    gobvx[d] += (shot_xvel(s) >> FX);
-    gobvy[d] += (shot_yvel(s) >> FX);
+    gobvx[d] += (shotvx[s] >> FX);
+    gobvy[d] += (shotvy[s] >> FX);
 }
 
 /*
@@ -894,8 +894,8 @@ void vulgon_shot(uint8_t d, uint8_t shot)
         gob_standard_kaboom(d, shot, 100);
     } else {
         // knockback
-        gobvx[d] += (shot_xvel(shot) >> 4);
-        gobvy[d] += (shot_yvel(shot) >> 4);
+        gobvx[d] += (shotvx[shot] >> 4);
+        gobvy[d] += (shotvy[shot] >> 4);
         gobtimer[d] = 4;
     }
 }
@@ -1091,8 +1091,8 @@ void wibbler_shot(uint8_t g, uint8_t shot)
         for( child=0; child<MAX_GOBS; ++child) {
             if(gobkind[child] == GK_WIBBLER && gobdat[child] == g) {
                 gobdat[child] = 0xff;
-                gobvx[child] = shot_xvel(shot);
-                gobvy[child] = shot_yvel(shot);
+                gobvx[child] = shotvx[shot];
+                gobvy[child] = shotvy[shot];
                 break;
             }
         }

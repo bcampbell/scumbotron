@@ -33,6 +33,8 @@ void player_add_score(uint8_t points);
 // shot vars
 extern int16_t shotx[MAX_SHOTS];
 extern int16_t shoty[MAX_SHOTS];
+extern int16_t shotvx[MAX_SHOTS];
+extern int16_t shotvy[MAX_SHOTS];
 extern uint8_t shotdir[MAX_SHOTS];  // 0 = inactive
 extern uint8_t shottimer[MAX_SHOTS];
 
@@ -41,26 +43,5 @@ extern uint8_t shottimer[MAX_SHOTS];
 void shot_clearall();
 void shot_tick(uint8_t s);
 void shot_collisions();
-
-static inline int16_t shot_yvel(uint8_t s) {
-    uint8_t dir = shotdir[s];
-    if (dir & DIR_UP) {
-       return -SHOT_SPD;
-    } else if (dir & DIR_DOWN) {
-       return SHOT_SPD;
-    }
-    return 0;
-}
-
-static inline int16_t shot_xvel(uint8_t s) {
-    uint8_t dir = shotdir[s];
-    if (dir & DIR_LEFT) {
-       return -SHOT_SPD;
-    } else if (dir & DIR_RIGHT) {
-       return SHOT_SPD;
-    }
-    return 0;
-}
-
 
 #endif // PLAYER_H
