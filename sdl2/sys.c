@@ -49,6 +49,11 @@ static uint8_t inp_menu_pressed = 0;
 static void update_inp_menu();
 static void update_inp_dualstick();
 
+static int16_t inp_mousex = 0;
+static int16_t inp_mousey = 0;
+static uint8_t inp_mousebuttons = 0;
+static void update_inp_mouse();
+
 static void plat_init();
 static void plat_render_start();
 static void plat_render_finish();
@@ -275,6 +280,23 @@ static void update_inp_dualstick()
         }
     }
     inp_dualstick_state = state;
+}
+
+static void update_inp_mouse()
+{
+    int x,y;
+    Uint32 b = SDL_GetMouseState(&x, &y);
+    inp_mousebuttons = 0;
+    if (b & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+        inp_mousebuttons |= 0x01;
+    }
+    if (b & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+        inp_mousebuttons |= 0x02;
+    }
+    float lx, ly;
+    SDL_RenderWindowToLogical(renderer, x,y, &lx, &ly);
+    inp_mousex = (int16_t)(lx * (float)FX_ONE);
+    inp_mousey = (int16_t)(ly * (float)FX_ONE);
 }
 
 static void update_inp_menu()
@@ -647,9 +669,11 @@ int main(int argc, char* argv[]) {
     while(1) {
         pumpevents();
         update_inp_dualstick();
+        update_inp_mouse();
         update_inp_menu();
         plat_render_start();
         game_render();
+        sprout16( inp_mousex, inp_mousey, 0);
         plat_render_finish();
 
         game_tick();
