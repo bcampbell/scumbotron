@@ -1,5 +1,6 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
+#include "../player.h" // KILLKILLKILL
 #include "plat_sdl2.h"
 #include "vera_psg.h"
 
@@ -49,9 +50,12 @@ static uint8_t inp_menu_pressed = 0;
 static void update_inp_menu();
 static void update_inp_dualstick();
 
-static int16_t inp_mousex = 0;
-static int16_t inp_mousey = 0;
-static uint8_t inp_mousebuttons = 0;
+// start PLAT_HAS_MOUSE
+int16_t plat_mouse_x = 0;
+int16_t plat_mouse_y = 0;
+uint8_t plat_mouse_buttons = 0;
+bool plat_mouse_show = true;
+// end PLAT_HAS_MOUSE
 static void update_inp_mouse();
 
 static void plat_init();
@@ -97,6 +101,7 @@ void plat_init()
     if (!fenster) {
         goto bailout;
     }
+    SDL_ShowCursor(SDL_DISABLE);
 
     // Set up palette
     {
@@ -286,17 +291,20 @@ static void update_inp_mouse()
 {
     int x,y;
     Uint32 b = SDL_GetMouseState(&x, &y);
-    inp_mousebuttons = 0;
+    plat_mouse_buttons = 0;
     if (b & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        inp_mousebuttons |= 0x01;
+        plat_mouse_buttons |= 0x01;
     }
     if (b & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        inp_mousebuttons |= 0x02;
+        plat_mouse_buttons |= 0x02;
+    }
+    if (b & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
+        plat_mouse_buttons |= 0x04;
     }
     float lx, ly;
     SDL_RenderWindowToLogical(renderer, x,y, &lx, &ly);
-    inp_mousex = (int16_t)(lx * (float)FX_ONE);
-    inp_mousey = (int16_t)(ly * (float)FX_ONE);
+    plat_mouse_x = (int16_t)(lx * (float)FX_ONE);
+    plat_mouse_y = (int16_t)(ly * (float)FX_ONE);
 }
 
 static void update_inp_menu()
@@ -673,7 +681,9 @@ int main(int argc, char* argv[]) {
         update_inp_menu();
         plat_render_start();
         game_render();
-        sprout16( inp_mousex, inp_mousey, 0);
+        if (plat_mouse_show) {
+            sprout16(plat_mouse_x, plat_mouse_y, 0);
+        }
         plat_render_finish();
 
         game_tick();

@@ -54,6 +54,8 @@ extern uint8_t gobs_spawncnt;  // num gobs spawning.
 
 // table to filter out illegal directions (left+right etc)
 extern const uint8_t dir_fix[16];
+// table to convert DIR_ bits to angle 0..23
+extern const uint8_t dir_to_angle24[16];
 
 // gob functions
 void gobs_clear();

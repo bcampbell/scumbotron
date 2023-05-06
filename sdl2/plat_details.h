@@ -13,4 +13,6 @@ extern uint16_t screen_h;
 #define SCREEN_W screen_w
 #define SCREEN_H screen_h
 
+#define PLAT_HAS_MOUSE
+
 #endif // PLAT_DETAILS_H

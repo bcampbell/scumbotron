@@ -40,6 +40,30 @@ const uint8_t dir_fix[16] = {
     0,              // 1111 all
 };
 
+#define ANGLE_DUD 0 // Shouldn't be used, but want to show invalid values.
+
+// Convert DIR_ bits into angle (0..23)
+// invalid directions return 0xff
+const uint8_t dir_to_angle24[16] = {
+    ANGLE_DUD,   // 0000
+    6,         // 0001 right
+    18,        // 0010 left
+    ANGLE_DUD, // 0011 left+right
+    12,        // 0100 down
+    6 + 3,     // 0101 down+right           
+    12 + 3,    // 0110 down+left           
+    ANGLE_DUD, // 0111 down+left+right
+
+    0,         // 1000 up
+    0 + 3,     // 1001 up+right
+    18 + 3,    // 1010 up+left
+    ANGLE_DUD, // 1011 up+left+right
+    ANGLE_DUD, // 1100 up+down
+    ANGLE_DUD, // 1101 up+down+right           
+    ANGLE_DUD, // 1110 up+down+left           
+    ANGLE_DUD, // 1111 all
+};
+
 void gobs_clear()
 {
     uint8_t i;

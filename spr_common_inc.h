@@ -40,24 +40,40 @@
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
-const uint8_t shot_spr[16] = {
-    0,              // 0000
-    SPR16_SHOT+2,   // 0001 DIR_RIGHT
-    SPR16_SHOT+2,   // 0010 DIR_LEFT
-    0,              // 0011
-    SPR16_SHOT+0,   // 0100 DIR_DOWN
-    SPR16_SHOT+3,   // 0101 down+right           
-    SPR16_SHOT+1,   // 0110 down+left           
-    0,              // 0111
 
-    SPR16_SHOT+0,   // 1000 up
-    SPR16_SHOT+1,   // 1001 up+right
-    SPR16_SHOT+3,   // 1010 up+left
-    0,              // 1011
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111
+// SHOT+0 vert, +1 horiz, +2 nw, +3 ne
+const uint8_t shot_spr[24] = {
+    SPR16_SHOT+0,   // 0 up
+    SPR16_SHOT+0,
+    SPR16_SHOT+1,
+
+    SPR16_SHOT+1,   // 3 up/right
+    SPR16_SHOT+1,
+    SPR16_SHOT+2,
+
+    SPR16_SHOT+2,   // 6 right
+    SPR16_SHOT+2,
+    SPR16_SHOT+3,
+
+    SPR16_SHOT+3,   // 9 down/right
+    SPR16_SHOT+3,
+    SPR16_SHOT+0,
+
+    SPR16_SHOT+0,   // 12 down
+    SPR16_SHOT+0,
+    SPR16_SHOT+1,
+
+    SPR16_SHOT+1,   // 15 down/left
+    SPR16_SHOT+1,
+    SPR16_SHOT+2,
+
+    SPR16_SHOT+2,  // 18 left
+    SPR16_SHOT+2,
+    SPR16_SHOT+3,
+
+    SPR16_SHOT+3,  // 21 up/left
+    SPR16_SHOT+3,
+    SPR16_SHOT+0,
 };
 
 

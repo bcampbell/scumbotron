@@ -1,4 +1,5 @@
 #include "misc.h"
+#include <stdio.h>
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
@@ -41,5 +42,81 @@ void hex32(uint32_t n, char buf[8])
     buf[5] = hexdigits[(n >> 8) & 0x0F];
     buf[6] = hexdigits[(n >> 4) & 0x0F];
     buf[7] = hexdigits[(n >> 0) & 0x0F];
+}
+
+// Return angle between x and y, in range (0..23).
+// (coords have topleft origin, ie y=down, x=right)
+// Angle 0 is vertically up, proceeding clockwise.
+// Method based on:
+// http://www.dustmop.io/blog/2015/07/22/discrete-arctan-in-6502/
+// TODO: could do this entirely 8bit.
+uint8_t arctan24(int16_t x, int16_t y) {
+
+    // Look up result angle (0..23) using quadrant and region.
+    static const uint8_t arctan_table[32] = {
+        0,1,2,3, 6,5,4,3,           // q0
+        12,11,10,9, 6,7,8,9,        // q1
+        12,13,14,15, 18,17,16,15,   // q2
+        0,23,22,21, 18,19,20,21,    // q3
+    };
+
+    // Quadrant numbering:
+    //
+    //    3 | 0
+    //    --+--
+    //    2 | 1
+    uint8_t quadrant;
+    if (x > 0) {
+        if (y > 0) {
+            quadrant = 1;
+        } else {
+            quadrant = 0;
+            y = -y;
+        }
+    } else {
+        x = -x;
+        if (y > 0) {
+            quadrant = 2;
+        } else {
+            quadrant = 3;
+            y = -y;
+        }
+    }
+
+    int16_t small, large, half;
+    // Calculate region (0..7) within the quadrant.
+    // Note: the region number is pretty arbitrary, just used as a lookup.
+    // The region ordering varies every 45 degrees.
+    uint8_t region;
+    if (x < y) {
+        region = 0;
+        small = x;
+        large = y;
+    } else {
+        region = 4;
+        small = y;
+        large = x;
+    }
+    half = small/2;
+
+    // compare to 2.5 slope
+    if ((small * 2) + half > large) {
+        // compare to 1.25
+        if (small + (half/2) > large) {
+            region += 3;
+        } else {
+            region += 2;
+        }
+    } else {
+        // compare to 7.5
+        if ((small * 8) - half > large) {
+            region += 1;
+        } else {
+            region += 0;
+        }
+    }
+
+    uint8_t foo = arctan_table[(quadrant *8) + region];
+    return foo;
 }
 

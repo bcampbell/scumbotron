@@ -1,6 +1,7 @@
 #include "player.h"
 #include "plat.h"
 #include "gob.h"
+#include "misc.h"
 
 uint8_t player_lives;
 uint32_t player_score;
@@ -80,7 +81,7 @@ void player_renderall()
     }
 
     for (s = 0; s < MAX_SHOTS; ++s) {
-        if (!shotdir[s]) {
+        if (!shottimer[s]) {
             // inactive.
             continue;
         }
@@ -100,7 +101,7 @@ void player_tickall()
         player_tick(p);
     }
     for (s = 0; s < MAX_SHOTS; ++s) {
-        if (!shotdir[s]) {
+        if (!shottimer[s]) {
             // inactive.
             continue;
         }
@@ -163,13 +164,73 @@ bool player_collisions()
 }
 
 
-void player_tick(uint8_t d) {
-    uint8_t sticks = plat_inp_dualsticks();
-    uint8_t move = dir_fix[sticks & 0x0F];
-    uint8_t fire = dir_fix[(sticks>>4) & 0x0F];
 
-    ++plrtimer[d];
+// shot velocities, by angle 0..23
+// x:
+static const int16_t shotcircx[24] = {
+  ((FX_ONE*0)/1), 
+  ((FX_ONE*176)/85), 
+  ((FX_ONE*4)/1), 
+  ((FX_ONE*379)/67), 
+  ((FX_ONE*672)/97), 
+  ((FX_ONE*85)/11), 
+  ((FX_ONE*8)/1), 
+  ((FX_ONE*85)/11), 
+  ((FX_ONE*672)/97), 
+  ((FX_ONE*379)/67), 
+  ((FX_ONE*4)/1), 
+  ((FX_ONE*176)/85), 
+  ((FX_ONE*0)/1), 
+  ((FX_ONE*-176)/85), 
+  ((FX_ONE*-4)/1), 
+  ((FX_ONE*-379)/67), 
+  ((FX_ONE*-672)/97), 
+  ((FX_ONE*-85)/11), 
+  ((FX_ONE*-8)/1), 
+  ((FX_ONE*-85)/11), 
+  ((FX_ONE*-672)/97), 
+  ((FX_ONE*-379)/67), 
+  ((FX_ONE*-4)/1), 
+  ((FX_ONE*-176)/85), 
+};
 
+// y:
+static const int16_t shotcircy[24] = {
+  ((FX_ONE*-8)/1), 
+  ((FX_ONE*-85)/11), 
+  ((FX_ONE*-672)/97), 
+  ((FX_ONE*-379)/67), 
+  ((FX_ONE*-4)/1), 
+  ((FX_ONE*-176)/85), 
+  ((FX_ONE*0)/1), 
+  ((FX_ONE*176)/85), 
+  ((FX_ONE*4)/1), 
+  ((FX_ONE*379)/67), 
+  ((FX_ONE*672)/97), 
+  ((FX_ONE*85)/11), 
+  ((FX_ONE*8)/1), 
+  ((FX_ONE*85)/11), 
+  ((FX_ONE*672)/97), 
+  ((FX_ONE*379)/67), 
+  ((FX_ONE*4)/1), 
+  ((FX_ONE*176)/85), 
+  ((FX_ONE*0)/1), 
+  ((FX_ONE*-176)/85), 
+  ((FX_ONE*-4)/1), 
+  ((FX_ONE*-379)/67), 
+  ((FX_ONE*-672)/97), 
+  ((FX_ONE*-85)/11),
+};
+
+
+// Control schemes:
+// 1. keyboard/digital gamepad
+// 2. keyboard+mouse
+// 3. analog twin stick
+//
+
+static void plr_digital_move(uint8_t d, uint8_t move)
+{
     // move
     {
         int16_t vy = plrvy[d];
@@ -211,36 +272,6 @@ void player_tick(uint8_t d) {
         plrfacing[d] =  move;
     }
 
-    // fire
-    if (fire) {
-        if (plrtimer[d]>8) {
-            uint8_t s = shot_alloc();
-            // FIRE!
-            plat_sfx_play(SFX_LASER);
-            plrtimer[d] = 0;
-            if (s < MAX_SHOTS) {
-                shotx[s] = plrx[d];
-                shoty[s] = plry[d];
-                if (fire & DIR_LEFT) {
-                    shotvx[s] = -SHOT_SPD;
-                } else if (fire & DIR_RIGHT) {
-                    shotvx[s] = SHOT_SPD;
-                } else {
-                    shotvx[s] = 0;
-                }
-                if (fire & DIR_UP) {
-                    shotvy[s] = -SHOT_SPD;
-                } else if (fire & DIR_DOWN) {
-                    shotvy[s] = SHOT_SPD;
-                } else {
-                    shotvy[s] = 0;
-                }
-                shotdir[s] = fire;
-                shottimer[s] = 16;
-            }
-        }
-    }
-
     // keep player on screen
     {
         const int16_t xmax = (SCREEN_W - 16) << FX;
@@ -258,17 +289,84 @@ void player_tick(uint8_t d) {
             plry[d] = ymax;
         }
     }
+}
+
+static void plr_digital_fire(uint8_t p, uint8_t fire) {
+    if (!fire) {
+        return;
+    }
+    if (plrtimer[p] > 8) {
+        uint8_t s = shot_alloc();
+        // FIRE!
+        plat_sfx_play(SFX_LASER);
+        plrtimer[p] = 0;
+        if (s < MAX_SHOTS) {
+            uint8_t theta = dir_to_angle24[fire];
+            if (theta == 0xff) {
+                return;
+            }
+            shottimer[s] = 24;
+            shotx[s] = plrx[p];
+            shoty[s] = plry[p];
+            shotvx[s] = shotcircx[theta];
+            shotvy[s] = shotcircy[theta];
+            shotdir[s] = theta;
+        }
+    }
+}
+
+static void plr_shoot(uint8_t p, uint8_t theta) {
+    uint8_t s = shot_alloc();
+    // FIRE!
+    plat_sfx_play(SFX_LASER);
+    plrtimer[p] = 0;
+    if (s >= MAX_SHOTS) {
+        return;
+    }
+    shottimer[s] = 24;
+    shotx[s] = plrx[p];
+    shoty[s] = plry[p];
+    shotvx[s] = shotcircx[theta];
+    shotvy[s] = shotcircy[theta];
+    shotdir[s] = theta;
+}
+
+void player_tick(uint8_t p) {
+    uint8_t sticks = plat_inp_dualsticks();
+    uint8_t move = dir_fix[sticks & 0x0F];
+    uint8_t fire = dir_fix[(sticks>>4) & 0x0F];
+
+    ++plrtimer[p];
+    plr_digital_move(p, move);
+
+    // check firing
+    if (plrtimer[p] >= 4) {
+        if (fire) {
+            uint8_t theta = dir_to_angle24[fire];
+            plr_shoot(p, theta);
+            plrtimer[p] = 0;
+        }
+        #ifdef PLAT_HAS_MOUSE
+        if (plat_mouse_buttons) {
+            int16_t dx = plat_mouse_x - plrx[p];
+            int16_t dy = plat_mouse_y - plry[p];
+            uint8_t theta = arctan24(dx, dy);
+            plr_shoot(p, theta);
+            plrtimer[p] = 0;
+        }
+        #endif // PLAT_HAS_MOUSE
+    }
 
     // Update position history array (every second frame)
 //    if ((tick & 0x01) == 0 ) {
     {
-        uint8_t idx = plrhistidx[d];
-        if (plrx[d] != plrhistx[d][idx] || plry[d] != plrhisty[d][idx]) {
+        uint8_t idx = plrhistidx[p];
+        if (plrx[p] != plrhistx[p][idx] || plry[p] != plrhisty[p][idx]) {
             // add new entry
             idx = (idx + 1) & (PLR_HIST_LEN-1);
-            plrhistidx[d] = idx;
-            plrhistx[d][idx] = plrx[d];
-            plrhisty[d][idx] = plry[d];
+            plrhistidx[p] = idx;
+            plrhistx[p][idx] = plrx[p];
+            plrhisty[p][idx] = plry[p];
         }
     }
 }
@@ -278,7 +376,7 @@ void shot_clearall()
 {
     uint8_t s;
     for(s = 0; s < MAX_SHOTS; ++s) {
-        shotdir[s] = 0;
+        shottimer[s] = 0;
     }
 }
 
@@ -287,7 +385,7 @@ static uint8_t shot_alloc()
 {
     uint8_t s;
     for(s = 0; s < MAX_SHOTS; ++s) {
-        if(shotdir[s] == 0) {
+        if(shottimer[s] == 0) {
             return s;
         }
     }
@@ -299,8 +397,7 @@ static uint8_t shot_alloc()
 // timer: dies at 0
 void shot_tick(uint8_t s)
 {
-    if (--shottimer[s] == 0) {
-        shotdir[s] = 0; // inactive.
+    if( --shottimer[s] == 0) {
         return;
     }
     shotx[s] += shotvx[s];
@@ -315,7 +412,7 @@ void shot_collisions()
         int16_t sx = shotx[s] + (8<<FX);
         int16_t sy = shoty[s] + (8<<FX);
         uint8_t d;
-        if (shotdir[s] == 0) {
+        if (shottimer[s] == 0) {
             continue;   // inactive
         }
         for (d = 0; d < MAX_GOBS; ++d) {
@@ -330,7 +427,7 @@ void shot_collisions()
                 if (sx >= dx0 && sx < dx1) {
                     // A hit!
                     gob_shot(d, s);
-                    shotdir[s] = 0; // turn off shot.
+                    shottimer[s] = 0; // turn off shot.
                     break;  // next shot.
                 }
             }

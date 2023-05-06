@@ -56,6 +56,13 @@ void plat_marine_render(int16_t x, int16_t y);
 void plat_wibbler_render(int16_t x, int16_t y, bool head);
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx);
 
+#ifdef PLAT_HAS_MOUSE
+extern int16_t plat_mouse_x;
+extern int16_t plat_mouse_y;
+extern uint8_t plat_mouse_buttons;   // left:0x01 right:0x02 middle:0x04
+extern bool plat_mouse_show;        // show mouse pointer?
+#endif // PLAT_HAS_MOUSE
+
 // noddy profiling
 #define GATSO_OFF 0
 #define GATSO_ON 1
