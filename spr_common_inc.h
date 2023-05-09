@@ -8,13 +8,13 @@
 // sprout64x8()
 
 // sprite image defs
+#define SPR16_RETICULE 0
 #define SPR16_EXTRALIFE 8
 #define SPR16_BAITER 16
 #define SPR16_AMOEBA_MED 20
 #define SPR16_AMOEBA_SMALL 24
 #define SPR16_TANK 28
 #define SPR16_GRUNT 30
-#define SPR16_SHOT 4
 #define SPR16_HZAPPER 12
 #define SPR16_HZAPPER_ON 13
 #define SPR16_VZAPPER 14
@@ -35,6 +35,9 @@
 #define SPR16_PLR_R 54
 #define SPR16_MARINE 56
 #define SPR16_WIBBLER 58
+#define SPR16_SHOT 64
+#define SPR16_SHOT_MED 68
+#define SPR16_SHOT_HEAVY 72
 
 #define SPR32_AMOEBA_BIG 0
 

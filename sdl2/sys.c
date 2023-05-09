@@ -19,7 +19,7 @@ extern unsigned int export_spr64x8_bin_len;
 extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
 
-#define NUM_SPR16 64
+#define NUM_SPR16 128
 #define NUM_SPR32 8
 
 #define BYTESIZE_SPR16 (16*16)   // 16x16 8bpp

@@ -185,7 +185,7 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 
 
 // 32x8 and 8x32 are DS-specific sprites for zapper beams
-#define SPR16_NUM 64
+#define SPR16_NUM 128
 #define SPR32_NUM 2
 #define SPR64x8_NUM 4
 #define SPR32x8_NUM 1

@@ -63,7 +63,7 @@ $(EXPORT_DIR)/palette.c: sprites16.png
 	tools/png2sprites -palette nds -c -var export_palette_bin $< $@
 
 $(EXPORT_DIR)/spr16.c: sprites16.png
-	tools/png2sprites -w 16 -h 16 -num 64 -fmt nds4bpp -c -var export_spr16_bin $< $@
+	tools/png2sprites -w 16 -h 16 -num 128 -fmt nds4bpp -c -var export_spr16_bin $< $@
 
 $(EXPORT_DIR)/spr32.c: sprites32.png
 	tools/png2sprites -w 32 -h 32 -num 2 -fmt nds4bpp -c -var export_spr32_bin $< $@

@@ -22,7 +22,7 @@ extern void waitvbl();
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
-#define SPR16_NUM 64
+#define SPR16_NUM 128
 #define SPR32_SIZE (16*32)   // 32x32, 4 bpp
 #define SPR32_NUM 2
 #define SPR64x8_SIZE (32*8) // 64x8, 4bpp
@@ -320,13 +320,23 @@ void plat_init()
 
     {
         // Uncompress 16x16 sprites
-        const volatile uint8_t* src = BANK_RAM;
+        // We're uncompressing into 8KB bank... so
+        // 64 sprites is our limit...
+        /*const volatile uint8_t* src = BANK_RAM;
         int i;
         cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_SPRITES16, VERA_INC_1);
         for (i = 0; i < SPR16_NUM * SPR16_SIZE; ++i) {
             VERA.data0 = *src++;
         }
+        */
+        // Uncompress directly into vram.
+        // Earlier kernal had a bug which meant I couldn't decompress
+        // directly to vram, so I used the 8KB banked ram as a temp
+        // buffer. But then I decided we needed more than 8KB of 16x16
+        // sprites. Luckily the decompress-to-vram had been fixed by then.
+        veraaddr0(VRAM_SPRITES16, VERA_INC_1);
+        cx16_k_memory_decompress(export_spr16_zbin, (uint8_t*)&(VERA.data0));
     }
     {
         // Uncompress 32x32 sprites
