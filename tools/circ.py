@@ -3,10 +3,11 @@ from math import sin,cos,pi
 from fractions import Fraction
 
 steps = 24
-r = 8
+FX = 1<<6   # fixedpoint multiplier
+r = (8 * FX)
 
-fx = []
-fy = []
+tx = []
+ty = []
 
 i = 0
 while i < steps:
@@ -15,19 +16,18 @@ while i < steps:
     x = r * sin(theta)
     y = -r * cos(theta)
 
-    fx.append(Fraction(x).limit_denominator(100))
-    fy.append(Fraction(y).limit_denominator(100))
-
+    tx.append(x)
+    ty.append(y)
 
     i = i + 1
 
 
 print("// x:")
-for f in fx:
-    print(f"  ((FX_ONE*{f.numerator})/{f.denominator}), ",)
+for f in tx:
+    print(f"  {int(f)}, ",)
 print()
 print("// y:")
-for f in fy:
-    print(f"  ((FX_ONE*{f.numerator})/{f.denominator}), ",)
+for f in ty:
+    print(f"  {int(f)}, ",)
 
 print()

@@ -16,10 +16,21 @@ static uint8_t inp_menu_state = 0;
 static uint8_t inp_menu_pressed = 0;
 static void update_inp_dualstick();
 static void update_inp_menu();
+static void update_inp_mouse();
+
+// start PLAT_HAS_MOUSE
+int16_t plat_mouse_x = 0;
+int16_t plat_mouse_y = 0;
+uint8_t plat_mouse_buttons = 0;
+bool plat_mouse_show = true;
+// end PLAT_HAS_MOUSE
 
 extern void waitvbl();
 
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
+typedef struct { int x, y; } mouse_pos_t;
+unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse button byte
+void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
@@ -292,6 +303,8 @@ void plat_init()
     VERA.layer0.hscroll = 12*8; // 16bit
     VERA.layer0.vscroll = 12*8; // 16bit
 
+    // Init mouse
+    cx16_k_mouse_config(1, SCREEN_W/8, SCREEN_H/8);
 
     // Load compressed data into vram.
     // Use the $A000 bank ram as a decompression buffer. So the uncompressed
@@ -875,6 +888,14 @@ static void update_inp_menu()
     inp_menu_state = state;
 }
 
+static void update_inp_mouse()
+{
+    mouse_pos_t m;
+    plat_mouse_buttons = cx16_k_mouse_get(&m);
+    plat_mouse_x = m.x <<FX;
+    plat_mouse_y = m.y <<FX;
+}
+
 
 uint8_t plat_inp_dualsticks()
 {
@@ -896,10 +917,13 @@ int main(void) {
         waitvbl();
         plat_render_start();
         game_render();
+        sprout16(plat_mouse_x, plat_mouse_y, 0);
+
         plat_render_finish();
         sfx_tick();
         update_inp_dualstick();
         update_inp_menu();
+        update_inp_mouse();
         game_tick();
     }
 }

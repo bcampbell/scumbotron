@@ -24,6 +24,8 @@
 ; Call address: $FEED
 
 __memory_decompress = $FEED
+__MOUSE_GET = $FF6B
+__MOUSE_CONFIG = $FF68
 
 __rc2 = $04
 __rc3 = $05
@@ -58,4 +60,38 @@ cx16_k_memory_decompress:
 
 	jmp __memory_decompress
 
+;
+; typedef struct { int x, y; } mouse_pos_t;
+; unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse button byte
+;                                             rc2/3
+;
+; https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2004%20-%20KERNAL.md#function-name-mouse_get
+;
+.global cx16_k_mouse_get
+cx16_k_mouse_get:
+	ldx	#__rc4		; x = temp pos
+	jsr	__MOUSE_GET
+	tax			; save buttons
+	ldy	#4-1		; copy 4 byte pos to xy_ptr
+copypos:
+	lda	__rc4,y
+	sta	(__rc2),y
+	dey
+	bpl	copypos
+	txa			; return buttons
+	rts
+
+
+;
+; void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
+;                                        a                        x                     rc2
+;
+; https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2004%20-%20KERNAL.md#function-name-mouse_config
+;
+.global cx16_k_mouse_config
+cx16_k_mouse_config:
+				; a = showmouse (already set)
+				; x = xsize8 (already set)
+	ldy	__rc2		; y = ysize8
+	jmp	__MOUSE_CONFIG
 
