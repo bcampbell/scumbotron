@@ -45,6 +45,8 @@ void game_tick()
     case STATE_GAMEOVER:    tick_STATE_GAMEOVER(); break;
     case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
     case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
+    case STATE_GALLERY_BADDIES:    tick_STATE_GALLERY_BADDIES(); break;
+    case STATE_GALLERY_GOODIES:    tick_STATE_GALLERY_GOODIES(); break;
     }
 }
 
@@ -71,6 +73,8 @@ void game_render()
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
         case STATE_ENTERHIGHSCORE:    render_STATE_ENTERHIGHSCORE(); break;
+        case STATE_GALLERY_BADDIES:    render_STATE_GALLERY_BADDIES(); break;
+        case STATE_GALLERY_GOODIES:    render_STATE_GALLERY_GOODIES(); break;
     }
 }
 

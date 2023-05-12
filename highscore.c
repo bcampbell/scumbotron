@@ -92,7 +92,7 @@ void enter_STATE_HIGHSCORES()
 void tick_STATE_HIGHSCORES()
 {
     if (++statetimer > 200 || plat_inp_menu()) {
-        enter_STATE_TITLESCREEN();
+        enter_STATE_GALLERY_BADDIES();
     }
 }
 
