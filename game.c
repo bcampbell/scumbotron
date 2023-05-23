@@ -7,12 +7,13 @@
 #include "game.h"
 
 uint8_t state;
-uint8_t statetimer;
+uint16_t statetimer;
 static uint8_t level;
 static uint8_t baiter_timer;
 static uint8_t baiter_count;
 
 static void tick_STATE_TITLESCREEN();
+static void tick_STATE_NEWGAME();
 static void tick_STATE_GETREADY();
 static void tick_STATE_PLAY();
 static void tick_STATE_CLEARED();
@@ -20,6 +21,7 @@ static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
 
 static void render_STATE_TITLESCREEN();
+static void render_STATE_NEWGAME();
 static void render_STATE_GETREADY();
 static void render_STATE_PLAY();
 static void render_STATE_CLEARED();
@@ -32,12 +34,14 @@ static void level_baiter_check();
 void game_init()
 {
     enter_STATE_TITLESCREEN();
+//   enter_STATE_STORY_INTRO();
 }
 
 void game_tick()
 {
     switch(state) {
     case STATE_TITLESCREEN: tick_STATE_TITLESCREEN(); break;
+    case STATE_NEWGAME:     tick_STATE_NEWGAME(); break;
     case STATE_GETREADY:    tick_STATE_GETREADY(); break;
     case STATE_PLAY:        tick_STATE_PLAY(); break;
     case STATE_CLEARED:     tick_STATE_CLEARED(); break;
@@ -47,34 +51,33 @@ void game_tick()
     case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
     case STATE_GALLERY_BADDIES:    tick_STATE_GALLERY_BADDIES(); break;
     case STATE_GALLERY_GOODIES:    tick_STATE_GALLERY_GOODIES(); break;
+    case STATE_STORY_INTRO:    tick_STATE_STORY_INTRO(); break;
+    case STATE_STORY_OHNO:    tick_STATE_STORY_OHNO(); break;
+    case STATE_STORY_ATTACK:    tick_STATE_STORY_ATTACK(); break;
+    case STATE_STORY_RUNAWAY:    tick_STATE_STORY_RUNAWAY(); break;
+    case STATE_STORY_DONE:    tick_STATE_STORY_DONE(); break;
     }
 }
-
-#if 0
-
-const char * statenames[] = {
-    "TITLESCREEN",
-    "GETREADY",
-    "PLAY",
-    "CLEARED",
-    "KILLED",
-    "GAMEOVER"
-};
-#endif
 
 void game_render()
 {
     switch(state) {
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
+        case STATE_NEWGAME:     render_STATE_NEWGAME(); break;
         case STATE_GETREADY:    render_STATE_GETREADY(); break;
         case STATE_PLAY:        render_STATE_PLAY(); break;
         case STATE_CLEARED:     render_STATE_CLEARED(); break;
         case STATE_KILLED:      render_STATE_KILLED(); break;
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
-        case STATE_ENTERHIGHSCORE:    render_STATE_ENTERHIGHSCORE(); break;
-        case STATE_GALLERY_BADDIES:    render_STATE_GALLERY_BADDIES(); break;
-        case STATE_GALLERY_GOODIES:    render_STATE_GALLERY_GOODIES(); break;
+        case STATE_ENTERHIGHSCORE:  render_STATE_ENTERHIGHSCORE(); break;
+        case STATE_GALLERY_BADDIES: render_STATE_GALLERY_BADDIES(); break;
+        case STATE_GALLERY_GOODIES: render_STATE_GALLERY_GOODIES(); break;
+        case STATE_STORY_INTRO:      render_STATE_STORY_INTRO(); break;
+        case STATE_STORY_OHNO:      render_STATE_STORY_OHNO(); break;
+        case STATE_STORY_ATTACK:    render_STATE_STORY_ATTACK(); break;
+        case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
+        case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
 }
 
@@ -93,16 +96,12 @@ static void tick_STATE_TITLESCREEN()
 {
     uint8_t inp = plat_inp_menu();
     if (inp & INP_MENU_ACTION) {
-        // init new game
-        uint8_t level = 0;
-        player_lives = 3;
-        player_score = 0;
-        level_init(level);
-        enter_STATE_GETREADY();
-    } else {
-        if (++statetimer > 200 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
-            enter_STATE_HIGHSCORES();
-        }
+        enter_STATE_NEWGAME();
+        return;
+    }
+
+    if (++statetimer > 200 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
+        enter_STATE_HIGHSCORES();
     }
 }
 
@@ -112,6 +111,33 @@ static void render_STATE_TITLESCREEN()
     for (i=0; i<20; ++i) {
         plat_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
     }
+}
+
+/*
+ * STATE_NEWGAME
+ *
+ * dummy state: just set up a new game then go on to next phase.
+ */
+void enter_STATE_NEWGAME()
+{
+    // init new game
+    level = 0;
+    player_lives = 3;
+    player_score = 0;
+    level_init(level);
+
+    state = STATE_NEWGAME;
+    statetimer = 0;
+}
+
+static void tick_STATE_NEWGAME()
+{
+    // Show the story (it'll come back to STATE_GETREADY)
+    enter_STATE_STORY_INTRO();
+}
+
+static void render_STATE_NEWGAME()
+{
 }
 
 
@@ -125,6 +151,9 @@ void enter_STATE_GETREADY()
 
     baiter_count = 0;
     baiter_timer = 0;
+    // We expect all the gobs to be set up by here.
+    // Kick them into spawning-in mode.
+    gobs_spawning();
     player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
     shot_clearall();
     plat_clr();

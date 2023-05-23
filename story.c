@@ -1,6 +1,6 @@
 #include "plat.h"
 #include "game.h"
-//#include "misc.h"
+#include "misc.h"
 
 
 /*
@@ -16,7 +16,13 @@ void enter_STATE_GALLERY_BADDIES()
 
 void tick_STATE_GALLERY_BADDIES()
 {
-    if (++statetimer > 250 || plat_inp_menu()) {
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+
+    if (++statetimer > 250 || inp) {
         enter_STATE_GALLERY_GOODIES();
     }
 }
@@ -115,7 +121,12 @@ void enter_STATE_GALLERY_GOODIES()
 
 void tick_STATE_GALLERY_GOODIES()
 {
-    if (++statetimer > 250 || plat_inp_menu()) {
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+    if (++statetimer > 250 || inp) {
         enter_STATE_TITLESCREEN();
     }
 }
@@ -179,4 +190,260 @@ void render_STATE_GALLERY_GOODIES()
         }
     }
 }
+
+
+static void render_robo_rain(uint8_t t) {
+    rnd_seed(13);
+    for (uint8_t i = 0; i<100; ++i) {
+        int16_t x = (((SCREEN_W/2)-128) - ((int16_t)rnd()))<<FX;
+        int16_t y = (0 - ((int16_t)rnd()))<<FX;
+
+        int16_t dx = ((int16_t)t)<<FX;
+
+
+        uint8_t foo = rnd();
+        switch(foo & 0x03) {
+            case 0: dx = dx; break;       // *1
+            case 1: dx = dx + dx/2;  break;   // *1.5
+            case 2: dx = dx + dx/4; break;    // 
+            case 3: dx = dx*2; break;        // *2
+        }
+        int16_t dy= ((int16_t)t)<<FX;
+        switch((foo>>2)  & 0x03) {
+            case 0: dy = dy; break;       // *1
+            case 1: dy = dy + dy/2;  break;   // *1.5
+            case 2: dy = dy + dy/4; break;    // 
+            case 3: dy = dy*2; break;        // *2
+        }
+        dx*=2;
+        switch ((foo>>4) & 0x07) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                plat_grunt_render(x+dx, y+dy);
+                break;
+            case 4:
+                plat_amoeba_med_render(x+dx, y+dy);
+                break;
+            case 5:
+                plat_tank_render(x+dx, y+dy, false);
+                break;
+            case 6:
+                plat_happyslapper_render(x+dx, y+dy, false);
+                break;
+            case 7:
+                plat_vulgon_render(x+dx, y+dy, false, 1);
+                break;
+        }
+    }
+}
+
+static void render_marine_formation(uint16_t t) {
+    const int16_t s = 24;
+    int16_t x = (-5*s);
+    x += t*2;
+    for (uint8_t col = 0; col < 3; ++col) {
+        int16_t y = 70;
+        for (uint8_t row = 0; row < 8; ++row) {
+            uint8_t j = ((((t>>2) + col /*+ row*/) & 3) == 3) ? 2 :0;
+            plat_marine_render(x << FX, (y + -j) << FX);
+            y += 25;
+        }
+        x += s;
+    }
+}
+
+static void render_marine_disorder(uint8_t t) {
+    rnd_seed(13);
+    const int16_t s = 24;
+    int16_t x = SCREEN_W + 8*s;
+    x -= (t*4 + t);
+    for (uint8_t col = 0; col < 8; ++col) {
+        int16_t y = 120;
+        for (uint8_t row = 0; row < 3; ++row) {
+            int16_t xjitter = rnd() >> 4;
+            int16_t yjitter = rnd() >> 4;
+            xjitter += (((col+row+(t>>1)) & 9) == 9) ? 1 : 0;
+            yjitter += (((col+row+(t>>1)) & 3) == 3) ? 2 : 0;
+            plat_marine_render((x+xjitter) << FX, (y + yjitter) << FX);
+            y += 15;
+        }
+    x += s;
+    }
+}
+
+
+/*
+ * STATE_STORY_INTRO
+ */
+void enter_STATE_STORY_INTRO()
+{
+    state = STATE_STORY_INTRO;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_STORY_INTRO()
+{
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_STORY_DONE();
+        return;
+    }
+    if (++statetimer > 550 || inp) {
+        enter_STATE_STORY_OHNO();
+    }
+}
+
+void render_STATE_STORY_INTRO()
+{
+    const uint8_t cx = (SCREEN_W/2)/8;
+    plat_text(cx-9, 5, "IT IS A LOVELY DAY", 1);
+    if (statetimer > 150) {
+        plat_text(cx-14, 8, "HUMANITY IS JUST SITTING DOWN", 1);
+        plat_text(cx-10, 10, "FOR A NICE CUP OF TEA", 1);
+    }
+    if (statetimer > 300) {
+        uint8_t l = 14;
+        if (statetimer > 320) { ++l; }
+        if (statetimer > 340) { ++l; }
+        if (statetimer > 360) { ++l; }
+        plat_textn(cx-8, 14, "WHEN, SUDDENLY...", l, 1);
+    }
+}
+
+
+/*
+ * STATE_STORY_OHNO
+ */
+void enter_STATE_STORY_OHNO()
+{
+    state = STATE_STORY_OHNO;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_STORY_OHNO()
+{
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_STORY_DONE();
+        return;
+    }
+    if (++statetimer > 250 || inp) {
+        enter_STATE_STORY_ATTACK();
+    }
+}
+
+void render_STATE_STORY_OHNO()
+{
+    uint16_t startfall = 0;
+    if (statetimer > startfall) {
+        plat_text(0, 9, "ALIEN ROBOTS ATTACK!", 15);
+        render_robo_rain((uint8_t)(statetimer-startfall));
+    }
+}
+
+
+
+/*
+ * STATE_STORY_ATTACK
+ */
+void enter_STATE_STORY_ATTACK()
+{
+    state = STATE_STORY_ATTACK;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_STORY_ATTACK()
+{
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_STORY_DONE();
+        return;
+    }
+    if (++statetimer > 320 || inp) {
+        enter_STATE_STORY_RUNAWAY();
+    }
+}
+void render_STATE_STORY_ATTACK()
+{
+    const uint8_t cx = (SCREEN_W/2)/8;
+    plat_text(cx - 7, 3, "TIME TO SEND IN", 1);
+    const uint16_t appeartime = 40;
+    if (statetimer < appeartime) {
+        return;
+    }
+    plat_text(cx - 14, 5, "HEAVILY ARMED SPACE MARINES!", 15); 
+    render_marine_formation((uint16_t)(statetimer - appeartime));
+}
+
+
+
+/*
+ * STATE_STORY_RUNAWAY
+ */
+void enter_STATE_STORY_RUNAWAY()
+{
+    state = STATE_STORY_RUNAWAY;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_STORY_RUNAWAY()
+{
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_STORY_DONE();
+        return;
+    }
+    if (++statetimer > 220 || inp) {
+        enter_STATE_STORY_DONE();
+    }
+}
+
+
+void render_STATE_STORY_RUNAWAY()
+{
+    const uint8_t cx = (SCREEN_W/2)/8;
+    if (statetimer > 20) {
+        plat_text(cx-4, 5, "OH NO!", 1);
+    }
+    const uint16_t appeartime = 0;
+    if (statetimer < appeartime) {
+        return;
+    }
+    render_marine_disorder((uint8_t)(statetimer - appeartime));
+}
+
+/*
+ * STATE_STORY_DONE
+ * dummy state - go straight to next phase.
+ */
+void enter_STATE_STORY_DONE()
+{
+    state = STATE_STORY_DONE;
+}
+
+
+void tick_STATE_STORY_DONE()
+{
+    // Start the gameplay.
+    enter_STATE_GETREADY();
+}
+
+
+void render_STATE_STORY_DONE()
+{
+}
+
+
+
+
 

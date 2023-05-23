@@ -274,6 +274,7 @@ void gobs_create(uint8_t kind, uint8_t n)
 }
 
 // for all gobs:
+// - cull any non-persistant gobs
 // - set to new random position.
 // - put into spawning mode.
 void gobs_reset() {
@@ -305,6 +306,18 @@ void gobs_reset() {
             default:
                 gob_randompos(g);
                 break;
+        }
+    }
+}
+
+
+// Set all the active gobs into spawning-in mode.
+void gobs_spawning() {
+    uint8_t g;
+    uint8_t t = 0;
+    for (g = 0; g < MAX_GOBS; ++g) {
+        if (gobkind[g] == GK_NONE) {
+            continue;
         }
         gobflags[g] |= GF_SPAWNING;
         gobtimer[g] = t + 8;

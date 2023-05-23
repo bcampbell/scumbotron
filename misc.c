@@ -1,10 +1,28 @@
 #include "misc.h"
 #include <stdio.h>
 
+
+
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
+// moved to:
+// https://www.avrfreaks.net/s/topic/a5C3l000000UQOhEAO/t115265
+//
+// When you seed with with
+// s= one of 15 18 63 101 129 156 172 208 and
+// a=96..138
+// you'll get a period of 55552. These are contiguous ranges of 43 seeds
+// with good period. So you could seed with something like a=96+x%43.
+
+static uint8_t s=15,a=96;
+
+void rnd_seed(uint8_t seed) {
+    // Force to values with a known-reasonable period.
+    s = 15;
+    a = 96 + (seed & 0x1f);
+}
+
 uint8_t rnd() {
-    static uint8_t s=0xaa,a=0;
     s^=s<<3;
     s^=s>>5;
     s^=a++>>2;

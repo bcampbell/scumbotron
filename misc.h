@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+void rnd_seed(uint8_t seed);
 uint8_t rnd();
 uint32_t bin2bcd(uint32_t in);
 

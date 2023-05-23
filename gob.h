@@ -66,6 +66,7 @@ bool gob_playercollide(uint8_t g, uint8_t plr);
 uint8_t gob_alloc();
 void gob_randompos(uint8_t d);
 void gobs_reset();
+void gobs_spawning();   // put active gobs into spawn mode.
 void gobs_create(uint8_t kind, uint8_t n);
 
 uint8_t rnd();
