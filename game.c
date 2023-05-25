@@ -34,7 +34,6 @@ static void level_baiter_check();
 void game_init()
 {
     enter_STATE_TITLESCREEN();
-//   enter_STATE_STORY_INTRO();
 }
 
 void game_tick()

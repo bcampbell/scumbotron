@@ -239,23 +239,46 @@ static void render_robo_rain(uint8_t t) {
     }
 }
 
+static const uint8_t bluefade[8] = {1,1,1,1,8,9,10,0}; 
 static void render_marine_formation(uint16_t t) {
+    rnd_seed(53);
     const int16_t s = 24;
     int16_t x = (-5*s);
     x += t*2;
-    for (uint8_t col = 0; col < 3; ++col) {
+    for (uint8_t col = 0; col < 5; ++col) {
         int16_t y = 70;
-        for (uint8_t row = 0; row < 8; ++row) {
-            uint8_t j = ((((t>>2) + col /*+ row*/) & 3) == 3) ? 2 :0;
+        for (uint8_t row = 0; row < 5; ++row) {
+            uint8_t j = ((((t>>2) + col) & 3) == 3) ? 2 :0; // jitter
             plat_marine_render(x << FX, (y + -j) << FX);
-            y += 25;
+            y += 24;
         }
         x += s;
     }
+
+
+    // Show some "hup"s
+    const uint8_t cw = SCREEN_W/8;
+    const uint8_t hupspacing = 2;
+    const uint8_t nhups = (cw-4)/hupspacing;
+
+    uint8_t hx = 0;
+    for (uint8_t hup = 0; hup < nhups; ++hup) {
+        const uint8_t tduration = 32;
+        const uint16_t tbegin = 80 + (hup*8);
+        const uint16_t tend = tbegin + tduration;
+        uint8_t hy = 7 + ((rnd()&7)<<1) + (hup&1); 
+        if (t >= tbegin && t < tend) {
+            uint8_t c = bluefade[(t-tbegin)/4];
+            plat_text(hx, hy, "HUP",c);
+        }
+        hx += hupspacing;
+    }
 }
 
+
+
 static void render_marine_disorder(uint8_t t) {
-    rnd_seed(13);
+    rnd_seed(53);
     const int16_t s = 24;
     int16_t x = SCREEN_W + 8*s;
     x -= (t*4 + t);
@@ -270,6 +293,24 @@ static void render_marine_disorder(uint8_t t) {
             y += 15;
         }
     x += s;
+    }
+
+    // Show some "run away!"s
+    const uint8_t cw = SCREEN_W/8;
+    const uint8_t hupspacing = 5;
+    const uint8_t nhups = (cw - 9)/hupspacing;
+
+    uint8_t hx = cw - 9;
+    for (uint8_t hup = 0; hup < nhups; ++hup) {
+        const uint8_t tduration = 32;
+        const uint16_t tbegin = 70 + (hup*8);
+        const uint16_t tend = tbegin + tduration;
+        uint8_t hy = 9 + ((rnd()&3)<<2) + (hup&3); 
+        if (t >= tbegin && t < tend) {
+            uint8_t c = bluefade[(t-tbegin)/4];
+            plat_text(hx, hy, "RUN AWAY!",c);
+        }
+        hx -= hupspacing;
     }
 }
 
@@ -300,7 +341,12 @@ void tick_STATE_STORY_INTRO()
 void render_STATE_STORY_INTRO()
 {
     const uint8_t cx = (SCREEN_W/2)/8;
-    plat_text(cx-9, 5, "IT IS A LOVELY DAY", 1);
+    if (statetimer <100) {
+    plat_text(cx-8, 1, "THE STORY SO FAR:", 1);
+    }
+    if (statetimer > 50) {
+        plat_text(cx-8, 5, "IT'S A LOVELY DAY", 1);
+    }
     if (statetimer > 150) {
         plat_text(cx-14, 8, "HUMANITY IS JUST SITTING DOWN", 1);
         plat_text(cx-10, 10, "FOR A NICE CUP OF TEA", 1);
@@ -367,14 +413,14 @@ void tick_STATE_STORY_ATTACK()
         enter_STATE_STORY_DONE();
         return;
     }
-    if (++statetimer > 320 || inp) {
+    if (++statetimer > 340 || inp) {
         enter_STATE_STORY_RUNAWAY();
     }
 }
 void render_STATE_STORY_ATTACK()
 {
     const uint8_t cx = (SCREEN_W/2)/8;
-    plat_text(cx - 7, 3, "TIME TO SEND IN", 1);
+    plat_text(cx - 6, 3, "SEND IN THE", 1);
     const uint16_t appeartime = 40;
     if (statetimer < appeartime) {
         return;
@@ -412,9 +458,9 @@ void tick_STATE_STORY_RUNAWAY()
 void render_STATE_STORY_RUNAWAY()
 {
     const uint8_t cx = (SCREEN_W/2)/8;
-    if (statetimer > 20) {
-        plat_text(cx-4, 5, "OH NO!", 1);
-    }
+//    if (statetimer > 20) {
+//        plat_text(cx-4, 5, "OH NO!", 1);
+//    }
     const uint16_t appeartime = 0;
     if (statetimer < appeartime) {
         return;
@@ -429,18 +475,29 @@ void render_STATE_STORY_RUNAWAY()
 void enter_STATE_STORY_DONE()
 {
     state = STATE_STORY_DONE;
+    statetimer = 0;
 }
 
 
 void tick_STATE_STORY_DONE()
 {
     // Start the gameplay.
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
     enter_STATE_GETREADY();
+        return;
+    }
+    if (++statetimer > 150 || inp) {
+    enter_STATE_GETREADY();
+    }
 }
 
 
 void render_STATE_STORY_DONE()
 {
+    const uint8_t cx = (SCREEN_W/2)/8;
+    plat_text(cx-4, 8, "OH NO!", 1);
+    plat_text(cx-13, 12, "WHO WILL SAVE HUMANITY NOW?", 1);
 }
 
 
