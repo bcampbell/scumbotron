@@ -62,7 +62,7 @@ $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 
 .PHONY: run
 run: $(BUILD_DIR)/game.prg
-	x16emu -prg $(BUILD_DIR)/game.prg -run
+	x16emu -prg $(BUILD_DIR)/game.prg -joy1 -run
 
 .PHONY: clean
 clean:

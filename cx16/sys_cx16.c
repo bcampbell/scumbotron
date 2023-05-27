@@ -6,7 +6,7 @@
 
 // Platform-specifics for cx16
 
-// irq.s, glue.s
+// irq.s
 extern void irq_init();
 extern void keyhandler_init();
 extern uint16_t inp_virtpad;
@@ -27,10 +27,13 @@ bool plat_mouse_show = true;
 
 extern void waitvbl();
 
+// kernal shims from glue.s
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 typedef struct { int x, y; } mouse_pos_t;
 unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse button byte
 void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
+long cx16_k_joystick_get(unsigned char sticknum);
+void cx16_k_joystick_scan(void);
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
@@ -848,7 +851,7 @@ static void update_inp_dualstick()
 {
     uint8_t state = 0;
     uint8_t i;
-    struct {uint16_t hw; uint8_t bitmask; } mapping[8] = {
+    struct {uint16_t hw; uint8_t bitmask; } kbmapping[8] = {
         {JOY_UP_MASK, INP_FIRE_UP},
         {JOY_DOWN_MASK, INP_FIRE_DOWN},
         {JOY_LEFT_MASK, INP_FIRE_LEFT},
@@ -859,10 +862,21 @@ static void update_inp_dualstick()
         {0x8000, INP_RIGHT}, // A
     };
     for (i = 0; i < 8; ++i) {
-        if ((inp_virtpad & mapping[i].hw)) {
-            state |= mapping[i].bitmask;
+        if ((inp_virtpad & kbmapping[i].hw)) {
+            state |= kbmapping[i].bitmask;
         }
     }
+
+    uint16_t j1 = (uint16_t)cx16_k_joystick_get(1);
+    if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
+    if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
+    if (!(j1 & JOY_LEFT_MASK)) {state |= INP_LEFT;}
+    if (!(j1 & JOY_RIGHT_MASK)) {state |= INP_RIGHT;}
+    if (!(j1 & 0x4000)) {state |= INP_FIRE_UP;}     // X
+    if (!(j1 & 0x0080)) {state |= INP_FIRE_DOWN;}   //B
+    if (!(j1 & 0x0040)) {state |= INP_FIRE_LEFT;}   //Y
+    if (!(j1 & 0x8000)) {state |= INP_FIRE_RIGHT;}  //A
+
     inp_dualstick_state = state;
 }
 
@@ -883,6 +897,18 @@ static void update_inp_menu()
             state |= mapping[i].bitmask;
         }
     }
+
+    long j1 = (uint16_t)cx16_k_joystick_get(1);
+    if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
+    if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
+    if (!(j1 & JOY_LEFT_MASK)) {state |= INP_LEFT;}
+    if (!(j1 & JOY_RIGHT_MASK)) {state |= INP_RIGHT;}
+    //if (!(j1 & 0x4000)) {state |= ???;}     // X
+    //if (!(j1 & 0x0080)) {state |= ???;}   //B
+    //if (!(j1 & 0x0040)) {state |= ???;}   //Y
+    if (!(j1 & 0x8000)) {state |= INP_MENU_ACTION;}  // A
+    if (!(j1 & 0x0010)) {state |= INP_MENU_ACTION;}  // START
+
     // Which ones were pressed since last check?
     inp_menu_pressed = (~inp_menu_state) & state;
     inp_menu_state = state;
@@ -908,6 +934,23 @@ uint8_t plat_inp_menu()
 }
 
 
+// dump out all the joystick data as raw hex
+void debug_gamepad()
+{
+    for (uint8_t n = 0; n <= 4; ++n) {
+        uint32_t j = cx16_k_joystick_get(n);
+        // $YYYYXXAA
+        char buf[9];
+        for(uint8_t i = 0; i < 8; ++i) {
+            buf[8-i-1] = hexdigits[j & 0xf];
+            j >>= 4;
+        }
+        plat_textn(0,15+n,buf,8,2);
+    }
+}
+
+
+
 
 int main(void) {
 
@@ -919,8 +962,10 @@ int main(void) {
         game_render();
         sprout16(plat_mouse_x, plat_mouse_y, 0);
 
+        debug_gamepad();
         plat_render_finish();
         sfx_tick();
+        //cx16_k_joystick_scan();
         update_inp_dualstick();
         update_inp_menu();
         update_inp_mouse();
