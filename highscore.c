@@ -22,7 +22,7 @@ static void draw() {
     uint8_t slot;
     char buf[8];
     const uint8_t cx = (SCREEN_TEXT_W - (HIGHSCORE_NAME_SIZE + 2 + 8))/2; 
-    const uint8_t cy = 3;
+    const uint8_t cy = 4;
     for (slot = 0; slot<NUM_HIGHSCORES; ++slot) {
         uint8_t c = ((tick+slot)/2) & 0x0f;
         if (slot == entry_slot) {
@@ -40,7 +40,6 @@ static void draw() {
         // Draw the score (8 digits).
         hex32(bin2bcd(scores[slot]), buf);
         plat_textn(cx + 2 + HIGHSCORE_NAME_SIZE, cy + slot*2, buf, 8, c );
-
     }
 }
 
@@ -91,13 +90,21 @@ void enter_STATE_HIGHSCORES()
 
 void tick_STATE_HIGHSCORES()
 {
-    if (++statetimer > 200 || plat_inp_menu()) {
-        enter_STATE_GALLERY_BADDIES();
+    uint8_t inp = plat_inp_menu();
+    if (inp & INP_MENU_ACTION) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+
+    if (++statetimer > 300 || inp) {
+        enter_STATE_ATTRACT();  // back to attract state
     }
 }
 
 void render_STATE_HIGHSCORES()
 {
+    const uint8_t cx = (SCREEN_TEXT_W/2);
+    plat_text(cx-5, 1, "HIGH SCORES", 1);
     draw();
 }
 
@@ -188,6 +195,8 @@ void tick_STATE_ENTERHIGHSCORE()
 
 void render_STATE_ENTERHIGHSCORE()
 {
+    const uint8_t cx = (SCREEN_TEXT_W/2);
+    plat_text(cx - 14, 1, "HIGH SCORE - ENTER YOUR NAME", 1);
     draw();
 }
 

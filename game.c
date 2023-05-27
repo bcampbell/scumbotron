@@ -12,6 +12,7 @@ static uint8_t level;
 static uint8_t baiter_timer;
 static uint8_t baiter_count;
 
+static void tick_STATE_ATTRACT();
 static void tick_STATE_TITLESCREEN();
 static void tick_STATE_NEWGAME();
 static void tick_STATE_GETREADY();
@@ -20,6 +21,7 @@ static void tick_STATE_CLEARED();
 static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
 
+static void render_STATE_ATTRACT();
 static void render_STATE_TITLESCREEN();
 static void render_STATE_NEWGAME();
 static void render_STATE_GETREADY();
@@ -33,12 +35,13 @@ static void level_baiter_check();
 
 void game_init()
 {
-    enter_STATE_TITLESCREEN();
+    enter_STATE_ATTRACT();
 }
 
 void game_tick()
 {
     switch(state) {
+    case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
     case STATE_TITLESCREEN: tick_STATE_TITLESCREEN(); break;
     case STATE_NEWGAME:     tick_STATE_NEWGAME(); break;
     case STATE_GETREADY:    tick_STATE_GETREADY(); break;
@@ -61,6 +64,7 @@ void game_tick()
 void game_render()
 {
     switch(state) {
+        case STATE_ATTRACT:     render_STATE_ATTRACT(); break;
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
         case STATE_NEWGAME:     render_STATE_NEWGAME(); break;
         case STATE_GETREADY:    render_STATE_GETREADY(); break;
@@ -78,6 +82,37 @@ void game_render()
         case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
+}
+
+/*
+ * STATE_ATTRACT
+ * dummy state which just hands off immediately to another state
+ */
+static uint8_t attract_phase = 0;
+
+void enter_STATE_ATTRACT()
+{
+    state = STATE_ATTRACT;
+    statetimer=0;
+}
+
+
+static void tick_STATE_ATTRACT()
+{
+    ++attract_phase;
+    if (attract_phase > 3) {
+        attract_phase = 0;
+    }
+    switch (attract_phase) {
+        case 1: enter_STATE_TITLESCREEN(); return;
+        case 2: enter_STATE_HIGHSCORES(); return;
+        case 3: enter_STATE_GALLERY_BADDIES(); return;
+        case 0: enter_STATE_STORY_INTRO(); return;
+    }
+}
+
+static void render_STATE_ATTRACT()
+{
 }
 
 /*
@@ -99,8 +134,8 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
-    if (++statetimer > 200 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
-        enter_STATE_HIGHSCORES();
+    if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
+        enter_STATE_ATTRACT();
     }
 }
 
@@ -131,8 +166,7 @@ void enter_STATE_NEWGAME()
 
 static void tick_STATE_NEWGAME()
 {
-    // Show the story (it'll come back to STATE_GETREADY)
-    enter_STATE_STORY_INTRO();
+    enter_STATE_GETREADY();
 }
 
 static void render_STATE_NEWGAME()

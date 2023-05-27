@@ -4,27 +4,33 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define STATE_TITLESCREEN 0
-#define STATE_NEWGAME 1
-#define STATE_GETREADY 2        // pause, get ready
-#define STATE_PLAY 3            // main gameplay
-#define STATE_CLEARED 4         // level is cleared of bad dudes
-#define STATE_KILLED 5          // player just died (but has another life)
-#define STATE_GAMEOVER 6
-#define STATE_HIGHSCORES 7      // show high scores
-#define STATE_ENTERHIGHSCORE 8  // enter a new high score
-#define STATE_GALLERY_BADDIES 9 // dude gallery screen
-#define STATE_GALLERY_GOODIES 10 // hero gallery screen
-#define STATE_STORY_INTRO 11 // story part 1
-#define STATE_STORY_OHNO 12 // story part 2
-#define STATE_STORY_ATTACK 13 // story part 3
-#define STATE_STORY_RUNAWAY 14 // story part 4
-#define STATE_STORY_DONE 15 // story finished
+#define STATE_ATTRACT 0
+#define STATE_TITLESCREEN 1
+// gameplay states
+#define STATE_NEWGAME 2
+#define STATE_GETREADY 3        // pause, get ready
+#define STATE_PLAY 4            // main gameplay
+#define STATE_CLEARED 5         // level is cleared of bad dudes
+#define STATE_KILLED 6          // player just died (but has another life)
+#define STATE_GAMEOVER 7
+// highscore states
+#define STATE_HIGHSCORES 8      // show high scores
+#define STATE_ENTERHIGHSCORE 9  // enter a new high score
+// gallery sequence
+#define STATE_GALLERY_BADDIES 10 // dude gallery screen
+#define STATE_GALLERY_GOODIES 11 // hero gallery screen
+// story sequence
+#define STATE_STORY_INTRO 12 // story part 1
+#define STATE_STORY_OHNO 13 // story part 2
+#define STATE_STORY_ATTACK 14 // story part 3
+#define STATE_STORY_RUNAWAY 15 // story part 4
+#define STATE_STORY_DONE 16 // story finished
  
 extern uint8_t state;
 extern uint16_t statetimer;
 
 // In game.c:
+void enter_STATE_ATTRACT();
 void enter_STATE_TITLESCREEN();
 void enter_STATE_NEWGAME();
 void enter_STATE_GETREADY();
