@@ -7,9 +7,13 @@
 // Platform-specifics for cx16
 
 // irq.s
+// Joystick 0 is the built-into-the-kernal keyboard joystick,
+// but we don't like the mapping, so we'll do our own keyboard-driven
+// joystick!
 extern void irq_init();
 extern void keyhandler_init();
-extern uint16_t inp_virtpad;
+extern uint16_t inp_virtpad;    // Same bits as gamepads.
+extern void waitvbl();
 
 static uint8_t inp_dualstick_state = 0;
 static uint8_t inp_menu_state = 0;
@@ -25,7 +29,6 @@ uint8_t plat_mouse_buttons = 0;
 bool plat_mouse_show = true;
 // end PLAT_HAS_MOUSE
 
-extern void waitvbl();
 
 // kernal shims from glue.s
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
@@ -937,8 +940,13 @@ uint8_t plat_inp_menu()
 // dump out all the joystick data as raw hex
 void debug_gamepad()
 {
-    for (uint8_t n = 0; n <= 4; ++n) {
-        uint32_t j = cx16_k_joystick_get(n);
+    for (uint8_t n = 0; n <= 5; ++n) {
+        uint32_t j;
+        if (n == 5) {
+           j = (uint32_t)inp_virtpad;   // keyboard, from irq.s
+        } else {
+           j  = cx16_k_joystick_get(n);
+        }
         // $YYYYXXAA
         char buf[9];
         for(uint8_t i = 0; i < 8; ++i) {
