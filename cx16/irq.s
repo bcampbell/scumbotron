@@ -1,7 +1,7 @@
 .global irq_init
 .global tick
 .global waitvbl
-.global inp_virtpad
+.global inp_keystates
 
 
 VERA_L=$9f20
@@ -66,93 +66,57 @@ keyhandler_init:
     rts
 
 
-; Map PS/2 scancodes to gamepad bits
-inp_virtpad_map:			  ;x,b,y,a
-	;     up,  dn,  lf,  rt,  W,   S,   A,   D   
-inp_virtpad_map_prefix:
-	.byte $E0, $E0, $E0, $E0, $00, $00, $00, $00	; prefix
-inp_virtpad_map_scancode:
-	.byte $75, $72, $6B, $74, $1D, $1B, $1C, $23	; scancode
-inp_virtpad_map_out_hi:
-	.byte $08, $04, $02, $01, $00, $80, $40, $00	; scancode
-inp_virtpad_map_out_lo:
-	.byte $00, $00, $00, $00, $40, $00, $00, $80	; scancode
+; Scancodes are $01..$7E, so we need 128/8 = 16 bytes to have a bit
+; for each key.
+inp_keystates:
+	.byte 0,0,0,0, 0,0,0,0
+	.byte 0,0,0,0, 0,0,0,0
 
-; cx16 pad bits:
-;  .A, byte 0:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-;              SNES | B | Y |SEL|STA|UP |DN |LT |RT |
-;
-;  .X, byte 1:      | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
-;              SNES | A | X | L | R | 1 | 1 | 1 | 1 |
 
-; The virtual gamepad, driven by keyboard.
-; not sure of correct bit order here...
-; Also bits are inverted compared to HW I think.
-; In any case, revisit!
-inp_virtpad: .byte 0,0
+kh_masks: .byte 1,2,4,8,16,32,64,128
 
+; see
+; https://github.com/X16Community/x16-docs/blob/master/X16%20Reference%20-%2002%20-%20Editor.md#custom-keyboard-keynum-code-handler
 keyhandler:
-    ; .X: PS/2 prefix ($00, $E0 or $E1)
-    ; .A: PS/2 scancode
-    ; .C: clear if key down, set if key up event
-    php         ;Save input on stack
+
     pha
     phx
 	phy
 
-	ldy #8	; size of inp_virtpad_map
-    bcs kh_keyup
+	tax
 
-kh_keydown_loop:
-	dey
-	bmi kh_done
-	cmp inp_virtpad_map_scancode,y
-	bne kh_keydown_loop
-	pha
+	; y = bit offset
+	and #$07
+	tay
+
+	; x = byte offset	
 	txa
-	cmp inp_virtpad_map_prefix,y
-	beq kh_keydown_match
-	pla
-	jmp kh_keydown_loop
-kh_keydown_match:
-	pla
-	; set the appropriate bit
-	lda inp_virtpad_map_out_hi,y
-	ora inp_virtpad+0
-	sta inp_virtpad+0
-	lda inp_virtpad_map_out_lo,y
-	ora inp_virtpad+1
-	sta inp_virtpad+1
+	lsr
+	lsr
+	lsr
+	tax
+	cmp #$0f
+	bpl	kh_keyup	; >=16 = keyup
+
+kh_keydown:
+	lda kh_masks,y
+	ora inp_keystates,x
+	sta inp_keystates,x
 	jmp kh_done
 
 kh_keyup:
-	dey
-	bmi kh_done
-	cmp inp_virtpad_map_scancode,y
-	bne kh_keyup
-	pha
 	txa
-	cmp inp_virtpad_map_prefix,y
-	beq kh_keyup_match
-	pla
-	jmp kh_keyup
-kh_keyup_match:
-	pla
-	; clear the appropriate bit
-	lda inp_virtpad_map_out_hi,y
-	eor #$FF
-	and inp_virtpad+0
-	sta inp_virtpad+0
-	lda inp_virtpad_map_out_lo,y
-	eor #$FF
-	and inp_virtpad+1
-	sta inp_virtpad+1
+	and #$0f
+	tax
+	lda kh_masks,y
+	eor #$ff
+	and inp_keystates,x
+	sta inp_keystates,x
 
 kh_done:
 	ply
     plx		;Restore input
     pla
-    plp
     rts
 
 waitvbl:

@@ -12,7 +12,7 @@
 // joystick!
 extern void irq_init();
 extern void keyhandler_init();
-extern uint16_t inp_virtpad;    // Same bits as gamepads.
+extern uint8_t inp_keystates[16];
 extern void waitvbl();
 
 static uint8_t inp_dualstick_state = 0;
@@ -864,11 +864,13 @@ static void update_inp_dualstick()
         {0x0040, INP_LEFT},  // Y
         {0x8000, INP_RIGHT}, // A
     };
+    /*
     for (i = 0; i < 8; ++i) {
         if ((inp_virtpad & kbmapping[i].hw)) {
             state |= kbmapping[i].bitmask;
         }
     }
+    */
 
     uint16_t j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
@@ -895,11 +897,13 @@ static void update_inp_menu()
         {JOY_RIGHT_MASK, INP_RIGHT},
         {0x8000 /*A*/, INP_MENU_ACTION},
     };
+    /*
     for (i = 0; i < 8; ++i) {
         if ((inp_virtpad & mapping[i].hw)) {
             state |= mapping[i].bitmask;
         }
     }
+    */
 
     long j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
@@ -940,13 +944,13 @@ uint8_t plat_inp_menu()
 // dump out all the joystick data as raw hex
 void debug_gamepad()
 {
-    for (uint8_t n = 0; n <= 5; ++n) {
+    for (uint8_t n = 0; n <= 4; ++n) {
         uint32_t j;
-        if (n == 5) {
-           j = (uint32_t)inp_virtpad;   // keyboard, from irq.s
-        } else {
+        //if (n == 5) {
+        //   j = (uint32_t)inp_virtpad;   // keyboard, from irq.s
+        //} else {
            j  = cx16_k_joystick_get(n);
-        }
+        //}
         // $YYYYXXAA
         char buf[9];
         for(uint8_t i = 0; i < 8; ++i) {
@@ -954,6 +958,17 @@ void debug_gamepad()
             j >>= 4;
         }
         plat_textn(0,15+n,buf,8,2);
+    }
+
+    // keystates
+    {
+        char buf[32];
+        for (uint8_t n = 0; n < 16; ++n) {
+            uint8_t b = inp_keystates[n];
+            buf[n*2] = hexdigits[b>>4];
+            buf[(n*2)+1] = hexdigits[b & 0x0f];
+        }
+        plat_textn(0,13,buf,32,2);
     }
 }
 
