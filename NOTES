@@ -71,3 +71,25 @@ Makefile tips: https://interrupt.memfault.com/blog/gnu-make-guidelines
     3:2, as in 960x640 (This screen ratio is also used on iDevices.)
     4:3, as in 1024x768, 640x480
 
+# other platforms
+
+Neogeo
+Jaguar
+Amiga
+ST
+Archimedes
+NeXT?
+MSDOS
+Wii
+Gamecube
+Saturn
+XBox
+PS1
+PS2
+Mac classic
+Sharp X68000
+Dreamcast
+N64
+PSP
+Vita
+
