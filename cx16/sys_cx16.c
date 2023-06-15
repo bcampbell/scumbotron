@@ -850,28 +850,38 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 }
 
 
+static inline bool inp_keypressed(uint8_t key) {
+    return inp_keystates[key / 8] & (1 << (key & 0x07));
+}
+
+// keycodes r43+. (previous roms used ps/2 multibye sequences) 
+#define KEYCODE_W 0x12
+#define KEYCODE_A 0x1F
+#define KEYCODE_S 0x20
+#define KEYCODE_D 0x21
+#define KEYCODE_ENTER 0x2B
+#define KEYCODE_LEFTARROW 0x4F
+#define KEYCODE_UPARROW 0x53
+#define KEYCODE_DOWNARROW 0x54
+#define KEYCODE_RIGHTARROW 0x59
+
 static void update_inp_dualstick()
 {
     uint8_t state = 0;
-    uint8_t i;
-    struct {uint16_t hw; uint8_t bitmask; } kbmapping[8] = {
-        {JOY_UP_MASK, INP_FIRE_UP},
-        {JOY_DOWN_MASK, INP_FIRE_DOWN},
-        {JOY_LEFT_MASK, INP_FIRE_LEFT},
-        {JOY_RIGHT_MASK, INP_FIRE_RIGHT},
-        {0x4000, INP_UP},    // X
-        {0x0080, INP_DOWN},  // B
-        {0x0040, INP_LEFT},  // Y
-        {0x8000, INP_RIGHT}, // A
-    };
-    /*
-    for (i = 0; i < 8; ++i) {
-        if ((inp_virtpad & kbmapping[i].hw)) {
-            state |= kbmapping[i].bitmask;
-        }
-    }
-    */
 
+    // Keys pretending to be a joypad.
+    // (cx16 provides a key-driven joypad as joystick 0, but the mapping
+    // is no good for twin-stick style controls)
+    if (inp_keypressed(KEYCODE_W)) { state |= INP_UP; }
+    if (inp_keypressed(KEYCODE_A)) { state |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_S)) { state |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_D)) { state |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_FIRE_LEFT; }
+    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_FIRE_UP; }
+    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_FIRE_DOWN; }
+    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_FIRE_RIGHT; }
+
+    // Read the first _real_ joypad, if plugged in
     uint16_t j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
     if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
@@ -889,21 +899,12 @@ static void update_inp_dualstick()
 static void update_inp_menu()
 {
     uint8_t state = 0;
-    uint8_t i;
-    struct {uint16_t hw; uint8_t bitmask; } mapping[8] = {
-        {JOY_UP_MASK, INP_UP},
-        {JOY_DOWN_MASK, INP_DOWN},
-        {JOY_LEFT_MASK, INP_LEFT},
-        {JOY_RIGHT_MASK, INP_RIGHT},
-        {0x8000 /*A*/, INP_MENU_ACTION},
-    };
-    /*
-    for (i = 0; i < 8; ++i) {
-        if ((inp_virtpad & mapping[i].hw)) {
-            state |= mapping[i].bitmask;
-        }
-    }
-    */
+
+    if (inp_keypressed(KEYCODE_W)) { state |= INP_UP; }
+    if (inp_keypressed(KEYCODE_A)) { state |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_S)) { state |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_D)) { state |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_ACTION; }
 
     long j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
@@ -917,6 +918,7 @@ static void update_inp_menu()
     if (!(j1 & 0x0010)) {state |= INP_MENU_ACTION;}  // START
 
     // Which ones were pressed since last check?
+    // TODO: calculate separately for keys and joystick!
     inp_menu_pressed = (~inp_menu_state) & state;
     inp_menu_state = state;
 }
@@ -944,6 +946,7 @@ uint8_t plat_inp_menu()
 // dump out all the joystick data as raw hex
 void debug_gamepad()
 {
+    return;
     for (uint8_t n = 0; n <= 4; ++n) {
         uint32_t j;
         //if (n == 5) {
