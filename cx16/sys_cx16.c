@@ -14,6 +14,8 @@ extern void irq_init();
 extern void keyhandler_init();
 extern uint8_t inp_keystates[16];
 extern void waitvbl();
+extern void inp_enabletextentry();
+extern void inp_disabletextentry();
 
 static uint8_t inp_dualstick_state = 0;
 static uint8_t inp_menu_state = 0;
@@ -37,6 +39,13 @@ unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse but
 void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
 long cx16_k_joystick_get(unsigned char sticknum);
 void cx16_k_joystick_scan(void);
+
+// cbm kernal shims
+extern unsigned char __GETIN(void);
+unsigned char cbm_k_getin (void) {
+	return __GETIN();
+}
+// end kernal shims
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
@@ -854,7 +863,8 @@ static inline bool inp_keypressed(uint8_t key) {
     return inp_keystates[key / 8] & (1 << (key & 0x07));
 }
 
-// keycodes r43+. (previous roms used ps/2 multibye sequences) 
+// some keycodes for r43+. (previous roms used ps/2 multibye sequences) 
+// see https://github.com/X16Community/x16-rom/blob/master/inc/keycode.inc
 #define KEYCODE_W 0x12
 #define KEYCODE_A 0x1F
 #define KEYCODE_S 0x20
@@ -864,6 +874,10 @@ static inline bool inp_keypressed(uint8_t key) {
 #define KEYCODE_UPARROW 0x53
 #define KEYCODE_DOWNARROW 0x54
 #define KEYCODE_RIGHTARROW 0x59
+#define KEYCODE_ESC 0x6E
+#define KEYCODE_BACKSPACE 0x0F
+#define KEYCODE_HOME 0x50
+#define KEYCODE_END 0x50
 
 static void update_inp_dualstick()
 {
@@ -900,11 +914,11 @@ static void update_inp_menu()
 {
     uint8_t state = 0;
 
-    if (inp_keypressed(KEYCODE_W)) { state |= INP_UP; }
-    if (inp_keypressed(KEYCODE_A)) { state |= INP_LEFT; }
-    if (inp_keypressed(KEYCODE_S)) { state |= INP_DOWN; }
-    if (inp_keypressed(KEYCODE_D)) { state |= INP_RIGHT; }
-    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_ACTION; }
+    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_UP; }
+    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_START; }
 
     long j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
@@ -914,8 +928,9 @@ static void update_inp_menu()
     //if (!(j1 & 0x4000)) {state |= ???;}     // X
     //if (!(j1 & 0x0080)) {state |= ???;}   //B
     //if (!(j1 & 0x0040)) {state |= ???;}   //Y
-    if (!(j1 & 0x8000)) {state |= INP_MENU_ACTION;}  // A
-    if (!(j1 & 0x0010)) {state |= INP_MENU_ACTION;}  // START
+    if (!(j1 & 0x8000)) {state |= INP_MENU_A;}  // A
+    if (!(j1 & 0x0080)) {state |= INP_MENU_B;}  // A
+    if (!(j1 & 0x0010)) {state |= INP_MENU_START;}  // START
 
     // Which ones were pressed since last check?
     // TODO: calculate separately for keys and joystick!
@@ -930,7 +945,6 @@ static void update_inp_mouse()
     plat_mouse_x = m.x <<FX;
     plat_mouse_y = m.y <<FX;
 }
-
 
 uint8_t plat_inp_dualsticks()
 {
@@ -977,7 +991,76 @@ void debug_gamepad()
 
 
 
+void debug_getin()
+{
 
+    static char buf[40] = {0};
+    static uint8_t n = 0;
+
+    while (1) {
+        char c = plat_textentry_getchar();
+        if (c == 0) {
+            break;
+        }
+        if (c==0x0a) {
+            c = 'X';
+        }
+        if (c==0x7f) {
+            // del
+            if (n>0) {
+                --n;
+                buf[n] = 0;
+            }
+            continue;
+        }
+        if (n<40) {
+            buf[n++] = c;
+        }
+    }
+    plat_textn(0,23,buf,n,2);
+}
+
+
+#ifdef PLAT_HAS_TEXTENTRY
+
+void plat_textentry_start()
+{
+    inp_enabletextentry();
+}
+
+void plat_textentry_stop()
+{
+    inp_disabletextentry();
+}
+
+char plat_textentry_getchar()
+{
+    char c = cbm_k_getin();
+    if (c==0) {
+        return 0;
+    }
+    // map keys DEL to ASCII DEL
+    if (c == 0x14) {
+        return 0x7F;
+    }
+    // map LEFT to ASCII non-destructive backspace
+    if (c == 0x9D ) {
+        return '\b';
+    }
+
+    // map CR to LF
+    if (c==0x0D) {
+        return '\n';
+    }
+    // suppress other control codes.
+    if (c < 32 || (c >= 0x80 && c < 0xa0)) {
+        return 0;
+    }
+    return c;
+}
+
+#endif // PLAT_HAS_TEXTENTRY
+ 
 int main(void) {
 
     plat_init();
@@ -989,6 +1072,7 @@ int main(void) {
         sprout16(plat_mouse_x, plat_mouse_y, 0);
 
         debug_gamepad();
+        //debug_getin();
         plat_render_finish();
         sfx_tick();
         //cx16_k_joystick_scan();

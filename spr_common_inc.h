@@ -9,6 +9,8 @@
 
 // sprite image defs
 #define SPR16_RETICULE 0
+#define SPR16_CURSOR 1  // 2 frames
+#define SPR16_BLOCK 3
 #define SPR16_EXTRALIFE 8
 #define SPR16_BAITER 16
 #define SPR16_AMOEBA_MED 20
@@ -106,7 +108,7 @@ void plat_shot_render(int16_t x, int16_t y, uint8_t direction)
 
 void plat_block_render(int16_t x, int16_t y)
 {
-    sprout16(x, y, 2);
+    sprout16(x, y, SPR16_BLOCK);
 }
 
 void plat_grunt_render(int16_t x, int16_t y)
@@ -213,5 +215,15 @@ void plat_wibbler_render(int16_t x, int16_t y, bool head)
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx)
 {
     sprout64x8(x, y, SPR64x8_BUB + bubidx);
+}
+
+void plat_cursor_render(int16_t x, int16_t y)
+{
+    if ((tick>>4) & 0x01) {
+        sprout16(x, y, SPR16_CURSOR);
+
+    } else {
+        sprout16(x, y, SPR16_CURSOR+1);
+    }
 }
 

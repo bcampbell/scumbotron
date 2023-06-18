@@ -2,7 +2,8 @@
 .global tick
 .global waitvbl
 .global inp_keystates
-
+.global inp_enabletextentry
+.global inp_disabletextentry
 
 VERA_L=$9f20
 VERA_M=$9f21
@@ -72,6 +73,20 @@ inp_keystates:
 	.byte 0,0,0,0, 0,0,0,0
 	.byte 0,0,0,0, 0,0,0,0
 
+; $00 to suppress passing scancode on to usual keymap/keybuffer handling
+; $ff to enable passing key on to keybuffer
+kh_retmask:
+	.byte 0
+
+inp_enabletextentry:
+	lda #$ff
+	sta kh_retmask
+	rts
+
+inp_disabletextentry:
+	lda #$00
+	sta kh_retmask
+	rts
 
 kh_masks: .byte 1,2,4,8,16,32,64,128
 
@@ -117,6 +132,8 @@ kh_done:
 	ply
     plx		;Restore input
     pla
+	; if text entry is disabled, return 0
+	and kh_retmask
     rts
 
 waitvbl:

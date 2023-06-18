@@ -4,6 +4,7 @@
 #include "plat.h"
 #include "gob.h"
 #include "player.h"
+#include "highscore.h"
 #include "game.h"
 
 uint8_t state;
@@ -35,6 +36,7 @@ static void level_baiter_check();
 
 void game_init()
 {
+    highscore_init();
     enter_STATE_ATTRACT();
 }
 
@@ -129,7 +131,7 @@ void enter_STATE_TITLESCREEN()
 static void tick_STATE_TITLESCREEN()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
     }

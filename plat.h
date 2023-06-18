@@ -1,6 +1,11 @@
 #ifndef SYS_H
 #define SYS_H
 
+
+// platform capabilities:
+// PLAT_HAS_MOUSE
+// PLAT_HAS_TEXTENTRY
+
 #include "plat_details.h"    // platform-specific details (screen size etc...)
 
 #define SCREEN_TEXT_W (SCREEN_W/8)
@@ -55,6 +60,7 @@ void plat_happyslapper_render(int16_t x, int16_t y, bool sleeping);
 void plat_marine_render(int16_t x, int16_t y);
 void plat_wibbler_render(int16_t x, int16_t y, bool head);
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx);
+void plat_cursor_render(int16_t x, int16_t y);
 
 #ifdef PLAT_HAS_MOUSE
 extern int16_t plat_mouse_x;
@@ -63,6 +69,13 @@ extern uint8_t plat_mouse_buttons;   // left:0x01 right:0x02 middle:0x04
 extern bool plat_mouse_show;        // show mouse pointer?
 #endif // PLAT_HAS_MOUSE
 
+// start PLAT_HAS_TEXTENTRY (fns should be no-ops if not supported)
+extern void plat_textentry_start();
+extern void plat_textentry_stop();
+// Returns printable ascii or DEL (0x7f) or LF (0x0A), or 0 for no input.
+extern char plat_textentry_getchar();
+// end PLAT_HAS_TEXTENTRY
+ 
 // noddy profiling
 #define GATSO_OFF 0
 #define GATSO_ON 1
@@ -95,7 +108,9 @@ void plat_addeffect(int16_t x, int16_t y, uint8_t kind);
 #define INP_FIRE_DOWN 0x40
 #define INP_FIRE_LEFT 0x20
 #define INP_FIRE_RIGHT 0x10
-#define INP_MENU_ACTION 0x10
+#define INP_MENU_A 0x10     // primary/action button
+#define INP_MENU_B 0x20     // secondary/cancel button
+#define INP_MENU_START 0x40
 
 // Returns direction + FIRE_ bits.
 uint8_t plat_inp_dualsticks();

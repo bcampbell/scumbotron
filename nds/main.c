@@ -104,8 +104,9 @@ static void update_inp_menu()
         {KEY_DOWN, INP_DOWN},
         {KEY_LEFT, INP_LEFT},
         {KEY_RIGHT, INP_RIGHT},
-        {KEY_START, INP_MENU_ACTION},
-        {KEY_A, INP_MENU_ACTION},
+        {KEY_START, INP_MENU_START},
+        {KEY_A, INP_MENU_A},
+        {KEY_B, INP_MENU_B},
     };
 
     int i;

@@ -17,7 +17,7 @@ void enter_STATE_GALLERY_BADDIES()
 void tick_STATE_GALLERY_BADDIES()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
     }
@@ -122,7 +122,7 @@ void enter_STATE_GALLERY_GOODIES()
 void tick_STATE_GALLERY_GOODIES()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
     }
@@ -333,7 +333,7 @@ void enter_STATE_STORY_INTRO()
 void tick_STATE_STORY_INTRO()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_STORY_DONE();
         return;
     }
@@ -386,7 +386,7 @@ void enter_STATE_STORY_OHNO()
 void tick_STATE_STORY_OHNO()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_STORY_DONE();
         return;
     }
@@ -418,7 +418,7 @@ void enter_STATE_STORY_ATTACK()
 void tick_STATE_STORY_ATTACK()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_STORY_DONE();
         return;
     }
@@ -454,7 +454,7 @@ void enter_STATE_STORY_RUNAWAY()
 void tick_STATE_STORY_RUNAWAY()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_STORY_DONE();
         return;
     }
@@ -482,7 +482,7 @@ void enter_STATE_STORY_DONE()
 void tick_STATE_STORY_DONE()
 {
     uint8_t inp = plat_inp_menu();
-    if (inp & INP_MENU_ACTION) {
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
     }

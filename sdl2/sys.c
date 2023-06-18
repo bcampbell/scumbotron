@@ -1,6 +1,5 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
-#include "../player.h" // KILLKILLKILL
 #include "plat_sdl2.h"
 #include "vera_psg.h"
 
@@ -41,8 +40,6 @@ uint16_t screen_w;
 uint16_t screen_h;
 
 static SDL_Palette *palette;
-static bool warp = false;           // F11 to toggle
-
 
 static uint8_t inp_dualstick_state = 0;
 static uint8_t inp_menu_state = 0;
@@ -57,6 +54,11 @@ uint8_t plat_mouse_buttons = 0;
 bool plat_mouse_show = true;
 // end PLAT_HAS_MOUSE
 static void update_inp_mouse();
+
+#ifdef PLAT_HAS_TEXTENTRY
+static void textentry_put(char c);
+#endif // PLAT_HAS_TEXTENTRY
+
 
 static void plat_init();
 static void plat_render_start();
@@ -237,8 +239,24 @@ static void pumpevents()
               } else {
                 SDL_SetWindowFullscreen(fenster, SDL_WINDOW_FULLSCREEN_DESKTOP);
               }
-              //warp = !warp;
               break;
+#ifdef PLAT_HAS_TEXTENTRY
+            case SDLK_RETURN:
+              if (SDL_IsTextInputActive()) {
+                  textentry_put('\n');
+              }
+              break;
+            case SDLK_BACKSPACE:
+              if (SDL_IsTextInputActive()) {
+                  textentry_put(0x7f);
+              }
+              break;
+            case SDLK_LEFT:
+              if (SDL_IsTextInputActive()) {
+                  textentry_put('\b');  // nondestructive backspace
+              }
+              break;
+#endif //PLAT_HAS_TEXTENTRY
             default:
               //KeyDown(event.key);
               break;
@@ -246,15 +264,23 @@ static void pumpevents()
           break;
         case SDL_WINDOWEVENT:
           {
-            SDL_WindowEvent* wev = &event.window;
-            if ( wev->event == SDL_WINDOWEVENT_RESIZED) {
-              int w = wev->data1;
-              int h = wev->data2;
+            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
               screen_rethink();
             }
           }
           break;
-
+#ifdef PLAT_HAS_TEXTENTRY
+        case SDL_TEXTINPUT:
+          {
+            for (char *p = event.text.text; *p; ++p) {
+                // Strip non-ascii chars from the utf-8.
+                if ((*p & 0x80) == 0) {
+                    textentry_put(*p);
+                }
+            }
+          }
+          break;
+#endif // PLAT_HAS_TEXTENTRY
       }
     }
 }
@@ -320,9 +346,9 @@ static void update_inp_menu()
         {SDL_SCANCODE_DOWN, INP_DOWN},
         {SDL_SCANCODE_LEFT, INP_LEFT},
         {SDL_SCANCODE_RIGHT, INP_RIGHT},
-        {SDL_SCANCODE_RETURN, INP_MENU_ACTION},
-        {SDL_SCANCODE_SPACE, INP_MENU_ACTION},
-        {SDL_SCANCODE_RCTRL, INP_MENU_ACTION},
+        {SDL_SCANCODE_RETURN, INP_MENU_START},
+        //{SDL_SCANCODE_SPACE, INP_MENU_A},
+        //{SDL_SCANCODE_RCTRL, INP_MENU_B},
     };
    
     for (i = 0; i < 8; ++i) {
@@ -666,6 +692,41 @@ static void rendereffects()
         }
     }
 }
+
+#ifdef PLAT_HAS_TEXTENTRY
+
+static char textentry_buf[16] = {0};
+static size_t textentry_n = 0;
+
+static void textentry_put(char c)
+{
+    if (textentry_n < sizeof(textentry_buf)) {
+        textentry_buf[textentry_n++] = c;
+    }
+}
+
+void plat_textentry_start()
+{
+    SDL_StartTextInput();
+    textentry_n = 0;    // clear buffer
+}
+
+void plat_textentry_stop()
+{
+    SDL_StopTextInput();
+}
+
+char plat_textentry_getchar()
+{
+    char c = '\0';
+    if (textentry_n > 0) {
+        --textentry_n;
+        c = textentry_buf[textentry_n];
+    }
+    return c;
+}
+
+#endif // PLAT_HAS_TEXTENTRY
 
 
 int main(int argc, char* argv[]) {
