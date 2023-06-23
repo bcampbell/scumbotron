@@ -1,4 +1,5 @@
 #include <cx16.h>
+#include <cbm.h>
 
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
@@ -32,20 +33,15 @@ bool plat_mouse_show = true;
 // end PLAT_HAS_MOUSE
 
 
-// kernal shims from glue.s
+#if 0
+// kernal shims from glue.s (until xarklabs shims are merged)
 uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
 typedef struct { int x, y; } mouse_pos_t;
 unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse button byte
 void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
 long cx16_k_joystick_get(unsigned char sticknum);
 void cx16_k_joystick_scan(void);
-
-// cbm kernal shims
-extern unsigned char __GETIN(void);
-unsigned char cbm_k_getin (void) {
-	return __GETIN();
-}
-// end kernal shims
+#endif
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
