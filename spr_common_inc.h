@@ -40,6 +40,8 @@
 #define SPR16_SHOT 64
 #define SPR16_SHOT_MED 68
 #define SPR16_SHOT_HEAVY 72
+#define SPR16_BRAIN 76
+#define SPR16_ZOMBIE 78
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -225,5 +227,18 @@ void plat_cursor_render(int16_t x, int16_t y)
     } else {
         sprout16(x, y, SPR16_CURSOR+1);
     }
+}
+
+void plat_brain_render(int16_t x, int16_t y)
+{
+    sprout16(x, y, SPR16_BRAIN + ((tick>>4) & 0x01));
+}
+
+void plat_zombie_render(int16_t x, int16_t y)
+{
+
+            x += jitter[tick&0xf]>>1;
+            y += jitter[(tick+3)&0xf]>>1;
+    sprout16(x, y, SPR16_ZOMBIE + ((tick>>4) & 0x01));
 }
 

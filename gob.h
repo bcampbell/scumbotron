@@ -28,6 +28,8 @@
 #define GK_HAPPYSLAPPER 17
 #define GK_MARINE 18
 #define GK_WIBBLER 19
+#define GK_BRAIN 20
+#define GK_ZOMBIE 21
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -82,6 +84,7 @@ static inline int16_t gob_size(uint8_t d) {
         default: return 16<<FX;
     }
 }
+int16_t gob_manhattan_dist(uint8_t a, uint8_t b);
 
 // grunt fns
 void grunt_create(uint8_t d);
@@ -169,5 +172,17 @@ void wibbler_create(uint8_t g);
 void wibbler_shot(uint8_t g, uint8_t shot);
 void wibbler_tick(uint8_t g);
 void wibbler_reset(uint8_t g);
+
+// Brain fns
+void brain_create(uint8_t d);
+void brain_tick(uint8_t d);
+void brain_reset(uint8_t d);
+void brain_shot(uint8_t d, uint8_t shot);
+
+// Zombie fns
+void zombie_create(uint8_t d);
+void zombie_tick(uint8_t d);
+void zombie_reset(uint8_t d);
+void zombie_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H

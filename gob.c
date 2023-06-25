@@ -127,6 +127,8 @@ void gobs_tick(bool spawnphase)
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
             case GK_MARINE:  marine_tick(i); break;
             case GK_WIBBLER:  wibbler_tick(i); break;
+            case GK_BRAIN:  brain_tick(i); break;
+            case GK_ZOMBIE:  zombie_tick(i); break;
             default:
                 break;
         }
@@ -195,6 +197,11 @@ void gobs_render()
             case GK_WIBBLER:
                 plat_wibbler_render(gobx[d], goby[d], gobdat[d] == 0xff);
                 break;
+            case GK_BRAIN:
+                plat_brain_render(gobx[d], goby[d]);
+                break;
+            case GK_ZOMBIE:
+                plat_zombie_render(gobx[d], goby[d]);
             default:
                 break;
         }
@@ -224,6 +231,8 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_POOMERANG:    poomerang_shot(d, s); break;
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
         case GK_WIBBLER:      wibbler_shot(d, s); break;
+        case GK_BRAIN:        brain_shot(d, s); break;
+        case GK_ZOMBIE:       zombie_shot(d, s); break;
         default:
             break;
     }
@@ -266,6 +275,8 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_HAPPYSLAPPER: happyslapper_create(d); break;
             case GK_MARINE: marine_create(d); break;
             case GK_WIBBLER: wibbler_create(d); break;
+            case GK_BRAIN: brain_create(d); break;
+            case GK_ZOMBIE: zombie_create(d); break;
             default:
                 // Not all kinds can be created. Some are spawned by others.
                 break;
@@ -278,7 +289,6 @@ void gobs_create(uint8_t kind, uint8_t n)
 // - set to new random position.
 // - put into spawning mode.
 void gobs_reset() {
-    uint8_t t=0;
     uint8_t g;
     bub_clear();
     for (g = 0; g < MAX_GOBS; ++g) {
@@ -303,6 +313,8 @@ void gobs_reset() {
             case GK_HAPPYSLAPPER: happyslapper_reset(g); break;
             case GK_MARINE:       marine_reset(g); break;
             case GK_WIBBLER:      wibbler_reset(g); break;
+            case GK_BRAIN:        brain_reset(g); break;
+            case GK_ZOMBIE:       zombie_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -387,6 +399,21 @@ void gob_move_bounce_y(uint8_t d)
     }
     goby[d] = y;
 }
+
+// return the Manhattan distance between gob a and gob b.
+int16_t gob_manhattan_dist(uint8_t a, uint8_t b)
+{
+    int16_t dx = gobx[a] - gobx[b];
+    if (dx < 0) {
+        dx = -dx;
+    }
+    int16_t dy = goby[a] - goby[b];
+    if (dy < 0) {
+        dy = -dy;
+    }
+    return dx + dy;
+}
+
 
 int16_t clip(int16_t val, int16_t minimum, int16_t maximum) {
     if (val < minimum) {
@@ -1033,6 +1060,22 @@ static int16_t rndspd(int16_t s)
     }
 }
 
+// helper - return true if marine has been collected and is trailing after player.
+static bool marine_is_trailing(uint8_t g)
+{
+    if (gobflags[g] & GF_COLLIDES_PLAYER) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+// turn marine into zombie
+static void marine_zombify(uint8_t g)
+{
+    gobkind[g] = GK_ZOMBIE;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+}
 
 void marine_reset(uint8_t g)
 {
@@ -1043,7 +1086,12 @@ void marine_reset(uint8_t g)
 
 void marine_tick(uint8_t g)
 {
-    if ((gobflags[g] & GF_COLLIDES_PLAYER)) {
+    if (marine_is_trailing(g)) {
+        uint8_t p = 0;  // Player to follow.
+        uint8_t idx = plrhistidx[p] - gobdat[g];
+        gobx[g] = plrhistx[p][idx & (PLR_HIST_LEN-1)];
+        goby[g] = plrhisty[p][idx & (PLR_HIST_LEN-1)];
+    } else {
         // Random walking.
         if ((tick & 0x3f) == 0) {
             // New direction.
@@ -1052,12 +1100,6 @@ void marine_tick(uint8_t g)
         }
         gob_move_bounce_x(g);
         gob_move_bounce_y(g);
-
-    } else {
-        uint8_t p = 0;  // Player to follow.
-        uint8_t idx = plrhistidx[p] - gobdat[g];
-        gobx[g] = plrhistx[p][idx & (PLR_HIST_LEN-1)];
-        goby[g] = plrhisty[p][idx & (PLR_HIST_LEN-1)];
     }
 }
 
@@ -1164,5 +1206,126 @@ void wibbler_tick(uint8_t g)
     }
     gob_move_bounce_x(g);
     gob_move_bounce_y(g);
+}
+
+/*
+ * Brain
+ */
+
+void brain_create(uint8_t d)
+{
+    gobkind[d] = GK_BRAIN;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    brain_reset(d);
+}
+
+void brain_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobtimer[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+    // reset time - add a little random variation to disperse them.
+    gobdat[d] = HAPPYSLAPPER_SLEEP_TIME + HAPPYSLAPPER_RUN_TIME + (rnd() % 0x0f);
+}
+
+
+
+void brain_tick(uint8_t g)
+{
+    int16_t tx;
+    int16_t ty;
+
+    // update every 8th frame
+    if (((tick + g) & 0x07) != 0x00) {
+        return;
+    }
+
+    int16_t bestd = INT16_MAX;
+    uint8_t targ = MAX_GOBS;
+    for (uint8_t i = 0; i < MAX_GOBS; ++i) {
+        if (gobkind[i] == GK_MARINE && !marine_is_trailing(i)) {
+            int16_t dist = gob_manhattan_dist(g, i);
+            if (dist < bestd) {
+                targ = i;
+                bestd = dist;
+            }
+        }
+    }
+
+    if (targ == MAX_GOBS) {
+        // target player instead
+        tx = plrx[0];
+        ty = plry[0];
+    } else {
+        if (bestd<(8<<FX)) {
+            //gobkind[g] = GK_NONE;
+
+
+            // convert marine to zombie
+            marine_zombify(targ);
+            return;
+        }
+
+        tx = gobx[targ];
+        ty = goby[targ];
+    }  
+
+    int16_t x = gobx[g];
+    int16_t y = goby[g];
+    if (x < tx) {
+        x += 2<<FX;
+    } else if (x > tx) {
+        x -= 2<<FX;
+    }
+    if (y < ty) {
+        y += 2<<FX;
+    } else if (y > ty) {
+        y -= 2<<FX;
+    }
+    gobx[g] = x;
+    goby[g] = y;
+}
+
+void brain_shot(uint8_t d, uint8_t shot)
+{
+    gob_standard_kaboom(d, shot, 75);
+}
+
+/*
+ * Zombie
+ */
+
+void zombie_create(uint8_t d)
+{
+    gobkind[d] = GK_ZOMBIE;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    zombie_reset(d);
+}
+
+void zombie_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobtimer[d] = 0;
+    gobvx[d] = 0;
+    gobvy[d] = 0;
+}
+
+void zombie_tick(uint8_t d)
+{
+    // Charge! (but only every 4 frames)
+    if (((tick+d) & 0x03) != 0x00) {
+       return;
+    }
+    // home in on player
+    gob_seek_x(d, plrx[0], 2<<FX, 4<<FX);
+    gob_seek_y(d, plry[0], 2<<FX, 4<<FX);
+    gob_move_bounce_x(d);
+    gob_move_bounce_y(d);
+}
+
+void zombie_shot(uint8_t d, uint8_t shot)
+{
+    gob_standard_kaboom(d, shot, 75);
 }
 
