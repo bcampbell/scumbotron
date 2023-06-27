@@ -94,6 +94,7 @@ void plat_sfx_play(uint8_t effect);
 #define EK_NONE 0
 #define EK_SPAWN 1
 #define EK_KABOOM 2
+#define EK_ZOMBIFY 3
 void plat_addeffect(int16_t x, int16_t y, uint8_t kind);
 
 

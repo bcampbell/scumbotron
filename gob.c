@@ -1236,6 +1236,7 @@ void brain_tick(uint8_t g)
     int16_t tx;
     int16_t ty;
 
+
     // update every 8th frame
     if (((tick + g) & 0x07) != 0x00) {
         return;
@@ -1252,18 +1253,17 @@ void brain_tick(uint8_t g)
             }
         }
     }
-
     if (targ == MAX_GOBS) {
-        // target player instead
+        // No marines. Target player instead
         tx = plrx[0];
         ty = plry[0];
     } else {
+        // Within zombification distance?
         if (bestd<(8<<FX)) {
             //gobkind[g] = GK_NONE;
-
-
             // convert marine to zombie
             marine_zombify(targ);
+            plat_addeffect(gobx[g]+(8<<FX), goby[g]+(8<<FX), EK_ZOMBIFY);
             return;
         }
 

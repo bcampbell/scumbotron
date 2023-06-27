@@ -74,6 +74,7 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch,
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
 static void drawrect(const SDL_Rect *r, uint8_t colour);
+static void fillrect(const SDL_Rect *r, uint8_t colour);
 
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
@@ -505,6 +506,19 @@ static void drawrect(const SDL_Rect *r, uint8_t colour)
     vline_noclip(b.x + b.w-1, b.y + 1, b.y + b.h - 1, colour);
 }
 
+static void fillrect(const SDL_Rect *r, uint8_t colour)
+{
+    SDL_Rect b;
+    if (!SDL_IntersectRect(&screen->clip_rect, r, &b)) {
+        return;
+    }
+
+    for (int y = b.y; y < (b.y + b.h); ++y) {
+        hline_noclip(b.x, b.x + b.w, y, colour);
+    }
+}
+
+
 // blit with colour 0 transparent.
 static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty)
 {
@@ -678,17 +692,31 @@ static void do_kaboomeffect(uint8_t e) {
     }
 }
 
+static void do_zombifyeffect(uint8_t e) {
+    int t = (int)etimer[e]++;
+    int x = ex[e]>>FX;
+    int y = ey[e]>>FX;
+
+    int w = t*32;
+    int h = 4 + t;
+    if(t<15) {
+        SDL_Rect r = {x-w / 2, y-h / 2, w, h};
+        fillrect(&r, t);
+    } else {
+        ekind[e] = EK_NONE;
+    }
+}
+
 
 static void rendereffects()
 {
     uint8_t e;
     for(e = 0; e < MAX_EFFECTS; ++e) {
-        if (ekind[e] == EK_NONE) {
-            continue;
-        } else if (ekind[e] == EK_SPAWN) {
-            do_spawneffect(e);
-        } else if (ekind[e] == EK_KABOOM) {
-            do_kaboomeffect(e);
+        switch (ekind[e]) {
+            case EK_NONE: continue;
+            case EK_SPAWN: do_spawneffect(e); break;
+            case EK_KABOOM: do_kaboomeffect(e); break;
+            case EK_ZOMBIFY: do_zombifyeffect(e); break;
         }
     }
 }

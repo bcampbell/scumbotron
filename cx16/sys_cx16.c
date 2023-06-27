@@ -717,18 +717,26 @@ static void do_kaboomeffect(uint8_t e) {
     }
 }
 
+static void do_zombifyeffect(uint8_t e) {
+    uint8_t t = etimer[e];
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+    drawbox(cx-t, cy-1, t*2, 2, 1, t);
+    if (++etimer[e] >= 16) {
+        ekind[e] = EK_NONE;
+    }
+}
+
+
 static void rendereffects()
 {
     uint8_t e;
     for(e = 0; e < MAX_EFFECTS; ++e) {
-        if (ekind[e] == EK_NONE) {
-            continue;
-        }
-        if (ekind[e] == EK_SPAWN) {
-            do_spawneffect(e);
-        }
-        if (ekind[e] == EK_KABOOM) {
-            do_kaboomeffect(e);
+        switch (ekind[e]) {
+            case EK_NONE: continue;
+            case EK_SPAWN: do_spawneffect(e); break;
+            case EK_KABOOM: do_kaboomeffect(e); break;
+            case EK_ZOMBIFY: do_zombifyeffect(e); break;
         }
     }
 }

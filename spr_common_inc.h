@@ -237,8 +237,8 @@ void plat_brain_render(int16_t x, int16_t y)
 void plat_zombie_render(int16_t x, int16_t y)
 {
 
-            x += jitter[tick&0xf]>>1;
-            y += jitter[(tick+3)&0xf]>>1;
+    x += jitter[tick&0xf]>>3;
+    y += jitter[(tick+3)&0xf]>>3;
     sprout16(x, y, SPR16_ZOMBIE + ((tick>>4) & 0x01));
 }
 
