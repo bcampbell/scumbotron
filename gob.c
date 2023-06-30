@@ -129,6 +129,7 @@ void gobs_tick(bool spawnphase)
             case GK_WIBBLER:  wibbler_tick(i); break;
             case GK_BRAIN:  brain_tick(i); break;
             case GK_ZOMBIE:  zombie_tick(i); break;
+            case GK_MISSILE:  missile_tick(i); break;
             default:
                 break;
         }
@@ -202,6 +203,10 @@ void gobs_render()
                 break;
             case GK_ZOMBIE:
                 plat_zombie_render(gobx[d], goby[d]);
+                break;
+            case GK_MISSILE:
+                plat_missile_render(gobx[d], goby[d], gobdat[d]);
+                break;
             default:
                 break;
         }
@@ -233,6 +238,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_WIBBLER:      wibbler_shot(d, s); break;
         case GK_BRAIN:        brain_shot(d, s); break;
         case GK_ZOMBIE:       zombie_shot(d, s); break;
+        case GK_MISSILE:      missile_shot(d, s); break;
         default:
             break;
     }
@@ -277,6 +283,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_WIBBLER: wibbler_create(d); break;
             case GK_BRAIN: brain_create(d); break;
             case GK_ZOMBIE: zombie_create(d); break;
+            case GK_MISSILE: missile_create(d); break;
             default:
                 // Not all kinds can be created. Some are spawned by others.
                 break;
@@ -315,6 +322,7 @@ void gobs_reset() {
             case GK_WIBBLER:      wibbler_reset(g); break;
             case GK_BRAIN:        brain_reset(g); break;
             case GK_ZOMBIE:       zombie_reset(g); break;
+            case GK_MISSILE:      missile_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -1325,6 +1333,58 @@ void zombie_tick(uint8_t d)
 }
 
 void zombie_shot(uint8_t d, uint8_t shot)
+{
+    gob_standard_kaboom(d, shot, 75);
+}
+
+/*
+ * Missile
+ */
+
+void missile_create(uint8_t d)
+{
+    gobkind[d] = GK_MISSILE;
+    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    missile_reset(d);
+}
+
+void missile_reset(uint8_t d)
+{
+    gob_randompos(d);
+    gobtimer[d] = 0;
+    gobdat[d] = 0;
+}
+
+
+static uint8_t angle24toangle8[24] = {
+0,0,1,1,1,2,
+2,2,3,3,3,4,
+4,4,5,5,5,6,
+6,6,7,7,7,0,
+};
+
+static int8_t missle_vx[8] = {
+    0,3,4,3, 0,-3,-4,-3,
+};
+static int8_t missle_vy[8] = {
+    -4,-3,0,3, 4,3,0,-3,
+};
+
+void missile_tick(uint8_t g)
+{
+    // home in on player (but not every frame)
+    if (((tick+g) & 0x1f) == 0x00) {
+        int16_t dx = plrx[0] - gobx[g];
+        int16_t dy = plry[0] - goby[g];
+        uint8_t theta = arctan24(dx, dy);
+        gobdat[g] = angle24toangle8[theta];
+    }
+
+    gobx[g] += (missle_vx[gobdat[g]]<<4);
+    goby[g] += (missle_vy[gobdat[g]]<<4);
+}
+
+void missile_shot(uint8_t d, uint8_t shot)
 {
     gob_standard_kaboom(d, shot, 75);
 }

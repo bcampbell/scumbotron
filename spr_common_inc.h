@@ -42,6 +42,7 @@
 #define SPR16_SHOT_HEAVY 72
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
+#define SPR16_MISSILE 80
 
 #define SPR32_AMOEBA_BIG 0
 
@@ -240,5 +241,10 @@ void plat_zombie_render(int16_t x, int16_t y)
     x += jitter[tick&0xf]>>3;
     y += jitter[(tick+3)&0xf]>>3;
     sprout16(x, y, SPR16_ZOMBIE + ((tick>>4) & 0x01));
+}
+
+void plat_missile_render(int16_t x, int16_t y, uint8_t dir)
+{
+    sprout16(x, y, SPR16_MISSILE + dir);
 }
 

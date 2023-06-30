@@ -350,8 +350,8 @@ static void level_init(uint8_t level)
             */
 
         case 0:
-            gobs_create(GK_BRAIN, 1);
-            gobs_create(GK_MARINE, 8);
+            //gobs_create(GK_BRAIN, 1);
+            gobs_create(GK_MISSILE, 16);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);

@@ -30,6 +30,7 @@
 #define GK_WIBBLER 19
 #define GK_BRAIN 20
 #define GK_ZOMBIE 21
+#define GK_MISSILE 22
 
 // Flags
 #define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
@@ -184,5 +185,11 @@ void zombie_create(uint8_t d);
 void zombie_tick(uint8_t d);
 void zombie_reset(uint8_t d);
 void zombie_shot(uint8_t d, uint8_t shot);
+
+// Missile fns
+void missile_create(uint8_t d);
+void missile_tick(uint8_t d);
+void missile_reset(uint8_t d);
+void missile_shot(uint8_t d, uint8_t shot);
 
 #endif // GOB_H
