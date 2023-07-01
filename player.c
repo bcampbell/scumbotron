@@ -165,63 +165,6 @@ bool player_collisions()
 
 
 
-// shot velocities, by angle 0..23
-// x:
-static const int16_t shotcircx[24] = {
-  0, 
-  132, 
-  255, 
-  362, 
-  443, 
-  494, 
-  512, 
-  494, 
-  443, 
-  362, 
-  255, 
-  132, 
-  0, 
-  -132, 
-  -255, 
-  -362, 
-  -443, 
-  -494, 
-  -512, 
-  -494, 
-  -443, 
-  -362, 
-  -256, 
-  -132,
-};
-
-// y:
-static const int16_t shotcircy[24] = {
-  -512, 
-  -494, 
-  -443, 
-  -362, 
-  -256, 
-  -132, 
-  0, 
-  132, 
-  255, 
-  362, 
-  443, 
-  494, 
-  512, 
-  494, 
-  443, 
-  362, 
-  256, 
-  132, 
-  0, 
-  -132, 
-  -256, 
-  -362, 
-  -443, 
-  -494,
-};
-
 
 // Control schemes:
 // 1. keyboard/digital gamepad
@@ -308,8 +251,8 @@ static void plr_digital_fire(uint8_t p, uint8_t fire) {
             shottimer[s] = 24;
             shotx[s] = plrx[p];
             shoty[s] = plry[p];
-            shotvx[s] = shotcircx[theta];
-            shotvy[s] = shotcircy[theta];
+            shotvx[s] = circ24x[theta];
+            shotvy[s] = circ24y[theta];
             shotdir[s] = theta;
         }
     }
@@ -326,8 +269,8 @@ static void plr_shoot(uint8_t p, uint8_t theta) {
     shottimer[s] = 24;
     shotx[s] = plrx[p];
     shoty[s] = plry[p];
-    shotvx[s] = shotcircx[theta];
-    shotvy[s] = shotcircy[theta];
+    shotvx[s] = circ24x[theta];
+    shotvy[s] = circ24y[theta];
     shotdir[s] = theta;
 }
 

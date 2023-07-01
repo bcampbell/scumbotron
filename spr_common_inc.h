@@ -43,6 +43,7 @@
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
 #define SPR16_MISSILE 80
+#define SPR16_LUNCHER 88
 
 #define SPR32_AMOEBA_BIG 0
 

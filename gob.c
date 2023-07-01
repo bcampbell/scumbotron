@@ -673,60 +673,78 @@ void amoeba_shot(uint8_t d, uint8_t shot)
 
 // tank
 
-void tank_create(uint8_t d)
+void tank_create(uint8_t g)
 {
-    gobkind[d] = GK_TANK;
-    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobdat[d] = 8;  // life
-    tank_reset(d);
+    gobkind[g] = GK_TANK;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobdat[g] = 12;  // life
+    tank_reset(g);
 }
 
-void tank_reset(uint8_t d)
+void tank_reset(uint8_t g)
 {
-    gob_randompos(d);
-    gobvx[d] = 0;
-    gobvy[d] = 0;
-    gobtimer[d] = 0;    // highlight timer
+    gob_randompos(g);
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+    gobtimer[g] = 0;    // highlight timer
 }
 
 
-void tank_tick(uint8_t d)
+void tank_tick(uint8_t g)
 {
     const int16_t vx = (5<<FX);
     const int16_t vy = (5<<FX);
     int16_t px = plrx[0];
     int16_t py = plry[0];
 
-    if (gobtimer[d] > 0) {
-        --gobtimer[d];
+    if (gobtimer[g] > 0) {
+        --gobtimer[g];
     }
+
+    // shoot at regular intervals
+    if(((tick + (g<<4)) & 0x3f) == 0 ) {
+      uint8_t m = gob_alloc();
+      if (m >= MAX_GOBS) {
+        return;
+      }
+      int16_t x = gobx[g] + ((8-4)<<FX);
+      int16_t y = goby[g] + ((8-4)<<FX);
+      int16_t dx = plrx[0] - x;
+      int16_t dy = plry[0] - y;
+      uint8_t theta = arctan8(dx, dy);
+      missile_spawn(m, x, y, theta);
+    }
+
+
+
+
     // update every 32 frames
-    if (((tick+d) & 0x1f) != 0x00) {
+    if (((tick+g) & 0x1f) != 0x00) {
        return;
     }
-    if (px < gobx[d]) {
-        gobx[d] -= vx;
-    } else if (px > gobx[d]) {
-        gobx[d] += vx;
+    if (px < gobx[g]) {
+        gobx[g] -= vx;
+    } else if (px > gobx[g]) {
+        gobx[g] += vx;
     }
-    if (py < goby[d]) {
-        goby[d] -= vy;
-    } else if (py > goby[d]) {
-        goby[d] += vy;
+    if (py < goby[g]) {
+        goby[g] -= vy;
+    } else if (py > goby[g]) {
+        goby[g] += vy;
     }
 }
 
-void tank_shot(uint8_t d, uint8_t shot)
+void tank_shot(uint8_t g, uint8_t shot)
 {
-    --gobdat[d];
-    if (gobdat[d]==0) {
+    --gobdat[g];
+    if (gobdat[g]==0) {
         // boom.
-        gob_standard_kaboom(d, shot, 100);
+        gob_standard_kaboom(g, shot, 100);
     } else {
         // knockback
-        gobx[d] += shotvx[shot];
-        goby[d] += shotvy[shot];
-        gobtimer[d] = 8;
+        gobx[g] += shotvx[shot]/2;
+        goby[g] += shotvy[shot]/2;
+        gobtimer[g] = 8;
     }
 }
 
@@ -1339,36 +1357,45 @@ void zombie_shot(uint8_t d, uint8_t shot)
 
 /*
  * Missile
+ *
+ * gobdat: current heading (0..7)
  */
 
-void missile_create(uint8_t d)
-{
-    gobkind[d] = GK_MISSILE;
-    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    missile_reset(d);
-}
-
-void missile_reset(uint8_t d)
-{
-    gob_randompos(d);
-    gobtimer[d] = 0;
-    gobdat[d] = 0;
-}
-
-
-static uint8_t angle24toangle8[24] = {
-0,0,1,1,1,2,
-2,2,3,3,3,4,
-4,4,5,5,5,6,
-6,6,7,7,7,0,
-};
-
-static int8_t missle_vx[8] = {
+static int8_t missile_vx[8] = {
     0,3,4,3, 0,-3,-4,-3,
 };
-static int8_t missle_vy[8] = {
+static int8_t missile_vy[8] = {
     -4,-3,0,3, 4,3,0,-3,
 };
+// helper
+static void missile_setdir(uint8_t g, uint8_t dir) {
+    gobdat[g] = dir;
+    gobvx[g] = missile_vx[dir]<<4;
+    gobvy[g] = missile_vy[dir]<<4;
+}
+
+void missile_spawn(uint8_t g, int16_t x, int16_t y, uint8_t direction)
+{
+    gobkind[g] = GK_MISSILE;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobx[g] = x;
+    goby[g] = y;
+    missile_setdir(g, direction);
+}
+
+void missile_create(uint8_t g)
+{
+    gobkind[g] = GK_MISSILE;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    missile_reset(g);
+}
+
+void missile_reset(uint8_t g)
+{
+    gob_randompos(g);
+    gobtimer[g] = 0;
+    missile_setdir(g, 0);
+}
 
 void missile_tick(uint8_t g)
 {
@@ -1376,16 +1403,31 @@ void missile_tick(uint8_t g)
     if (((tick+g) & 0x1f) == 0x00) {
         int16_t dx = plrx[0] - gobx[g];
         int16_t dy = plry[0] - goby[g];
-        uint8_t theta = arctan24(dx, dy);
-        gobdat[g] = angle24toangle8[theta];
+        uint8_t theta = arctan8(dx, dy);
+        int8_t delta = theta - gobdat[g];
+        // find shortest route
+        if (delta < -4) {
+            delta += 8;
+        } else if (delta > 4){
+            delta -= 8;
+        }
+        // turn toward target
+        if (delta > 0) {
+            missile_setdir(g, (gobdat[g] + 1) & 7);
+        } else if (delta < 0) {
+            missile_setdir(g, (gobdat[g] - 1) & 7);
+        }
+
+        gobvx[g] = missile_vx[gobdat[g]]<<4;
+        gobvy[g] = missile_vy[gobdat[g]]<<4;
     }
 
-    gobx[g] += (missle_vx[gobdat[g]]<<4);
-    goby[g] += (missle_vy[gobdat[g]]<<4);
+    gobx[g] += gobvx[g];
+    goby[g] += gobvy[g];
 }
 
-void missile_shot(uint8_t d, uint8_t shot)
+void missile_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 75);
+    gob_standard_kaboom(g, shot, 20);
 }
 
