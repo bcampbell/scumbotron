@@ -340,7 +340,7 @@ static void level_init(uint8_t level)
     switch (level) {
         case 0:
             //gobs_create(GK_BRAIN, 2);
-            gobs_create(GK_BOSS, 2);
+            gobs_create(GK_BOSS, 1);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);

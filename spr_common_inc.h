@@ -5,6 +5,7 @@
 // sprout16()
 // sprout32()
 // sprout16_highlight()
+// sprout32_highlight()
 // sprout64x8()
 
 // sprite image defs
@@ -215,7 +216,11 @@ void plat_marine_render(int16_t x, int16_t y)
 
 void plat_boss_render(int16_t x, int16_t y, bool highlight)
 {
-    sprout32(x, y, highlight ? SPR32_AMOEBA_BIG : SPR32_BOSS_HEAD);
+    if (highlight) {
+        sprout32_highlight(x, y, SPR32_BOSS_HEAD);
+    } else {
+        sprout32(x, y, SPR32_BOSS_HEAD);
+    }
 }
 
 void plat_bosstail_render(int16_t x, int16_t y, uint8_t phase)

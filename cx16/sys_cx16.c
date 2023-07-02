@@ -77,6 +77,7 @@ extern unsigned int export_spr64x8_zbin_len;
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
+static void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
 
 static void drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
 static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
@@ -238,6 +239,25 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
 }
+
+static void sprout32_highlight(int16_t x, int16_t y, uint8_t img ) {
+    if (sprremaining == 0) {
+        return;
+    }
+    --sprremaining;
+    veraaddr1(VRAM_SPRITE_ATTRS + (sprremaining*8), VERA_INC_1);
+    const uint32_t addr = VRAM_SPRITES32 + (SPR32_SIZE * img);
+    VERA.data1 = (addr>>5) & 0xFF;
+    VERA.data1 = (0 << 7) | (addr>>13);
+    VERA.data1 = (x >> FX) & 0xff;  // x lo
+    VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
+    VERA.data1 = (y >> FX) & 0xff;  // y lo
+    VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
+    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    // wwhhpppp
+    VERA.data1 = (2 << 6) | (2 << 4) | 1;  // 32x32, palette offset 1.
+}
+
 
 static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
     if (sprremaining == 0) {

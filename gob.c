@@ -1387,15 +1387,16 @@ void missile_shot(uint8_t g, uint8_t shot)
 
 void boss_create(uint8_t g)
 {
+    const uint8_t initiallife = 31;
     uint8_t i;
     gobkind[g] = GK_BOSS;
     gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL;
-    gobdat[g] = (5 << 2) | (rnd() & 3);
+    gobdat[g] = (initiallife << 2) | (rnd() & 3);
     gobtimer[g] = 0;
     boss_reset(g);
   
     uint8_t parent = g; 
-    for (i = 0; i < 9; ++i) {
+    for (i = 0; i < 15; ++i) {
         uint8_t c = gob_alloc();
         if (c >= MAX_GOBS) {
             return;
@@ -1534,8 +1535,8 @@ void bosstail_reset(uint8_t g)
 
 void bosstail_shot(uint8_t g, uint8_t shot)
 {
-    gobvx[g] += shotvx[shot]<<2;
-    gobvy[g] += shotvy[shot]<<2;
+    //gobvx[g] += shotvx[shot]<<2;
+    //gobvy[g] += shotvy[shot]<<2;
 }
 
 void bosstail_tick(uint8_t g)

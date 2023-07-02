@@ -79,6 +79,7 @@ static void fillrect(const SDL_Rect *r, uint8_t colour);
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout32(int16_t x, int16_t y, uint8_t img);
+static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout64x8(int16_t x, int16_t y, uint8_t img);
 static void rendereffects();
 
@@ -579,7 +580,6 @@ static inline void sprout32(int16_t x, int16_t y, uint8_t img)
     blit8(pix, 32, 32, screen, x, y);
 }
 
-// TODO
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
@@ -587,6 +587,15 @@ static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
     y = y >> FX;
     blit8_matte(pix, 16, 16, screen, x, y, 1);
 }
+
+static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
+{
+    const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
+    x = x >> FX;
+    y = y >> FX;
+    blit8_matte(pix, 32, 32, screen, x, y, 1);
+}
+
 
 static inline void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
