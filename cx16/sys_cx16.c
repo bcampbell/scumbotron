@@ -46,7 +46,7 @@ void cx16_k_joystick_scan(void);
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
 #define SPR32_SIZE (16*32)   // 32x32, 4 bpp
-#define SPR32_NUM 2
+#define SPR32_NUM 8
 #define SPR64x8_SIZE (32*8) // 64x8, 4bpp
 #define SPR64x8_NUM 4
 extern unsigned char export_palette_zbin[];

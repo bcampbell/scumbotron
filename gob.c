@@ -88,7 +88,9 @@ void gobs_tick(bool spawnphase)
         if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
             if( gobtimer[i] == 8) {
-                plat_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
+                if (gobkind[i] != GK_BOSSTAIL) {
+                    plat_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
+                }
             } else if( gobtimer[i] == 0) {
                 // done spawning.
                 gobflags[i] &= ~GF_SPAWNING;
@@ -99,6 +101,10 @@ void gobs_tick(bool spawnphase)
         }
         if (gobflags[i] & GF_LOCKS_LEVEL) {
             ++gobs_lockcnt;
+        }
+        // Decrease highlight timer (lower 3 bits) if non-zero.
+        if (gobflags[i] & GF_HIGHLIGHT_MASK) {
+            --gobflags[i];
         }
 
         // If in spawn phase, keep everything frozen until we finish.
@@ -126,10 +132,11 @@ void gobs_tick(bool spawnphase)
             case GK_POOMERANG: poomerang_tick(i); break;
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
             case GK_MARINE:  marine_tick(i); break;
-            case GK_WIBBLER:  wibbler_tick(i); break;
             case GK_BRAIN:  brain_tick(i); break;
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_MISSILE:  missile_tick(i); break;
+            case GK_BOSS:  boss_tick(i); break;
+            case GK_BOSSTAIL:  bosstail_tick(i); break;
             default:
                 break;
         }
@@ -195,9 +202,6 @@ void gobs_render()
             case GK_MARINE:
                 plat_marine_render(gobx[d], goby[d]);
                 break;
-            case GK_WIBBLER:
-                plat_wibbler_render(gobx[d], goby[d], gobdat[d] == 0xff);
-                break;
             case GK_BRAIN:
                 plat_brain_render(gobx[d], goby[d]);
                 break;
@@ -206,6 +210,12 @@ void gobs_render()
                 break;
             case GK_MISSILE:
                 plat_missile_render(gobx[d], goby[d], gobdat[d]);
+                break;
+            case GK_BOSS:
+                plat_boss_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
+                break;
+            case GK_BOSSTAIL:
+                plat_bosstail_render(gobx[d], goby[d], d);
                 break;
             default:
                 break;
@@ -235,10 +245,11 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_VULGON:       vulgon_shot(d, s); break;
         case GK_POOMERANG:    poomerang_shot(d, s); break;
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
-        case GK_WIBBLER:      wibbler_shot(d, s); break;
         case GK_BRAIN:        brain_shot(d, s); break;
         case GK_ZOMBIE:       zombie_shot(d, s); break;
         case GK_MISSILE:      missile_shot(d, s); break;
+        case GK_BOSS:         boss_shot(d, s); break;
+        case GK_BOSSTAIL:     bosstail_shot(d, s); break;
         default:
             break;
     }
@@ -280,12 +291,13 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_VULGON: vulgon_create(d); break;
             case GK_HAPPYSLAPPER: happyslapper_create(d); break;
             case GK_MARINE: marine_create(d); break;
-            case GK_WIBBLER: wibbler_create(d); break;
             case GK_BRAIN: brain_create(d); break;
             case GK_ZOMBIE: zombie_create(d); break;
             case GK_MISSILE: missile_create(d); break;
+            case GK_BOSS: boss_create(d); break;
+            // Not all kinds can be created. Some are spawned by others.
+            case GK_BOSSTAIL:
             default:
-                // Not all kinds can be created. Some are spawned by others.
                 break;
         }
     }
@@ -319,10 +331,11 @@ void gobs_reset() {
             case GK_VULGON:       vulgon_reset(g); break;
             case GK_HAPPYSLAPPER: happyslapper_reset(g); break;
             case GK_MARINE:       marine_reset(g); break;
-            case GK_WIBBLER:      wibbler_reset(g); break;
             case GK_BRAIN:        brain_reset(g); break;
             case GK_ZOMBIE:       zombie_reset(g); break;
             case GK_MISSILE:      missile_reset(g); break;
+            case GK_BOSS:         boss_reset(g); break;
+            case GK_BOSSTAIL:     bosstail_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -375,6 +388,15 @@ void gob_randompos(uint8_t d) {
 
     gobx[d] = (xmid + x) << FX;
     goby[d] = (ymid + y) << FX;
+}
+
+// duration must be <= 7 
+void gob_highlight(uint8_t g, uint8_t duration)
+{
+    uint8_t f = gobflags[g];
+    f = f & ~GF_HIGHLIGHT_MASK;
+    f |= duration;
+    gobflags[g] = f;
 }
 
 // move according to velocity, bouncing off walls.
@@ -453,6 +475,7 @@ void gob_seek_y(uint8_t d, int16_t target, int16_t accel, int16_t maxspd)
 }
 
 
+// no shot if 0xff
 void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 {
     player_add_score(points);
@@ -492,47 +515,59 @@ void block_shot(uint8_t d, uint8_t shot)
 /*
  * grunt
  */
-void grunt_create(uint8_t d)
+void grunt_create(uint8_t g)
 {
-    gobkind[d] = GK_GRUNT;
-    gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
-    grunt_reset(d);
+    gobkind[g] = GK_GRUNT;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobdat[g] = 0;
+    gobtimer[g] = 0;
+    grunt_reset(g);
 }
 
-void grunt_reset(uint8_t d)
+void grunt_reset(uint8_t g)
 {
-    gob_randompos(d);
-    gobvx[d] = (2 << FX) + (rnd() & 0x7f);
-    gobvy[d] = (2 << FX) + (rnd() & 0x7f);
+    gob_randompos(g);
+    gobvx[g] = (2 << FX) + (rnd() & 0x7f);
+    gobvy[g] = (2 << FX) + (rnd() & 0x7f);
+}
+
+void grunt_spawn(uint8_t g, int16_t x, int16_t y)
+{
+    gobkind[g] = GK_GRUNT;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobdat[g] = 0;
+    gobtimer[g] = 0;
+    gobx[g] = x;
+    goby[g] = y;
+    gobvx[g] = (2 << FX) + (rnd() & 0x7f);
+    gobvy[g] = (2 << FX) + (rnd() & 0x7f);
 }
 
 
-void grunt_tick(uint8_t d)
+void grunt_tick(uint8_t g)
 {
     int16_t px,py;
     // update every 16 frames
-    if (((tick+d) & 0x0f) != 0x00) {
+    if (((tick+g) & 0x0f) != 0x00) {
        return;
     }
     px = plrx[0];
-    if (px < gobx[d]) {
-        gobx[d] -= gobvx[d];
-    } else if (px > gobx[d]) {
-        gobx[d] += gobvx[d];
+    if (px < gobx[g]) {
+        gobx[g] -= gobvx[g];
+    } else if (px > gobx[g]) {
+        gobx[g] += gobvx[g];
     }
     py = plry[0];
-    if (py < goby[d]) {
-        goby[d] -= gobvy[d];
-    } else if (py > goby[d]) {
-        goby[d] += gobvy[d];
+    if (py < goby[g]) {
+        goby[g] -= gobvy[g];
+    } else if (py > goby[g]) {
+        goby[g] += gobvy[g];
     }
 }
 
-void grunt_shot(uint8_t d, uint8_t shot)
+void grunt_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 50);
+    gob_standard_kaboom(g, shot, 50);
 }
 
 
@@ -714,9 +749,6 @@ void tank_tick(uint8_t g)
       uint8_t theta = arctan8(dx, dy);
       missile_spawn(m, x, y, theta);
     }
-
-
-
 
     // update every 32 frames
     if (((tick+g) & 0x1f) != 0x00) {
@@ -1146,94 +1178,6 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
     gobdat[g] = idx + 3;
     return false;   // Don't kill player.
 }
-
-/*
- * Wibbler
- */
-
-void wibbler_create(uint8_t g)
-{
-    uint8_t i;
-    gobkind[g] = GK_WIBBLER;
-    gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL;
-    gobdat[g] = 0xff;  // parent
-    wibbler_reset(g);
-   
-    for (i = 0; i < 15; ++i) {
-        uint8_t c = gob_alloc();
-        if (c >= MAX_GOBS) {
-            return;
-        }
-        gobkind[c] = GK_WIBBLER;
-        gobflags[c] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL; 
-        gobdat[c] = g;
-        gobx[c] = gobx[g];
-        goby[c] = goby[g];
-        gobvx[c] = 0;
-        gobvx[c] = 0;
-        //wibbler_reset(i);
-        g = c;
-    }
-}
-
-void wibbler_reset(uint8_t g)
-{
-    if (gobdat[g] == 0xff) {
-        gob_randompos(g);
-    } else {
-        gobx[g] = gobx[gobdat[g]];
-        goby[g] = goby[gobdat[g]];
-    }
-    gobvx[g] = 0;
-    gobvy[g] = 0;
-}
-
-void wibbler_shot(uint8_t g, uint8_t shot)
-{
-    if(gobdat[g] == 0xff) {
-        uint8_t child;
-        // make the first child the new head.
-        for( child=0; child<MAX_GOBS; ++child) {
-            if(gobkind[child] == GK_WIBBLER && gobdat[child] == g) {
-                gobdat[child] = 0xff;
-                gobvx[child] = shotvx[shot];
-                gobvy[child] = shotvy[shot];
-                break;
-            }
-        }
-        gob_standard_kaboom(g, shot, 50);
-    }
-}
-
-void wibbler_tick(uint8_t g)
-{
-    const int16_t WIBBLER_MAX_SPD = 2 << FX;
-    const int16_t WIBBLER_ACCEL = 3;
-
-    uint8_t parent = gobdat[g];
-    if (parent == 0xff) {
-        /*
-        if (((g+tick) & 0x31) == 0) {
-            //gobvx[g] >>= 1;
-            //gobvy[g] >>= 1;
-            gobvx[g] += (rnd() - 128)>>1;
-            gobvy[g] += (rnd() - 128)>>1;
-        }
-        */
-        gob_seek_x(g, plrx[0], (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
-        gob_seek_y(g, plry[0], (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
-    } else {
-        if ((tick & 0x3) == 0) {
-            gobvx[g] >>= 1;
-            gobvy[g] >>= 1;
-        }
-        gob_seek_x(g, gobx[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
-        gob_seek_y(g, goby[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
-    }
-    gob_move_bounce_x(g);
-    gob_move_bounce_y(g);
-}
-
 /*
  * Brain
  */
@@ -1429,5 +1373,194 @@ void missile_tick(uint8_t g)
 void missile_shot(uint8_t g, uint8_t shot)
 {
     gob_standard_kaboom(g, shot, 20);
+}
+
+
+/*
+ * Boss
+ *
+ * gobdat: LLLLLLTT
+ *         L = life (6 bits)
+ *         T = target point (2bits)
+ * gobtimer: time until next target
+ */
+
+void boss_create(uint8_t g)
+{
+    uint8_t i;
+    gobkind[g] = GK_BOSS;
+    gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL;
+    gobdat[g] = (5 << 2) | (rnd() & 3);
+    gobtimer[g] = 0;
+    boss_reset(g);
+  
+    uint8_t parent = g; 
+    for (i = 0; i < 9; ++i) {
+        uint8_t c = gob_alloc();
+        if (c >= MAX_GOBS) {
+            return;
+        }
+        bosstail_spawn(c, parent);
+        parent = c;
+    }
+}
+
+void boss_reset(uint8_t g)
+{
+    gob_randompos(g);
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+    gobtimer[g] = 0;
+}
+
+void boss_shot(uint8_t g, uint8_t shot)
+{
+    uint8_t life = gobdat[g] >> 2;
+    if (life == 0) {
+        // tell any children to go kaboom.
+        bosstail_chainreact(g);
+        gob_standard_kaboom(g, shot, 250);
+        return;
+    }
+    --life;
+    gobdat[g] = (life << 2) & (gobdat[g] & 0xFC);
+    uint8_t child;
+    // make the first child the new head.
+    //for( child=0; child<MAX_GOBS; ++child) {
+    //    if(gobkind[child] == GK_BOSSTAIL && gobdat[child] == g) {
+    //        break;
+    //    }
+    //}
+    gobvx[g] += shotvx[shot]<<2;
+    gobvy[g] += shotvy[shot]<<2;
+    gob_highlight(g, 4);
+}
+
+
+void boss_tick(uint8_t g)
+{
+    const int16_t WIBBLER_MAX_SPD = 2 << FX;
+    const int16_t WIBBLER_ACCEL = 3;
+
+    uint8_t targ = gobdat[g] & 0x03;
+    if (++gobtimer[g] >= 230) {
+        gobtimer[g] = 0;
+        // next target
+        targ = (targ + 1 ) & 0x03;
+        gobdat[g] = (gobdat[g] & 0xfc) | targ;
+    }
+   
+    const int16_t x0 = 0;
+    const int16_t y0 = 0;
+    const int16_t x1 = (SCREEN_W-32)<<FX;
+    const int16_t y1 = (SCREEN_H-32)<<FX;
+    int16_t targx;
+    int16_t targy;
+    switch (targ) {
+        case 0: targx = x0; targy = y0; break;
+        case 1: targx = x1; targy = y0; break;
+        case 2: targx = x1; targy = y1; break;
+        case 3: targx = x0; targy = y1; break;
+    }
+
+        /*
+        if (((g+tick) & 0x31) == 0) {
+            //gobvx[g] >>= 1;
+            //gobvy[g] >>= 1;
+            gobvx[g] += (rnd() - 128)>>1;
+            gobvy[g] += (rnd() - 128)>>1;
+        }
+        */
+    gob_seek_x(g, targx, (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
+    gob_seek_y(g, targy, (3*WIBBLER_ACCEL)/2, WIBBLER_MAX_SPD);
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
+
+    // shoot off a burst at regular intervals
+    if(gobtimer[g] < 25 && ((tick & 0x7) == 0 )) {
+      uint8_t m = gob_alloc();
+      if (m >= MAX_GOBS) {
+        return;
+      }
+
+      int16_t x = gobx[g] + (4<<FX);
+      int16_t y = goby[g] + (4<<FX);
+      grunt_spawn(m, x, y);
+    //  int16_t dx = plrx[0] - x;
+    //  int16_t dy = plry[0] - y;
+    //  uint8_t theta = arctan8(dx, dy);
+//      missile_spawn(m, x, y, theta);
+    }
+
+}
+
+
+/*
+ * Boss tail segment
+ */
+
+
+void bosstail_spawn(uint8_t g, uint8_t parent)
+{
+    gobkind[g] = GK_BOSSTAIL;
+    gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL; 
+    gobdat[g] = parent;
+    gobx[g] = gobx[parent];
+    goby[g] = goby[parent];
+    gobvx[g] = 0;
+    gobvx[g] = 0;
+    //boss_reset(i);
+}
+
+//
+void bosstail_chainreact(uint8_t parent)
+{
+    uint8_t g;
+    for (g=0; g<MAX_GOBS; ++g) {
+        if (gobkind[g]== GK_BOSSTAIL && gobdat[g]==parent) {
+            gobdat[g] = 0xff;
+            gobtimer[g] = 8;
+        }
+    }
+}
+
+void bosstail_reset(uint8_t g)
+{
+    gobx[g] = gobx[gobdat[g]];
+    goby[g] = goby[gobdat[g]];
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+}
+
+void bosstail_shot(uint8_t g, uint8_t shot)
+{
+    gobvx[g] += shotvx[shot]<<2;
+    gobvy[g] += shotvy[shot]<<2;
+}
+
+void bosstail_tick(uint8_t g)
+{
+    uint8_t parent = gobdat[g];
+    if (parent == 0xff) {
+        // parent gone - we're counting down to destruction.
+        if (gobtimer[g] == 0) {
+            bosstail_chainreact(g);
+            gob_standard_kaboom(g, 0xff, 50);
+        } else {
+            --gobtimer[g];
+        }
+        return;
+    }
+    const int16_t WIBBLER_MAX_SPD = 2 << FX;
+    const int16_t WIBBLER_ACCEL = 3;
+
+    if ((tick & 0x3) == 0) {
+        gobvx[g] >>= 1;
+        gobvy[g] >>= 1;
+    }
+        gob_seek_x(g, gobx[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
+        gob_seek_y(g, goby[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
 }
 

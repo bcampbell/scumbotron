@@ -66,7 +66,7 @@ $(EXPORT_DIR)/spr16.c: sprites16.png
 	tools/png2sprites -w 16 -h 16 -num 128 -fmt nds4bpp -c -var export_spr16_bin $< $@
 
 $(EXPORT_DIR)/spr32.c: sprites32.png
-	tools/png2sprites -w 32 -h 32 -num 2 -fmt nds4bpp -c -var export_spr32_bin $< $@
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt nds4bpp -c -var export_spr32_bin $< $@
 
 # have to use pairs of 32x8 sprites (nds doesn't do 64x8)
 $(EXPORT_DIR)/spr64x8.c: sprites64x8.png

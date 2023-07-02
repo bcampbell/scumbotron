@@ -45,7 +45,7 @@ $(EXPORT_DIR)/spr16.bin: sprites16.png
 	tools/png2sprites -w 16 -h 16 -num 128 -fmt 4bpp $< $@
 
 $(EXPORT_DIR)/spr32.bin: sprites32.png
-	tools/png2sprites -w 32 -h 32 -num 2 -fmt 4bpp $< $@
+	tools/png2sprites -w 32 -h 32 -num 8 -fmt 4bpp $< $@
 
 $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp $< $@

@@ -27,18 +27,20 @@
 #define GK_POOMERANG 16
 #define GK_HAPPYSLAPPER 17
 #define GK_MARINE 18
-#define GK_WIBBLER 19
-#define GK_BRAIN 20
-#define GK_ZOMBIE 21
-#define GK_MISSILE 22
-#define GK_LUNCHER 23
+#define GK_BRAIN 19
+#define GK_ZOMBIE 20
+#define GK_MISSILE 21
+#define GK_BOSS 22
+#define GK_BOSSTAIL 23
 
 // Flags
-#define GF_SPAWNING 0x01    // Currently spawning (uses gobtimer)
-#define GF_LOCKS_LEVEL 0x02 // Must be destroyed to complete level
-#define GF_PERSIST 0x04  // Survives level reset (eg after player death)
-#define GF_COLLIDES_PLAYER 0x08 // Collides with player.
-#define GF_COLLIDES_SHOT 0x10   // Collides with player shots.
+// lower 3 bits used for highlight timer
+#define GF_HIGHLIGHT_MASK 0x07
+#define GF_SPAWNING 0x08    // Currently spawning (uses gobtimer)
+#define GF_LOCKS_LEVEL 0x10 // Must be destroyed to complete level
+#define GF_PERSIST 0x20  // Survives level reset (eg after player death)
+#define GF_COLLIDES_PLAYER 0x40 // Collides with player.
+#define GF_COLLIDES_SHOT 0x80   // Collides with player shots.
 
 // Gob tables.
 #define MAX_GOBS 40
@@ -84,6 +86,8 @@ static inline int16_t gob_size(uint8_t d) {
         case GK_AMOEBA_BIG: return 32<<FX;
         case GK_AMOEBA_SMALL: return 12<<FX;
         case GK_MISSILE: return 8<<FX;
+        case GK_BOSS: return 32<<FX;
+        case GK_BOSSTAIL: return 32<<FX;
         default: return 16<<FX;
     }
 }
@@ -170,12 +174,6 @@ void marine_tick(uint8_t g);
 void marine_reset(uint8_t g);
 bool marine_playercollide(uint8_t g, uint8_t plr);
 
-// Wibbler fns.
-void wibbler_create(uint8_t g);
-void wibbler_shot(uint8_t g, uint8_t shot);
-void wibbler_tick(uint8_t g);
-void wibbler_reset(uint8_t g);
-
 // Brain fns
 void brain_create(uint8_t d);
 void brain_tick(uint8_t d);
@@ -194,5 +192,18 @@ void missile_create(uint8_t d);
 void missile_tick(uint8_t d);
 void missile_reset(uint8_t d);
 void missile_shot(uint8_t d, uint8_t shot);
+
+// Boss fns.
+void boss_create(uint8_t g);
+void boss_shot(uint8_t g, uint8_t shot);
+void boss_tick(uint8_t g);
+void boss_reset(uint8_t g);
+
+// Bosstail fns.
+void bosstail_spawn(uint8_t g, uint8_t parent);
+void bosstail_shot(uint8_t g, uint8_t shot);
+void bosstail_tick(uint8_t g);
+void bosstail_reset(uint8_t g);
+void bosstail_chainreact(uint8_t parent);
 
 #endif // GOB_H

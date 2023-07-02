@@ -58,11 +58,11 @@ void plat_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger);
 void plat_poomerang_render(int16_t x, int16_t y);
 void plat_happyslapper_render(int16_t x, int16_t y, bool sleeping);
 void plat_marine_render(int16_t x, int16_t y);
-void plat_wibbler_render(int16_t x, int16_t y, bool head);
 void plat_brain_render(int16_t x, int16_t y);
 void plat_zombie_render(int16_t x, int16_t y);
 void plat_missile_render(int16_t x, int16_t y, uint8_t dir);
-void plat_luncher_render(int16_t x, int16_t y, bool highlight);
+void plat_boss_render(int16_t x, int16_t y, bool highlight);
+void plat_bosstail_render(int16_t x, int16_t y, uint8_t phase);
 
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx);
 void plat_cursor_render(int16_t x, int16_t y);

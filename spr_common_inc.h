@@ -46,6 +46,8 @@
 #define SPR16_LUNCHER 88
 
 #define SPR32_AMOEBA_BIG 0
+#define SPR32_BOSS_HEAD 2
+#define SPR32_BOSS_TAIL 3
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
@@ -211,10 +213,16 @@ void plat_marine_render(int16_t x, int16_t y)
     sprout16(x, y, SPR16_MARINE + ((tick >> 3) & 0x01));
 }
 
-void plat_wibbler_render(int16_t x, int16_t y, bool head)
+void plat_boss_render(int16_t x, int16_t y, bool highlight)
 {
-    sprout16(x, y, head ? SPR16_WIBBLER+4 : (SPR16_WIBBLER + ((tick>>2) & 0x03)));
+    sprout32(x, y, highlight ? SPR32_AMOEBA_BIG : SPR32_BOSS_HEAD);
 }
+
+void plat_bosstail_render(int16_t x, int16_t y, uint8_t phase)
+{
+    sprout32(x, y, SPR32_BOSS_TAIL + ((phase + (tick >> 3)) & 3));
+}
+
 
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx)
 {
