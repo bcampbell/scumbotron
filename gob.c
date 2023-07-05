@@ -88,7 +88,8 @@ void gobs_tick(bool spawnphase)
         if (gobflags[i] & GF_SPAWNING) {
             ++gobs_spawncnt;
             if( gobtimer[i] == 8) {
-                if (gobkind[i] != GK_BOSSTAIL) {
+                // don't play spawn effect for boss segments
+                if (gobkind[i] != GK_BOSSSEG) {
                     plat_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
                 }
             } else if( gobtimer[i] == 0) {
@@ -136,7 +137,7 @@ void gobs_tick(bool spawnphase)
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_MISSILE:  missile_tick(i); break;
             case GK_BOSS:  boss_tick(i); break;
-            case GK_BOSSTAIL:  bosstail_tick(i); break;
+            case GK_BOSSSEG:  bossseg_tick(i); break;
             default:
                 break;
         }
@@ -214,8 +215,10 @@ void gobs_render()
             case GK_BOSS:
                 plat_boss_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
-            case GK_BOSSTAIL:
-                plat_bosstail_render(gobx[d], goby[d], d);
+            case GK_BOSSSEG:
+                if ((gobdat[d] & 0xf0) != SEGSTATE_HIDE) {
+                    plat_bossseg_render(gobx[d], goby[d], d, gobtimer[d]!=0, gobflags[d] & GF_HIGHLIGHT_MASK);
+                }
                 break;
             default:
                 break;
@@ -249,7 +252,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_ZOMBIE:       zombie_shot(d, s); break;
         case GK_MISSILE:      missile_shot(d, s); break;
         case GK_BOSS:         boss_shot(d, s); break;
-        case GK_BOSSTAIL:     bosstail_shot(d, s); break;
+        case GK_BOSSSEG:      bossseg_shot(d, s); break;
         default:
             break;
     }
@@ -296,7 +299,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_MISSILE: missile_create(d); break;
             case GK_BOSS: boss_create(d); break;
             // Not all kinds can be created. Some are spawned by others.
-            case GK_BOSSTAIL:
+            case GK_BOSSSEG:
             default:
                 break;
         }
@@ -335,7 +338,7 @@ void gobs_reset() {
             case GK_ZOMBIE:       zombie_reset(g); break;
             case GK_MISSILE:      missile_reset(g); break;
             case GK_BOSS:         boss_reset(g); break;
-            case GK_BOSSTAIL:     bosstail_reset(g); break;
+            case GK_BOSSSEG:      bossseg_reset(g); break;
             default:
                 gob_randompos(g);
                 break;
@@ -1385,9 +1388,30 @@ void missile_shot(uint8_t g, uint8_t shot)
  * gobtimer: time until next target
  */
 
+#define NUM_BOSSSEGS 12
+#define NUM_BOSS_FORMATIONS 3
+
+static const int8_t boss_formx[NUM_BOSS_FORMATIONS][NUM_BOSSSEGS] = {
+    {-6,-5,-4,-3,-2,-1,2,3,4,5,6,7},
+    {0,0,0,0,0,0, 0,0,0,0,0,0},
+    {-1,-1,-1,-1,-1, 0,1, 2,2,2,2,2},
+};
+
+static const int8_t boss_formy[NUM_BOSS_FORMATIONS][NUM_BOSSSEGS] = {
+    {0,0,0,0,0,0, 0,0,0,0,0,0},
+    {-6,-5,-4,-3,-2,-1,2,3,4,5,6,7},
+    {-1,0,1,2,3, -1,-1, -1,0,1,2,3},
+};
+
+static uint8_t boss;
+static uint8_t boss_formation;
+
 void boss_create(uint8_t g)
 {
-    const uint8_t initiallife = 31;
+    boss = g;
+    boss_formation = 0;
+
+    const uint8_t initiallife = 63;
     uint8_t i;
     gobkind[g] = GK_BOSS;
     gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL;
@@ -1395,14 +1419,12 @@ void boss_create(uint8_t g)
     gobtimer[g] = 0;
     boss_reset(g);
   
-    uint8_t parent = g; 
-    for (i = 0; i < 15; ++i) {
+    for (i = 0; i < NUM_BOSSSEGS; ++i) {
         uint8_t c = gob_alloc();
         if (c >= MAX_GOBS) {
             return;
         }
-        bosstail_spawn(c, parent);
-        parent = c;
+        bossseg_spawn(c, i);
     }
 }
 
@@ -1419,19 +1441,17 @@ void boss_shot(uint8_t g, uint8_t shot)
     uint8_t life = gobdat[g] >> 2;
     if (life == 0) {
         // tell any children to go kaboom.
-        bosstail_chainreact(g);
+        uint8_t delay = 4;
+        for (uint8_t child = 0; child < MAX_GOBS; ++child) {
+            bossseg_destruct(child, delay);
+            delay += 4;
+        }
         gob_standard_kaboom(g, shot, 250);
         return;
     }
     --life;
     gobdat[g] = (life << 2) & (gobdat[g] & 0xFC);
-    uint8_t child;
-    // make the first child the new head.
-    //for( child=0; child<MAX_GOBS; ++child) {
-    //    if(gobkind[child] == GK_BOSSTAIL && gobdat[child] == g) {
-    //        break;
-    //    }
-    //}
+
     gobvx[g] += shotvx[shot]<<2;
     gobvy[g] += shotvy[shot]<<2;
     gob_highlight(g, 4);
@@ -1449,6 +1469,10 @@ void boss_tick(uint8_t g)
         // next target
         targ = (targ + 1 ) & 0x03;
         gobdat[g] = (gobdat[g] & 0xfc) | targ;
+        ++boss_formation;
+        if(boss_formation >= NUM_BOSS_FORMATIONS) {
+            boss_formation = 0;
+        }
     }
    
     const int16_t x0 = 0;
@@ -1497,71 +1521,120 @@ void boss_tick(uint8_t g)
 
 
 /*
- * Boss tail segment
+ * Boss segment
+ *
+ * gobdat: ssssffff
+ *         s=state SEGSTATE_*
+ *         f=formation slot (0 to NUM_BOSSSEGS-1)
+ * gobvx,gobvy: current position, relative to boss head
+ * gobtimer: 0=moving, 1=at rest
+ *           or countdown timer, if gobdat==0xff
  */
 
 
-void bosstail_spawn(uint8_t g, uint8_t parent)
+// return x for current formation, relative to boss head
+static inline int16_t bossseg_x(uint8_t g)
 {
-    gobkind[g] = GK_BOSSTAIL;
+    uint8_t slot = gobdat[g] & 0x0F;
+    int16_t x = (boss_formx[boss_formation][slot] * 16)<<FX;
+    return x;
+}
+
+static inline int16_t bossseg_y(uint8_t g)
+{
+    uint8_t slot = gobdat[g] & 0x0F;
+    int16_t y = (boss_formy[boss_formation][slot] * 16)<<FX;
+    return y;
+}
+
+
+
+void bossseg_spawn(uint8_t g, uint8_t slot)
+{
+    gobkind[g] = GK_BOSSSEG;
     gobflags[g] = GF_PERSIST | GF_COLLIDES_PLAYER | GF_COLLIDES_SHOT | GF_LOCKS_LEVEL; 
-    gobdat[g] = parent;
-    gobx[g] = gobx[parent];
-    goby[g] = goby[parent];
-    gobvx[g] = 0;
-    gobvx[g] = 0;
-    //boss_reset(i);
+    gobdat[g] = SEGSTATE_NORMAL | slot;
+    bossseg_reset(g);
 }
 
 //
-void bosstail_chainreact(uint8_t parent)
+void bossseg_destruct(uint8_t g, uint8_t delay)
 {
-    uint8_t g;
-    for (g=0; g<MAX_GOBS; ++g) {
-        if (gobkind[g]== GK_BOSSTAIL && gobdat[g]==parent) {
-            gobdat[g] = 0xff;
-            gobtimer[g] = 8;
+    if (bossseg_state(g) != SEGSTATE_NORMAL) {
+        // If already hidden, just drop out without fanfare.
+        gobkind[g] = GK_NONE;
+        return;
+    }
+    gobdat[g] = SEGSTATE_DESTRUCT | (gobdat[g] & 0x0f);
+    gobtimer[g] = delay;
+}
+
+void bossseg_reset(uint8_t g)
+{
+    gobvx[g] = bossseg_x(g);
+    gobvy[g] = bossseg_y(g);
+    gobdat[g] = SEGSTATE_NORMAL | (gobdat[g] & 0x0f);
+    gobtimer[g] = 8;
+    
+    gobx[g] = gobx[boss] + gobvx[g];
+    goby[g] = goby[boss] + gobvy[g];
+}
+
+void bossseg_shot(uint8_t g, uint8_t shot)
+{
+#if 0
+    if (bossseg_state(g) == SEGSTATE_NORMAL) {
+        if (gobtimer[g] == 0) {
+            // Hide and turn off collisions.
+            gobdat[g] = SEGSTATE_HIDE | (gobdat[g] & 0x0f);
+            gobflags[g] = gobflags[g] & ~(GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER);
+            gobtimer[g] = 64;
+        } else {
+            --gobtimer[g];
         }
     }
+#endif
 }
 
-void bosstail_reset(uint8_t g)
+void bossseg_tick(uint8_t g)
 {
-    gobx[g] = gobx[gobdat[g]];
-    goby[g] = goby[gobdat[g]];
-    gobvx[g] = 0;
-    gobvy[g] = 0;
-}
-
-void bosstail_shot(uint8_t g, uint8_t shot)
-{
-    //gobvx[g] += shotvx[shot]<<2;
-    //gobvy[g] += shotvy[shot]<<2;
-}
-
-void bosstail_tick(uint8_t g)
-{
-    uint8_t parent = gobdat[g];
-    if (parent == 0xff) {
+    //uint8_t slot = gobdat[g] & 0x0f;
+    if (bossseg_state(g) == SEGSTATE_DESTRUCT) {
         // parent gone - we're counting down to destruction.
         if (gobtimer[g] == 0) {
-            bosstail_chainreact(g);
-            gob_standard_kaboom(g, 0xff, 50);
+            gob_standard_kaboom(g, 0xff, 50);   // 0xff=no shot
         } else {
             --gobtimer[g];
         }
         return;
     }
-    const int16_t WIBBLER_MAX_SPD = 2 << FX;
-    const int16_t WIBBLER_ACCEL = 3;
 
-    if ((tick & 0x3) == 0) {
-        gobvx[g] >>= 1;
-        gobvy[g] >>= 1;
+    if (bossseg_state(g) == SEGSTATE_HIDE) {
+        if (gobtimer[g] == 0) {
+            // Show and turn on collisions.
+            gobdat[g] = SEGSTATE_NORMAL | (gobdat[g] & 0x0f);
+            gobflags[g] = gobflags[g] | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+            gobtimer[g] = 8;
+        } else {
+            --gobtimer[g];
+        }
+        return;
     }
-        gob_seek_x(g, gobx[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
-        gob_seek_y(g, goby[parent], WIBBLER_ACCEL*6, WIBBLER_MAX_SPD*4);
-    gob_move_bounce_x(g);
-    gob_move_bounce_y(g);
+
+    int16_t targx = bossseg_x(g);
+    int16_t dx = (targx - gobvx[g])/8;
+    gobvx[g] += dx;
+
+    int16_t targy = bossseg_y(g);
+    int16_t dy = (targy - gobvy[g])/8;
+    gobvy[g] += dy;
+    if ((dx/8) == 0 && (dy/8) == 0) {
+        gobtimer[g] = 1;    // at rest
+    } else {
+        gobtimer[g] = 0;
+    }
+    // position in boss-space
+    gobx[g] = gobx[boss] + gobvx[g];
+    goby[g] = goby[boss] + gobvy[g];
 }
 

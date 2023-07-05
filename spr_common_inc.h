@@ -44,11 +44,10 @@
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
 #define SPR16_MISSILE 80
-#define SPR16_LUNCHER 88
+#define SPR16_BOSS_SEG 88
 
 #define SPR32_AMOEBA_BIG 0
 #define SPR32_BOSS_HEAD 2
-#define SPR32_BOSS_TAIL 3
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
@@ -223,9 +222,13 @@ void plat_boss_render(int16_t x, int16_t y, bool highlight)
     }
 }
 
-void plat_bosstail_render(int16_t x, int16_t y, uint8_t phase)
+void plat_bossseg_render(int16_t x, int16_t y, uint8_t phase, bool atrest, bool highlight)
 {
-    sprout32(x, y, SPR32_BOSS_TAIL + ((phase + (tick >> 3)) & 3));
+    if (atrest) {
+        sprout16(x, y, SPR16_BOSS_SEG);
+    } else {
+        sprout16(x, y, SPR16_BOSS_SEG + ((phase + (tick >> 3)) & 3));
+    }
 }
 
 

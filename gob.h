@@ -31,7 +31,7 @@
 #define GK_ZOMBIE 20
 #define GK_MISSILE 21
 #define GK_BOSS 22
-#define GK_BOSSTAIL 23
+#define GK_BOSSSEG 23
 
 // Flags
 // lower 3 bits used for highlight timer
@@ -87,7 +87,7 @@ static inline int16_t gob_size(uint8_t d) {
         case GK_AMOEBA_SMALL: return 12<<FX;
         case GK_MISSILE: return 8<<FX;
         case GK_BOSS: return 32<<FX;
-        case GK_BOSSTAIL: return 32<<FX;
+        case GK_BOSSSEG: return 16<<FX;
         default: return 16<<FX;
     }
 }
@@ -199,11 +199,19 @@ void boss_shot(uint8_t g, uint8_t shot);
 void boss_tick(uint8_t g);
 void boss_reset(uint8_t g);
 
-// Bosstail fns.
-void bosstail_spawn(uint8_t g, uint8_t parent);
-void bosstail_shot(uint8_t g, uint8_t shot);
-void bosstail_tick(uint8_t g);
-void bosstail_reset(uint8_t g);
-void bosstail_chainreact(uint8_t parent);
+// Boss segment fns.
+// upper 4 bits of gobdat is state:
+#define SEGSTATE_NORMAL     0x00
+#define SEGSTATE_DESTRUCT   0xf0
+#define SEGSTATE_HIDE       0x10
+
+static inline uint8_t bossseg_state(uint8_t g) {
+    return gobdat[g] & 0xf0;
+}
+void bossseg_spawn(uint8_t g, uint8_t slot);
+void bossseg_shot(uint8_t g, uint8_t shot);
+void bossseg_tick(uint8_t g);
+void bossseg_reset(uint8_t g);
+void bossseg_destruct(uint8_t g, uint8_t delay);
 
 #endif // GOB_H
