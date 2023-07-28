@@ -1,5 +1,6 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
+#include "../misc.h"
 #include "plat_sdl2.h"
 #include "vera_psg.h"
 

@@ -13,6 +13,7 @@
 #define SPR16_CURSOR 1  // 2 frames
 #define SPR16_BLOCK 3
 #define SPR16_EXTRALIFE 8
+#define SPR16_POWERUP 9
 #define SPR16_BAITER 16
 #define SPR16_AMOEBA_MED 20
 #define SPR16_AMOEBA_SMALL 24
@@ -51,42 +52,26 @@
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
-
-// SHOT+0 vert, +1 horiz, +2 nw, +3 ne
-const uint8_t shot_spr[24] = {
-    SPR16_SHOT+0,   // 0 up
-    SPR16_SHOT+0,
-    SPR16_SHOT+1,
-
-    SPR16_SHOT+1,   // 3 up/right
-    SPR16_SHOT+1,
-    SPR16_SHOT+2,
-
-    SPR16_SHOT+2,   // 6 right
-    SPR16_SHOT+2,
-    SPR16_SHOT+3,
-
-    SPR16_SHOT+3,   // 9 down/right
-    SPR16_SHOT+3,
-    SPR16_SHOT+0,
-
-    SPR16_SHOT+0,   // 12 down
-    SPR16_SHOT+0,
-    SPR16_SHOT+1,
-
-    SPR16_SHOT+1,   // 15 down/left
-    SPR16_SHOT+1,
-    SPR16_SHOT+2,
-
-    SPR16_SHOT+2,  // 18 left
-    SPR16_SHOT+2,
-    SPR16_SHOT+3,
-
-    SPR16_SHOT+3,  // 21 up/left
-    SPR16_SHOT+3,
-    SPR16_SHOT+0,
-};
-
+/*
+// +0 vert, +1 horiz, +2 nw, +3 ne
+const uint8_t angle24_to_diag8[24] = {
+    // 0 up
+    0, 0, 1,
+    // 3 up/right
+    1, 1, 2,
+    // 6 right
+    2, 2, 3,
+    // 9 down/right
+    3, 3, 0,
+    // 12 down
+    0, 0, 1,
+    // 15 down/left
+    1, 1, 2,
+    // 18 left
+    2, 2, 3,
+    // 21 up/left
+    3, 3, 0, };
+*/
 
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
 {
@@ -104,12 +89,14 @@ void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
 
 void plat_powerup_render(int16_t x, int16_t y, uint8_t kind)
 {
-    sprout16(x, y, SPR16_EXTRALIFE);
+    sprout16(x, y, SPR16_EXTRALIFE + kind);
 }
 
-void plat_shot_render(int16_t x, int16_t y, uint8_t direction)
+void plat_shot_render(int16_t x, int16_t y, uint8_t direction, uint8_t power)
 {
-    sprout16(x, y, shot_spr[direction]);
+    uint8_t base[3] = {SPR16_SHOT, SPR16_SHOT_MED, SPR16_SHOT_HEAVY};
+    uint8_t dir8 = angle24toangle8[direction];
+    sprout16(x, y, base[power] + (dir8 & 0x03));
 }
 
 void plat_block_render(int16_t x, int16_t y)

@@ -1,5 +1,6 @@
 #include <nds.h>
 #include "../plat.h"
+#include "../misc.h"
 #include "../gob.h" // for ZAPPER_*
 
 // sprintf support...

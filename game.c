@@ -162,6 +162,7 @@ void enter_STATE_NEWGAME()
     player_score = 0;
     level_init(level);
 
+    player_create(0);
     state = STATE_NEWGAME;
     statetimer = 0;
 }
@@ -189,7 +190,7 @@ void enter_STATE_GETREADY()
     // We expect all the gobs to be set up by here.
     // Kick them into spawning-in mode.
     gobs_spawning();
-    player_create(0, ((SCREEN_W / 2) - 8) << FX, ((SCREEN_H / 2) - 8) << FX);
+    player_reset(0);
     shot_clearall();
     plat_clr();
 }
@@ -339,8 +340,11 @@ static void level_init(uint8_t level)
 
     switch (level) {
         case 0:
-            //gobs_create(GK_BRAIN, 2);
-            gobs_create(GK_BOSS, 1);
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_GRUNT, 15);
+            gobs_create(GK_BRAIN, 2);
+            //gobs_create(GK_BOSS, 1);
+            gobs_create(GK_MARINE, 3);
             break;
         case 1:
             gobs_create(GK_BLOCK, 10);

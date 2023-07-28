@@ -488,7 +488,7 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 
     if (rnd() > 250) {
         // transform into powerup
-        powerup_create(d, gobx[d], goby[d], 0);
+        powerup_create(d, gobx[d], goby[d], rnd() & 0x01);
     }
 }
 
@@ -950,7 +950,12 @@ void powerup_tick(uint8_t d)
 
 bool powerup_playercollide(uint8_t g, uint8_t plr)
 {
-    player_lives++;
+    switch(gobdat[g]) {
+        case 0: player_powerup_life(plr); break;
+        case 1: player_powerup_weapon(plr); break;
+        default: break;
+    }
+
     gobkind[g] = GK_NONE;
     return false;   // Don't kill player.
 }
