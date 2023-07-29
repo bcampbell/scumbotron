@@ -24,7 +24,8 @@
 #define STATE_STORY_OHNO 13 // story part 2
 #define STATE_STORY_ATTACK 14 // story part 3
 #define STATE_STORY_RUNAWAY 15 // story part 4
-#define STATE_STORY_DONE 16 // story finished
+#define STATE_STORY_WHATNOW 16 // story finished
+#define STATE_STORY_DONE 17 // story finished
  
 extern uint8_t state;
 extern uint16_t statetimer;
@@ -64,6 +65,9 @@ void render_STATE_STORY_ATTACK();
 void enter_STATE_STORY_RUNAWAY();
 void tick_STATE_STORY_RUNAWAY();
 void render_STATE_STORY_RUNAWAY();
+void enter_STATE_STORY_WHATNOW();
+void tick_STATE_STORY_WHATNOW();
+void render_STATE_STORY_WHATNOW();
 void enter_STATE_STORY_DONE();
 void tick_STATE_STORY_DONE();
 void render_STATE_STORY_DONE();

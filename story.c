@@ -447,7 +447,7 @@ void tick_STATE_STORY_RUNAWAY()
         return;
     }
     if (++statetimer > 170 || inp) {
-        enter_STATE_STORY_DONE();
+        enter_STATE_STORY_WHATNOW();
     }
 }
 
@@ -458,7 +458,39 @@ void render_STATE_STORY_RUNAWAY()
 }
 
 /*
- * STATE_STORY_DONE
+ * STATE_STORY_WHATNOW
+ */
+void enter_STATE_STORY_WHATNOW()
+{
+    state = STATE_STORY_WHATNOW;
+    statetimer = 0;
+}
+
+
+void tick_STATE_STORY_WHATNOW()
+{
+    uint8_t inp = plat_inp_menu();
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+    if (++statetimer > 250 || inp) {
+        enter_STATE_STORY_DONE();  // Back to attract mode.
+    }
+}
+
+
+void render_STATE_STORY_WHATNOW()
+{
+    const uint8_t cx = (SCREEN_W/2)/8;
+    plat_text(cx-4, 5, "OH NO!", 1);
+    if (statetimer > 70) {
+        plat_text(cx-13, 12, "WHO WILL SAVE HUMANITY NOW?", 1);
+    }
+}
+
+/*
+ * STATE_STORY_DONE - nop mode, go back to attract sequence
  */
 void enter_STATE_STORY_DONE()
 {
@@ -469,24 +501,12 @@ void enter_STATE_STORY_DONE()
 
 void tick_STATE_STORY_DONE()
 {
-    uint8_t inp = plat_inp_menu();
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_NEWGAME();
-        return;
-    }
-    if (++statetimer > 250 || inp) {
-        enter_STATE_ATTRACT();  // Back to attract mode.
-    }
+    enter_STATE_ATTRACT();  // Back to attract mode.
 }
 
 
 void render_STATE_STORY_DONE()
 {
-    const uint8_t cx = (SCREEN_W/2)/8;
-    plat_text(cx-2, 5, "OH.", 1);
-    if (statetimer > 70) {
-        plat_text(cx-15, 12, "BUT WHO WILL SAVE HUMANITY NOW?", 1);
-    }
 }
 
 

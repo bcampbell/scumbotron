@@ -59,6 +59,7 @@ void game_tick()
     case STATE_STORY_OHNO:    tick_STATE_STORY_OHNO(); break;
     case STATE_STORY_ATTACK:    tick_STATE_STORY_ATTACK(); break;
     case STATE_STORY_RUNAWAY:    tick_STATE_STORY_RUNAWAY(); break;
+    case STATE_STORY_WHATNOW:    tick_STATE_STORY_WHATNOW(); break;
     case STATE_STORY_DONE:    tick_STATE_STORY_DONE(); break;
     }
 }
@@ -82,6 +83,7 @@ void game_render()
         case STATE_STORY_OHNO:      render_STATE_STORY_OHNO(); break;
         case STATE_STORY_ATTACK:    render_STATE_STORY_ATTACK(); break;
         case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
+        case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
 }
