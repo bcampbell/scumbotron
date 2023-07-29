@@ -354,20 +354,8 @@ void render_STATE_STORY_INTRO()
         plat_text(cx-10, 13, "FOR A NICE CUP OF TEA", 1);
     }
 
-    if (statetimer > 220) {
-        uint8_t l;
-        if (statetimer < 300) {
-            l = 5;
-        } else if (statetimer < 320) {
-            l = 14;
-        } else if (statetimer < 340) {
-            l = 14 + 1;
-        } else if (statetimer < 360) {
-            l = 14 + 2;
-        } else {
-            l = 14 + 3;
-        }
-        plat_textn(cx-8, 17, "WHEN, SUDDENLY...", l, 1);
+    if (statetimer > 350) {
+        plat_textn(cx-8, 17, "WHEN, SUDDENLY...", 17, 1);
     }
 }
 
