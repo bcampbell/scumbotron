@@ -372,6 +372,7 @@ uint8_t gob_alloc() {
     return MAX_GOBS;
 }
 
+#if 0
 void gob_randompos(uint8_t d) {
     const int16_t xmid = (SCREEN_W/2)-8;
     const int16_t ymid = (SCREEN_H/2)-8;
@@ -385,6 +386,30 @@ void gob_randompos(uint8_t d) {
 
         lsq = x*x + y*y;
         if (lsq > 80*80 && lsq <100*100 ) {
+            break;
+        }
+    }
+
+    gobx[d] = (xmid + x) << FX;
+    goby[d] = (ymid + y) << FX;
+}
+#endif
+
+void gob_randompos(uint8_t d) {
+    const int16_t xmid = (SCREEN_W/2)-8;
+    const int16_t ymid = (SCREEN_H/2)-8;
+
+    int16_t x;
+    int16_t y;
+    while (1) {
+        int16_t lsq; 
+        x = -128 + rnd();
+        y = -128 + rnd();
+
+        lsq = x*x + y*y;
+        if (lsq > 80*80 &&
+                x > -xmid && x < (xmid - 16) &&
+                y > -ymid && y < (ymid - 16)) {
             break;
         }
     }
@@ -715,7 +740,7 @@ void tank_create(uint8_t g)
 {
     gobkind[g] = GK_TANK;
     gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobdat[g] = 12;  // life
+    gobdat[g] = 4;  // life
     tank_reset(g);
 }
 
