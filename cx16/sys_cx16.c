@@ -507,6 +507,34 @@ void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
 }
 
 
+// cw must be even!
+void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
+{
+    // translate from 2x2 pixel block to charset rom char.
+    static const uint8_t chr[16] = {
+        0x20,0x7c,0x7e,0xe2,0x6c,0xe1,0x7f,0xfb,
+        0x7b,0xff,0x61,0xec,0x62,0xfe,0xfc,0xa0
+    };
+    uint8_t x;
+    uint8_t y;
+
+    for (y=0; y < ch; ++y) {
+        veraaddr0(VRAM_LAYER1_MAP + (cy+y)*64*2 + cx*2, VERA_INC_1);
+        uint8_t colour = (basecol + y) & 0x0f;
+        for (x=0; x < cw; x+=2) {
+            // left char
+            VERA.data0 = chr[(*src) >>4];
+            VERA.data0 = (colour & 0x0f);
+            // right char
+            VERA.data0 = chr[*(src) & 0x0f];
+            VERA.data0 = (colour & 0x0f);
+            //--c;
+            ++src;
+        }
+    }
+}
+
+
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     const uint8_t cx = 0;

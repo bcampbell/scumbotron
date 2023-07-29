@@ -436,6 +436,28 @@ void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
     plat_textn(cx, cy, txt, len, colour);
 }
 
+// cw must be even!
+void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
+{
+    int x = cx*8;
+    int y = cy*8;
+
+    for (y=0; y < ch; ++y) {
+        uint8_t c = (basecol + y) & 0x0f;
+        uint8_t colour = (basecol + y) & 0x0f;
+        for (x=0; x < cw; x+=2) {
+            // left char
+            c = 128 + (*src >> 4);
+            blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x) * 8, (cy + y) * 8, colour);
+            // right char
+            c = 128 + (*src & 0x0f);
+            blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x + 1) * 8, (cy + y) * 8, colour);
+            ++src;
+        }
+    }
+}
+
+
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
     char buf[40];

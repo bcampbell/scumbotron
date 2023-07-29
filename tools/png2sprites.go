@@ -39,7 +39,7 @@ Flags:
 	flag.IntVar(&opts.width, "w", 8, "Sprite width")
 	flag.IntVar(&opts.height, "h", 8, "Sprite height")
 	flag.IntVar(&opts.numFrames, "num", 1, "Number of sprites to export")
-	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format (8bpp, 4bpp, 1bpp, nds4bpp)")
+	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format (8bpp, 4bpp, 1bpp, nds4bpp, mono4x2)")
 	flag.BoolVar(&opts.csource, "c", false, "Output C src instead of raw binary")
 	flag.StringVar(&opts.varName, "var", "", "Set variable name used for C source output (-c) (defaults to munged filename)")
 	flag.Parse()
@@ -247,6 +247,8 @@ func cook(img *image.Paletted) ([]uint8, error) {
 		return cook4bppNDS(img)
 	case "1bpp":
 		return cook1bpp(img)
+	case "mono4x2":
+		return cookMono4x2(img)
 	}
 	return []uint8{}, errors.New("unsupported -fmt")
 }
@@ -310,6 +312,56 @@ func cook1bpp(img *image.Paletted) ([]uint8, error) {
 					b |= 1 << i
 				}
 				idx++
+			}
+			out = append(out, b)
+		}
+	}
+	return out, nil
+}
+
+// Each output byte encodes 2 2x2 blocks of pixels.
+// used for old school petscii-style 4-pixels-in-a-character.
+// Bit ordering of pixels:
+//
+// 5410
+// 7632
+//
+// So, the low 4 bits can be used as the right character,
+// and the hi 4 bits can be used as the left.
+
+func cookMono4x2(img *image.Paletted) ([]uint8, error) {
+	out := []uint8{}
+	r := img.Bounds()
+	for y := 0; y < r.Dy(); y += 2 {
+		for x := 0; x < r.Dx(); x += 4 {
+			row0 := img.PixOffset(r.Min.X+x, r.Min.Y+y)
+			row1 := img.PixOffset(r.Min.X+x, r.Min.Y+y+1)
+			var b byte
+			// left char in low 4 bits:
+			if img.Pix[row0+3] > 0 {
+				b |= 1 << 0
+			}
+			if img.Pix[row0+2] > 0 {
+				b |= 1 << 1
+			}
+			if img.Pix[row1+3] > 0 {
+				b |= 1 << 2
+			}
+			if img.Pix[row1+2] > 0 {
+				b |= 1 << 3
+			}
+			// right char in low 4 bits:
+			if img.Pix[row0+1] > 0 {
+				b |= 1 << 4
+			}
+			if img.Pix[row0+0] > 0 {
+				b |= 1 << 5
+			}
+			if img.Pix[row1+1] > 0 {
+				b |= 1 << 6
+			}
+			if img.Pix[row1+0] > 0 {
+				b |= 1 << 7
 			}
 			out = append(out, b)
 		}

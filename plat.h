@@ -37,6 +37,10 @@ void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score);
 
+// Render bonkers encoding where each byte encodes a 4x2 block of pixels,
+// to be rendered via charset.
+void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol);
+
 // Incremented every frame.
 extern volatile uint8_t tick;
 

@@ -165,6 +165,27 @@ void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
     plat_textn(cx, cy, txt, len, colour);
 }
 
+// cw must be even!
+void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
+{
+    int y;
+    for (y=0; y < ch; ++y) {
+        uint8_t c = (basecol + y) & 0x0f;
+        uint8_t colour = (basecol + y) & 0x0f;
+        uint16_t* dest = BG_MAP_RAM(8) + (cy+y)*32 + cx;    // addressing 16bit words
+        int x;
+        for (x=0; x < cw; x += 2) {
+            // left char
+            c = 128 + (*src >> 4);
+            *dest++ = ((uint16_t)colour<<12) | c;
+            // right char
+            c = 128 + (*src & 0x0f);
+            *dest++ = ((uint16_t)colour<<12) | c;
+            ++src;
+        }
+    }
+}
+
 
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {

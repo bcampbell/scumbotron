@@ -141,12 +141,48 @@ static void tick_STATE_TITLESCREEN()
     }
 }
 
+// $ tools/png2sprites -w 64 -h 8 -c -fmt mono4x2 logo.png 
+static const unsigned char logo_img[] = {
+	// img 0 (64x8)
+	0xd3, 0x32, 0x4c, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x4c, 0x0d, 0x3e,
+	0x7c, 0xc0, 0xf0, 0x5a, 0xf0, 0xcc, 0xc0, 0xcc,
+	0x04, 0xc4, 0xcc, 0x8f, 0x78, 0xf5, 0xaf, 0x0f,
+	0x00, 0x5a, 0xf0, 0x5a, 0xf5, 0xaf, 0x5a, 0xfd,
+	0x2f, 0x5a, 0x5a, 0x0f, 0xd2, 0xf5, 0xaf, 0x0f,
+	0xcc, 0xd2, 0x7c, 0x1e, 0xb5, 0xaf, 0x5a, 0xfd,
+	0x27, 0xd2, 0x5a, 0x0f, 0x5a, 0x7d, 0x2f, 0x0f,
+};
+
+
 static void render_STATE_TITLESCREEN()
 {
-    uint8_t i;
-    for (i=0; i<20; ++i) {
-        plat_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
+//    uint8_t i;
+//    for (i=0; i<20; ++i) {
+//        plat_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
+//    }
+    const uint8_t cx = (SCREEN_TEXT_W-32)/2;
+    const uint8_t cy = 4;
+    plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
+    plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1981 SCUMWAYS INC.", 1);
+
+
+    uint8_t col1 = (SCREEN_TEXT_W/2) - 5 - 8;
+    uint8_t col2 = (SCREEN_TEXT_W/2) - 5 + 8;
+
+    plat_text(col1, 14, "  MOVE: ", 1);
+    plat_text(col1, 16, "    W   ", 1);
+    plat_text(col1, 17, "  A S D ", 1);
+
+    plat_text(col2, 14, "  FIRE: ", 1);
+    plat_text(col2, 16, "   UP   ", 1);
+    plat_text(col2, 17, "LF DN RT", 1);
+
+    if ((tick/32) & 0x01) {
+        plat_text((SCREEN_TEXT_W-20)/2, 23, "PRESS ENTER TO PLAY", 1);
+        plat_text((SCREEN_TEXT_W-20)/2 + 6, 23, "ENTER", 1);
     }
+
 }
 
 /*
