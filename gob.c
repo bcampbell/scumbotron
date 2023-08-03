@@ -1394,9 +1394,6 @@ void missile_tick(uint8_t g)
         } else if (delta < 0) {
             missile_setdir(g, (gobdat[g] - 1) & 7);
         }
-
-        gobvx[g] = missile_vx[gobdat[g]]<<4;
-        gobvy[g] = missile_vy[gobdat[g]]<<4;
     }
 
     gobx[g] += gobvx[g];

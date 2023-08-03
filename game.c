@@ -394,6 +394,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_GRUNT, 10);
             //gobs_create(GK_BOSS, 1);
             gobs_create(GK_MARINE, 3);
+            gobs_create(GK_TANK, 1);
             break;
         case 1:
             gobs_create(GK_BLOCK, 4);

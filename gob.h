@@ -85,7 +85,6 @@ static inline int16_t gob_size(uint8_t d) {
     switch (gobkind[d]) {
         case GK_AMOEBA_BIG: return 32<<FX;
         case GK_AMOEBA_SMALL: return 12<<FX;
-        case GK_MISSILE: return 8<<FX;
         case GK_BOSS: return 32<<FX;
         case GK_BOSSSEG: return 16<<FX;
         default: return 16<<FX;
