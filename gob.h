@@ -29,7 +29,7 @@
 #define GK_MARINE 18
 #define GK_BRAIN 19
 #define GK_ZOMBIE 20
-#define GK_MISSILE 21
+#define GK_RIFASHARK 21
 #define GK_BOSS 22
 #define GK_BOSSSEG 23
 
@@ -99,9 +99,12 @@ void grunt_tick(uint8_t d);
 void grunt_shot(uint8_t d, uint8_t shot);
 
 // baiter fns
-void baiter_tick(uint8_t d);
-void baiter_create(uint8_t d);
-void baiter_shot(uint8_t d, uint8_t shot);
+void baiter_create(uint8_t g);
+void baiter_reset(uint8_t g);
+void baiter_spawn(uint8_t g, int16_t x, int16_t y);
+void baiter_tick(uint8_t g);
+void baiter_reset(uint8_t g);
+void baiter_shot(uint8_t g, uint8_t shot);
 
 // block fns
 void block_create(uint8_t d);
@@ -185,12 +188,12 @@ void zombie_tick(uint8_t d);
 void zombie_reset(uint8_t d);
 void zombie_shot(uint8_t d, uint8_t shot);
 
-// Missile fns
-void missile_spawn(uint8_t g, int16_t x, int16_t y, uint8_t direction);
-void missile_create(uint8_t d);
-void missile_tick(uint8_t d);
-void missile_reset(uint8_t d);
-void missile_shot(uint8_t d, uint8_t shot);
+// Rifashark fns
+void rifashark_spawn(uint8_t g, int16_t x, int16_t y, uint8_t direction);
+void rifashark_create(uint8_t d);
+void rifashark_tick(uint8_t d);
+void rifashark_reset(uint8_t d);
+void rifashark_shot(uint8_t d, uint8_t shot);
 
 // Boss fns.
 void boss_create(uint8_t g);

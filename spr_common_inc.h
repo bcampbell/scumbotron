@@ -44,7 +44,7 @@
 #define SPR16_SHOT_HEAVY 72
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
-#define SPR16_MISSILE 80
+#define SPR16_RIFASHARK 96
 #define SPR16_BOSS_SEG 88
 
 #define SPR32_AMOEBA_BIG 0
@@ -247,8 +247,9 @@ void plat_zombie_render(int16_t x, int16_t y)
     sprout16(x, y, SPR16_ZOMBIE + ((tick>>4) & 0x01));
 }
 
-void plat_missile_render(int16_t x, int16_t y, uint8_t dir)
+void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir)
 {
-    sprout16(x, y, SPR16_MISSILE + dir);
+    uint8_t f = (tick & 0x10);
+    sprout16(x, y, SPR16_RIFASHARK + dir + f);
 }
 

@@ -135,7 +135,7 @@ void gobs_tick(bool spawnphase)
             case GK_MARINE:  marine_tick(i); break;
             case GK_BRAIN:  brain_tick(i); break;
             case GK_ZOMBIE:  zombie_tick(i); break;
-            case GK_MISSILE:  missile_tick(i); break;
+            case GK_RIFASHARK:  rifashark_tick(i); break;
             case GK_BOSS:  boss_tick(i); break;
             case GK_BOSSSEG:  bossseg_tick(i); break;
             default:
@@ -209,8 +209,8 @@ void gobs_render()
             case GK_ZOMBIE:
                 plat_zombie_render(gobx[d], goby[d]);
                 break;
-            case GK_MISSILE:
-                plat_missile_render(gobx[d], goby[d], gobdat[d]);
+            case GK_RIFASHARK:
+                plat_rifashark_render(gobx[d], goby[d], gobdat[d]);
                 break;
             case GK_BOSS:
                 plat_boss_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
@@ -250,7 +250,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
         case GK_BRAIN:        brain_shot(d, s); break;
         case GK_ZOMBIE:       zombie_shot(d, s); break;
-        case GK_MISSILE:      missile_shot(d, s); break;
+        case GK_RIFASHARK:      rifashark_shot(d, s); break;
         case GK_BOSS:         boss_shot(d, s); break;
         case GK_BOSSSEG:      bossseg_shot(d, s); break;
         default:
@@ -296,7 +296,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_MARINE: marine_create(d); break;
             case GK_BRAIN: brain_create(d); break;
             case GK_ZOMBIE: zombie_create(d); break;
-            case GK_MISSILE: missile_create(d); break;
+            case GK_RIFASHARK: rifashark_create(d); break;
             case GK_BOSS: boss_create(d); break;
             // Not all kinds can be created. Some are spawned by others.
             case GK_BOSSSEG:
@@ -324,6 +324,7 @@ void gobs_reset() {
         switch(gobkind[g]) {
             case GK_BLOCK:        block_reset(g); break;
             case GK_GRUNT:        grunt_reset(g); break;
+            case GK_BAITER:       baiter_reset(g); break;
             case GK_AMOEBA_SMALL: amoeba_reset(g); break;
             case GK_AMOEBA_MED:   amoeba_reset(g); break;
             case GK_AMOEBA_BIG:   amoeba_reset(g); break;
@@ -336,7 +337,7 @@ void gobs_reset() {
             case GK_MARINE:       marine_reset(g); break;
             case GK_BRAIN:        brain_reset(g); break;
             case GK_ZOMBIE:       zombie_reset(g); break;
-            case GK_MISSILE:      missile_reset(g); break;
+            case GK_RIFASHARK:      rifashark_reset(g); break;
             case GK_BOSS:         boss_reset(g); break;
             case GK_BOSSSEG:      bossseg_reset(g); break;
             default:
@@ -602,32 +603,46 @@ void grunt_shot(uint8_t g, uint8_t shot)
 /*
  * baiter
  */
-void baiter_create(uint8_t d)
+void baiter_create(uint8_t g)
 {
-    gobkind[d] = GK_BAITER;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[d] = 0;
-    goby[d] = 0;
-    gobvx[d] = 0;
-    gobvy[d] = 0;
-    gobdat[d] = 0;
-    gobtimer[d] = 0;
+    gobkind[g] = GK_BAITER;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+    baiter_reset(g);
 }
 
-void baiter_tick(uint8_t d)
+void baiter_reset(uint8_t g)
+{ 
+    gob_randompos(g);
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+}
+
+void baiter_spawn(uint8_t g, int16_t x, int16_t y)
+{
+    gobkind[g] = GK_BAITER;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobx[g] = x;
+    goby[g] = y;
+    gobvx[g] = 0;
+    gobvy[g] = 0;
+}
+
+void baiter_tick(uint8_t g)
 {
     const int16_t BAITER_MAX_SPD = 2 << FX;
     const int16_t BAITER_ACCEL = 3;
 
-    gob_seek_x(d, plrx[0], BAITER_ACCEL, BAITER_MAX_SPD);
-    gob_move_bounce_x(d);
-    gob_seek_y(d, plry[0], BAITER_ACCEL, BAITER_MAX_SPD);
-    gob_move_bounce_y(d);
+    gob_seek_x(g, plrx[0], BAITER_ACCEL, BAITER_MAX_SPD);
+    gob_move_bounce_x(g);
+    gob_seek_y(g, plry[0], BAITER_ACCEL, BAITER_MAX_SPD);
+    gob_move_bounce_y(g);
 }
 
-void baiter_shot(uint8_t d, uint8_t shot)
+void baiter_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 75);
+    gob_standard_kaboom(g, shot, 75);
 }
 
 
@@ -765,19 +780,28 @@ void tank_tick(uint8_t g)
     }
 
     // shoot at regular intervals
-    if(((tick + (g<<4)) & 0x3f) == 0 ) {
-      uint8_t m = gob_alloc();
-      if (m >= MAX_GOBS) {
-        return;
-      }
+    uint8_t f = tick + (g<<6);
+    if(f  == 0) {
+        int16_t x = gobx[g] + ((8-4)<<FX);
+        int16_t y = goby[g] + ((8-4)<<FX);
+        for (uint8_t theta = 0; theta < 8; theta += 2) {
+            uint8_t m = gob_alloc();
+            if (m >= MAX_GOBS) {
+                break;
+            }
+            rifashark_spawn(m, x, y, theta);
+        }
+    }
+#if 0
       int16_t x = gobx[g] + ((8-4)<<FX);
       int16_t y = goby[g] + ((8-4)<<FX);
       int16_t dx = plrx[0] - x;
       int16_t dy = plry[0] - y;
       uint8_t theta = arctan8(dx, dy);
-      missile_spawn(m, x, y, theta);
+      rifashark_spawn(m, x, y, theta);
+      //baiter_spawn(m, x, y);
     }
-
+#endif
     // update every 32 frames
     if (((tick+g) & 0x1f) != 0x00) {
        return;
@@ -1338,43 +1362,44 @@ void zombie_shot(uint8_t d, uint8_t shot)
  * gobdat: current heading (0..7)
  */
 
-static int8_t missile_vx[8] = {
+static int8_t rifashark_vx[8] = {
     0,3,4,3, 0,-3,-4,-3,
 };
-static int8_t missile_vy[8] = {
+static int8_t rifashark_vy[8] = {
     -4,-3,0,3, 4,3,0,-3,
 };
 // helper
-static void missile_setdir(uint8_t g, uint8_t dir) {
+static void rifashark_setdir(uint8_t g, uint8_t dir) {
     gobdat[g] = dir;
-    gobvx[g] = missile_vx[dir]<<4;
-    gobvy[g] = missile_vy[dir]<<4;
+    gobvx[g] = rifashark_vx[dir]<<4;
+    gobvy[g] = rifashark_vy[dir]<<4;
 }
 
-void missile_spawn(uint8_t g, int16_t x, int16_t y, uint8_t direction)
+void rifashark_spawn(uint8_t g, int16_t x, int16_t y, uint8_t direction)
 {
-    gobkind[g] = GK_MISSILE;
-    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobkind[g] = GK_RIFASHARK;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobx[g] = x;
     goby[g] = y;
-    missile_setdir(g, direction);
+    gobtimer[g] = 0;
+    rifashark_setdir(g, direction);
 }
 
-void missile_create(uint8_t g)
+void rifashark_create(uint8_t g)
 {
-    gobkind[g] = GK_MISSILE;
-    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    missile_reset(g);
+    gobkind[g] = GK_RIFASHARK;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    rifashark_reset(g);
 }
 
-void missile_reset(uint8_t g)
+void rifashark_reset(uint8_t g)
 {
     gob_randompos(g);
     gobtimer[g] = 0;
-    missile_setdir(g, 0);
+    rifashark_setdir(g, rnd() & 0x07);
 }
 
-void missile_tick(uint8_t g)
+void rifashark_tick(uint8_t g)
 {
     // home in on player (but not every frame)
     if (((tick+g) & 0x1f) == 0x00) {
@@ -1390,9 +1415,9 @@ void missile_tick(uint8_t g)
         }
         // turn toward target
         if (delta > 0) {
-            missile_setdir(g, (gobdat[g] + 1) & 7);
+            rifashark_setdir(g, (gobdat[g] + 1) & 7);
         } else if (delta < 0) {
-            missile_setdir(g, (gobdat[g] - 1) & 7);
+            rifashark_setdir(g, (gobdat[g] - 1) & 7);
         }
     }
 
@@ -1400,7 +1425,7 @@ void missile_tick(uint8_t g)
     goby[g] += gobvy[g];
 }
 
-void missile_shot(uint8_t g, uint8_t shot)
+void rifashark_shot(uint8_t g, uint8_t shot)
 {
     gob_standard_kaboom(g, shot, 20);
 }
@@ -1541,7 +1566,7 @@ void boss_tick(uint8_t g)
     //  int16_t dx = plrx[0] - x;
     //  int16_t dy = plry[0] - y;
     //  uint8_t theta = arctan8(dx, dy);
-//      missile_spawn(m, x, y, theta);
+//      rifashark_spawn(m, x, y, theta);
     }
 
 }

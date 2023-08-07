@@ -391,6 +391,9 @@ static void level_init(uint8_t level)
 
     switch (level) {
         case 0:
+            gobs_create(GK_TANK, 4);
+            break;
+        case 200:
             gobs_create(GK_GRUNT, 10);
             //gobs_create(GK_BOSS, 1);
             gobs_create(GK_MARINE, 3);
