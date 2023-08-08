@@ -36,8 +36,9 @@ static uint8_t shot_alloc();
 static uint8_t weapon_fire_delay[NUM_WEAPONS] = {8, 7, 6};
 
 // player
-#define PLAYER_ACCEL (FX_ONE/4)
-#define PLAYER_MAXSPD (2*FX_ONE)
+
+//#define PLAYER_ACCEL (FX_ONE/4)
+#define PLAYER_MAXSPD (FX_ONE + (FX_ONE/2))
 
 // Dampen the player velocity
 static inline int16_t dampvel(int16_t v) {
@@ -205,6 +206,7 @@ void player_powerup_weapon(uint8_t plr)
 
 static void plr_digital_move(uint8_t d, uint8_t move)
 {
+#ifdef MOVE_WITH_INTERIA_DISABLED_FOR_NOW
     // move
     {
         int16_t vy = plrvy[d];
@@ -241,11 +243,36 @@ static void plr_digital_move(uint8_t d, uint8_t move)
         vx = dampvel(vx);
         plrvx[d] = vx;
     }
+#endif
+
+    // move
+    {
+        int16_t vy = 0;
+        if (move & DIR_UP) {
+            vy = -PLAYER_MAXSPD;
+        } else if (move & DIR_DOWN) {
+            vy = PLAYER_MAXSPD;
+        }
+        plry[d] += vy;
+        plrvy[d] = vy;
+    }
+
+    {
+        int16_t vx = 0;
+        if (move & DIR_LEFT) {
+            vx = -PLAYER_MAXSPD;
+        } else if (move & DIR_RIGHT) {
+            vx = PLAYER_MAXSPD;
+        }
+        plrx[d] += vx;
+        plrvx[d] = vx;
+    }
+    // end of non-intertial movement
+
 
     if (move) {
         plrfacing[d] =  move;
     }
-
     // keep player on screen
     {
         const int16_t xmax = (SCREEN_W - 16) << FX;
