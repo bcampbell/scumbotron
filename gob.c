@@ -792,16 +792,7 @@ void tank_tick(uint8_t g)
             rifashark_spawn(m, x, y, theta);
         }
     }
-#if 0
-      int16_t x = gobx[g] + ((8-4)<<FX);
-      int16_t y = goby[g] + ((8-4)<<FX);
-      int16_t dx = plrx[0] - x;
-      int16_t dy = plry[0] - y;
-      uint8_t theta = arctan8(dx, dy);
-      rifashark_spawn(m, x, y, theta);
-      //baiter_spawn(m, x, y);
-    }
-#endif
+
     // update every 32 frames
     if (((tick+g) & 0x1f) != 0x00) {
        return;
