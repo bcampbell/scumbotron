@@ -31,7 +31,8 @@ uint8_t rnd() {
 
 // double dabble: 8 decimal digits in 32 bits BCD
 // from https://stackoverflow.com/a/64955167
-uint32_t bin2bcd(uint32_t in) {
+// NOTE: will likely crash at some point if binary number is >99999999.
+uint32_t bin2bcd32(uint32_t in) {
   uint32_t bit = 0x4000000; //  99999999 max binary
   uint32_t bcd = 0;
   uint32_t carry = 0;
@@ -45,6 +46,25 @@ uint32_t bin2bcd(uint32_t in) {
     if (!(bit >>= 1)) return bcd;
     carry = ((bcd + 0x33333333) & 0x88888888) >> 1; // carrys: 8s -> 4s
     carry += carry >> 1; // carrys 6s  
+  }
+}
+
+// Convert 8bit binary into 8bit bcd.
+uint8_t bin2bcd8(uint8_t in) {
+  uint8_t bit = 0x40; //  99 max binary
+  uint8_t bcd = 0;
+  uint8_t carry = 0;
+  if (!in) return 0;
+  if (in > 99) return 0x99;
+  while (!(in & bit)) bit >>= 1;  // skip to MSB
+
+  while (1) {
+    bcd <<= 1;
+    bcd += carry; // carry 6s to next BCD digits (10 + 6 = 0x10 = LSB of next BCD digit)
+    if (bit & in) bcd |= 1;
+    if (!(bit >>= 1)) return bcd;
+    carry = ((bcd + 0x33) & 0x88) >> 1; // carrys: 8s -> 4s
+    carry += carry >> 1; // carrys 6s
   }
 }
 

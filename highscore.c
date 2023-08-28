@@ -53,7 +53,7 @@ static void draw() {
         }
 
         // Draw the score (8 digits).
-        hex32(bin2bcd(hs->score), buf);
+        hex32(bin2bcd32(hs->score), buf);
         plat_textn(cx + 2 + HIGHSCORE_NAME_SIZE, cy + slot*2, buf, 8, c );
     }
 }

@@ -6,7 +6,8 @@
 
 void rnd_seed(uint8_t seed);
 uint8_t rnd();
-uint32_t bin2bcd(uint32_t in);
+uint32_t bin2bcd32(uint32_t in);
+uint8_t bin2bcd8(uint8_t in);
 
 // "0123456789ABCDEF"
 extern const char hexdigits[16];
