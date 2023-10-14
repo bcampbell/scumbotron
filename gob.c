@@ -136,6 +136,7 @@ void gobs_tick(bool spawnphase)
             case GK_BRAIN:  brain_tick(i); break;
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_RIFASHARK:  rifashark_tick(i); break;
+            case GK_RIFASPAWNER:  rifaspawner_tick(i); break;
             case GK_BOSS:  boss_tick(i); break;
             case GK_BOSSSEG:  bossseg_tick(i); break;
             default:
@@ -212,6 +213,9 @@ void gobs_render()
             case GK_RIFASHARK:
                 plat_rifashark_render(gobx[d], goby[d], gobdat[d]);
                 break;
+            case GK_RIFASPAWNER:
+                plat_rifaspawner_render(gobx[d], goby[d]);
+                break;
             case GK_BOSS:
                 plat_boss_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
@@ -250,7 +254,8 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_HAPPYSLAPPER: happyslapper_shot(d, s); break;
         case GK_BRAIN:        brain_shot(d, s); break;
         case GK_ZOMBIE:       zombie_shot(d, s); break;
-        case GK_RIFASHARK:      rifashark_shot(d, s); break;
+        case GK_RIFASHARK:    rifashark_shot(d, s); break;
+        case GK_RIFASPAWNER:  rifaspawner_shot(d, s); break;
         case GK_BOSS:         boss_shot(d, s); break;
         case GK_BOSSSEG:      bossseg_shot(d, s); break;
         default:
@@ -297,6 +302,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_BRAIN: brain_create(d); break;
             case GK_ZOMBIE: zombie_create(d); break;
             case GK_RIFASHARK: rifashark_create(d); break;
+            case GK_RIFASPAWNER: rifaspawner_create(d); break;
             case GK_BOSS: boss_create(d); break;
             // Not all kinds can be created. Some are spawned by others.
             case GK_BOSSSEG:
@@ -337,7 +343,8 @@ void gobs_reset() {
             case GK_MARINE:       marine_reset(g); break;
             case GK_BRAIN:        brain_reset(g); break;
             case GK_ZOMBIE:       zombie_reset(g); break;
-            case GK_RIFASHARK:      rifashark_reset(g); break;
+            case GK_RIFASHARK:    rifashark_reset(g); break;
+            case GK_RIFASPAWNER:  rifaspawner_reset(g); break;
             case GK_BOSS:         boss_reset(g); break;
             case GK_BOSSSEG:      bossseg_reset(g); break;
             default:
@@ -779,19 +786,6 @@ void tank_tick(uint8_t g)
         --gobtimer[g];
     }
 
-    // shoot at regular intervals
-    uint8_t f = tick + (g<<6);
-    if(f  == 0) {
-        int16_t x = gobx[g] + ((8-4)<<FX);
-        int16_t y = goby[g] + ((8-4)<<FX);
-        for (uint8_t theta = 0; theta < 8; theta += 2) {
-            uint8_t m = gob_alloc();
-            if (m >= MAX_GOBS) {
-                break;
-            }
-            rifashark_spawn(m, x, y, theta);
-        }
-    }
 
     // update every 32 frames
     if (((tick+g) & 0x1f) != 0x00) {
@@ -1348,7 +1342,7 @@ void zombie_shot(uint8_t d, uint8_t shot)
 }
 
 /*
- * Missile
+ * Rifashark
  *
  * gobdat: current heading (0..7)
  */
@@ -1417,6 +1411,79 @@ void rifashark_tick(uint8_t g)
 }
 
 void rifashark_shot(uint8_t g, uint8_t shot)
+{
+    gob_standard_kaboom(g, shot, 20);
+}
+
+
+/*
+ * Rifaspawner
+ *
+ * gobdat: current heading (0..7)
+ */
+
+// helper
+static void rifaspawner_newdir(uint8_t g) {
+    int16_t vx = (rnd() - 128)/4;
+    int16_t vy = (rnd() - 128)/4;
+
+
+    const int16_t minspd = 32;
+    if (vx < 0 && vx > -minspd) {
+        vx = -minspd;
+    } else if (vx >= 0 && vx < minspd) {
+        vx = minspd;
+    }
+    if (vy < 0 && vy > -minspd) {
+        vy = -minspd;
+    } else if (vy >= 0 && vy < minspd) {
+        vy = minspd;
+    }
+
+    gobvx[g] = vx;
+    gobvy[g] = vy;
+    gobtimer[g] = 128 + (rnd()/2);
+}
+
+void rifaspawner_create(uint8_t g)
+{
+    gobkind[g] = GK_RIFASPAWNER;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    rifaspawner_reset(g);
+}
+
+void rifaspawner_reset(uint8_t g)
+{
+    rifaspawner_newdir(g);
+    gob_randompos(g);
+}
+
+void rifaspawner_tick(uint8_t g)
+{
+    // shoot at regular intervals
+    uint8_t f = tick + (g<<6);
+    if(f  == 0) {
+        int16_t x = gobx[g] + ((8-4)<<FX);
+        int16_t y = goby[g] + ((8-4)<<FX);
+        for (uint8_t theta = 0; theta < 8; theta += 2) {
+            uint8_t m = gob_alloc();
+            if (m >= MAX_GOBS) {
+                break;
+            }
+            rifashark_spawn(m, x, y, theta);
+        }
+    }
+
+    // slowly run away from player
+    if(((tick+g)&0x15) ==0) {
+        gob_seek_x(g, plrx[0], -((1<<FX)>>2), 2<<FX);
+        gob_seek_y(g, plry[0], -((1<<FX)>>2), 2<<FX);
+    }
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
+}
+
+void rifaspawner_shot(uint8_t g, uint8_t shot)
 {
     gob_standard_kaboom(g, shot, 20);
 }

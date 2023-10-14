@@ -221,6 +221,8 @@ static void render_robo_rain(uint8_t t) {
         switch ((foo>>2) & 0x07) {
             case 0:
             case 1:
+                plat_rifashark_render(x,y,4);
+                break;
             case 2:
                 plat_grunt_render(x, y);
                 break;

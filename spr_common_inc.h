@@ -46,9 +46,11 @@
 #define SPR16_ZOMBIE 78
 #define SPR16_RIFASHARK 96
 #define SPR16_BOSS_SEG 88
+#define SPR16_RIFASPAWNER 92+16
 
 #define SPR32_AMOEBA_BIG 0
 #define SPR32_BOSS_HEAD 2
+#define SPR32_BLOB 3
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
@@ -251,5 +253,14 @@ void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir)
 {
     uint8_t f = (tick & 0x10);
     sprout16(x, y, SPR16_RIFASHARK + dir + f);
+}
+
+void plat_rifaspawner_render(int16_t x, int16_t y)
+{
+    uint8_t f = ((tick>>2) & 0x07);
+    if (f>=4) {
+        f=7-f;
+    }
+    sprout16(x, y, SPR16_RIFASPAWNER + f);
 }
 

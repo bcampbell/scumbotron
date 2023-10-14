@@ -30,8 +30,9 @@
 #define GK_BRAIN 19
 #define GK_ZOMBIE 20
 #define GK_RIFASHARK 21
-#define GK_BOSS 22
-#define GK_BOSSSEG 23
+#define GK_RIFASPAWNER 22
+#define GK_BOSS 23
+#define GK_BOSSSEG 24
 
 // Flags
 // lower 3 bits used for highlight timer
@@ -194,6 +195,12 @@ void rifashark_create(uint8_t d);
 void rifashark_tick(uint8_t d);
 void rifashark_reset(uint8_t d);
 void rifashark_shot(uint8_t d, uint8_t shot);
+
+// Rifaspawner fns
+void rifaspawner_create(uint8_t d);
+void rifaspawner_tick(uint8_t d);
+void rifaspawner_reset(uint8_t d);
+void rifaspawner_shot(uint8_t d, uint8_t shot);
 
 // Boss fns.
 void boss_create(uint8_t g);
