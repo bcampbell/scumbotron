@@ -1,6 +1,3 @@
-// mos-cx16-clang -Os -o game.prg game.c
-
-
 #include "plat.h"
 #include "gob.h"
 #include "player.h"

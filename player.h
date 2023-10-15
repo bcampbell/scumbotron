@@ -41,7 +41,7 @@ extern int16_t shotvx[MAX_SHOTS];
 extern int16_t shotvy[MAX_SHOTS];
 extern uint8_t shotdir[MAX_SHOTS];      // 0..23
 extern uint8_t shottimer[MAX_SHOTS];    // 0=inactive
-extern uint8_t shotpower[MAX_SHOTS];
+extern uint8_t shotkind[MAX_SHOTS];
 
 void shot_clearall();
 void shot_tick(uint8_t s);

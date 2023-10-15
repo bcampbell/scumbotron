@@ -28,7 +28,7 @@ int16_t shotvx[MAX_SHOTS];
 int16_t shotvy[MAX_SHOTS];
 uint8_t shotdir[MAX_SHOTS];
 uint8_t shottimer[MAX_SHOTS];
-uint8_t shotpower[MAX_SHOTS];
+uint8_t shotkind[MAX_SHOTS];
 
 static uint8_t shot_alloc();
 
@@ -102,7 +102,7 @@ void player_renderall()
             // inactive.
             continue;
         }
-        plat_shot_render(shotx[s], shoty[s], shotdir[s], shotpower[s]);
+        plat_shot_render(shotx[s], shoty[s], shotdir[s], shotkind[s]);
     }
 }
 
@@ -306,7 +306,7 @@ static void plr_shoot(uint8_t p, uint8_t theta) {
     shotvx[s] = circ24x[theta];
     shotvy[s] = circ24y[theta];
     shotdir[s] = theta;
-    shotpower[s] = plrweapon[p];
+    shotkind[s] = plrweapon[p];
 }
 
 void player_tick(uint8_t p) {

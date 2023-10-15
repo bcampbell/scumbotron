@@ -805,11 +805,12 @@ void tank_tick(uint8_t g)
 
 void tank_shot(uint8_t g, uint8_t shot)
 {
-    --gobdat[g];
-    if (gobdat[g]==0) {
+    uint8_t power = shotkind[shot] + 1;
+    if (gobdat[g] <= power ) {
         // boom.
         gob_standard_kaboom(g, shot, 100);
     } else {
+        gobdat[g] -= power;
         // knockback
         gobx[g] += shotvx[shot]/2;
         goby[g] += shotvy[shot]/2;
@@ -911,16 +912,21 @@ void fragger_tick(uint8_t d)
 void fragger_shot(uint8_t d, uint8_t shot)
 {
     // boom.
-    int16_t x = gobx[d];
-    int16_t y = goby[d];
-    uint8_t i;
     gob_standard_kaboom(d, shot, 100);
-    for (i = 0; i < 4; ++i) {
-        uint8_t f = gob_alloc();
-        if (f >=MAX_GOBS) {
-            return;
+
+    // Bigger shots don't cause fragmentation.
+    uint8_t power = shotkind[shot] + 1;
+    if (power <= 1) {
+        int16_t x = gobx[d];
+        int16_t y = goby[d];
+        uint8_t i;
+        for (i = 0; i < 4; ++i) {
+            uint8_t f = gob_alloc();
+            if (f >=MAX_GOBS) {
+                return;
+            }
+            frag_spawn(f, x, y, i);
         }
-        frag_spawn(f, x, y, i);
     }
 }
 
