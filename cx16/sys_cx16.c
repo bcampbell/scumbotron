@@ -551,17 +551,12 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = screencode(' ');
     VERA.data0 = c;
 
-    {
-        static int i = 99;
-        uint8_t bcd = bin2bcd8(i);
-        VERA.data0 = screencode(hexdigits[bcd >> 4]);
-        VERA.data0 = c;
-        VERA.data0 = screencode(hexdigits[bcd & 0x0f]);
-        VERA.data0 = c;
-        if ((tick & 0x03) == 0) {
-            ++i;
-        }
-    }
+   
+    uint8_t bcd = bin2bcd8(level);
+    VERA.data0 = screencode(hexdigits[bcd >> 4]);
+    VERA.data0 = c;
+    VERA.data0 = screencode(hexdigits[bcd & 0x0f]);
+    VERA.data0 = c;
 
     VERA.data0 = screencode(' ');
     VERA.data0 = c;
