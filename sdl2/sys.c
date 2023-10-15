@@ -20,7 +20,7 @@ extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
 
 #define NUM_SPR16 128
-#define NUM_SPR32 8
+#define NUM_SPR32 3
 
 #define BYTESIZE_SPR16 (16*16)   // 16x16 8bpp
 #define BYTESIZE_SPR32 (32*32)   // 32x32 8bpp
@@ -45,7 +45,10 @@ static SDL_Palette *palette;
 static uint8_t inp_dualstick_state = 0;
 static uint8_t inp_menu_state = 0;
 static uint8_t inp_menu_pressed = 0;
+static uint8_t inp_cheat_state = 0;
+static uint8_t inp_cheat_pressed = 0;
 static void update_inp_menu();
+static void update_inp_cheat();
 static void update_inp_dualstick();
 
 // start PLAT_HAS_MOUSE
@@ -234,8 +237,6 @@ static void pumpevents()
           break;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
-            case SDLK_F12:
-              break;
             case SDLK_F11:
               if (SDL_GetWindowFlags(fenster) & SDL_WINDOW_FULLSCREEN_DESKTOP) {
                 SDL_SetWindowFullscreen(fenster, 0);
@@ -364,6 +365,23 @@ static void update_inp_menu()
     inp_menu_state = state;
 }
 
+static void update_inp_cheat()
+{
+    uint8_t state = 0;
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    if (keys[SDL_SCANCODE_F1]) {
+        state |= INP_CHEAT_POWERUP;
+    }
+    if (keys[SDL_SCANCODE_F2]) {
+        state |= INP_CHEAT_EXTRALIFE;
+    }
+    if (keys[SDL_SCANCODE_F3]) {
+        state |= INP_CHEAT_NEXTLEVEL;
+    }
+    inp_cheat_pressed = (~inp_cheat_state) & state;
+    inp_cheat_state = state;
+}
+
 
 
 uint8_t plat_inp_dualsticks()
@@ -374,6 +392,11 @@ uint8_t plat_inp_dualsticks()
 uint8_t plat_inp_menu()
 {
     return inp_menu_pressed;
+}
+
+uint8_t plat_inp_cheat()
+{
+    return inp_cheat_pressed;
 }
 
 void plat_render_start()
@@ -800,6 +823,7 @@ int main(int argc, char* argv[]) {
         update_inp_dualstick();
         update_inp_mouse();
         update_inp_menu();
+        update_inp_cheat();
         plat_render_start();
         game_render();
         if (plat_mouse_show) {

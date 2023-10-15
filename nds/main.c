@@ -134,6 +134,12 @@ uint8_t plat_inp_menu()
     return inp_menu_pressed;
 }
 
+uint8_t plat_inp_cheat()
+{
+    // TODO: support some cheat keys
+    return 0;
+}
+
 void plat_clr()
 {
 }
@@ -210,7 +216,7 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 
 // 32x8 and 8x32 are DS-specific sprites for zapper beams
 #define SPR16_NUM 128
-#define SPR32_NUM 8
+#define SPR32_NUM 3
 #define SPR64x8_NUM 4
 #define SPR32x8_NUM 1
 #define SPR8x32_NUM 1

@@ -131,4 +131,11 @@ uint8_t plat_inp_dualsticks();
 // Latched, so only returns when buttons are pressed (not held).
 uint8_t plat_inp_menu();
 
+
+#define INP_CHEAT_POWERUP 0x01
+#define INP_CHEAT_EXTRALIFE 0x02
+#define INP_CHEAT_NEXTLEVEL 0x04
+
+uint8_t plat_inp_cheat();
+
 #endif // SYS_H

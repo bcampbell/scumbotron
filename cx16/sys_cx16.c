@@ -25,6 +25,12 @@ static void update_inp_dualstick();
 static void update_inp_menu();
 static void update_inp_mouse();
 
+// start CHEAT
+static uint8_t inp_cheat_state = 0;
+static uint8_t inp_cheat_pressed = 0;
+static void update_inp_cheat();
+//end CHEAT
+
 // start PLAT_HAS_MOUSE
 int16_t plat_mouse_x = 0;
 int16_t plat_mouse_y = 0;
@@ -46,7 +52,7 @@ void cx16_k_joystick_scan(void);
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
 #define SPR32_SIZE (16*32)   // 32x32, 4 bpp
-#define SPR32_NUM 8
+#define SPR32_NUM 3
 #define SPR64x8_SIZE (32*8) // 64x8, 4bpp
 #define SPR64x8_NUM 4
 extern unsigned char export_palette_zbin[];
@@ -933,6 +939,12 @@ static inline bool inp_keypressed(uint8_t key) {
 #define KEYCODE_HOME 0x50
 #define KEYCODE_END 0x50
 
+#define KEYCODE_F1 0x70
+#define KEYCODE_F2 0x71
+#define KEYCODE_F3 0x72
+#define KEYCODE_F4 0x73
+#define KEYCODE_F5 0x74
+
 static void update_inp_dualstick()
 {
     uint8_t state = 0;
@@ -1000,6 +1012,16 @@ static void update_inp_mouse()
     plat_mouse_y = m.y <<FX;
 }
 
+static void update_inp_cheat()
+{
+    uint8_t state = 0;
+    if (inp_keypressed(KEYCODE_F1)) { state |= INP_CHEAT_POWERUP; }
+    if (inp_keypressed(KEYCODE_F2)) { state |= INP_CHEAT_EXTRALIFE; }
+    if (inp_keypressed(KEYCODE_F3)) { state |= INP_CHEAT_NEXTLEVEL; }
+    inp_cheat_pressed = (~inp_cheat_state) & state;
+    inp_cheat_state = state;
+}
+
 uint8_t plat_inp_dualsticks()
 {
     return inp_dualstick_state;
@@ -1008,6 +1030,11 @@ uint8_t plat_inp_dualsticks()
 uint8_t plat_inp_menu()
 {
     return inp_menu_pressed;
+}
+
+uint8_t plat_inp_cheat()
+{
+    return inp_cheat_pressed;
 }
 
 
@@ -1132,6 +1159,7 @@ int main(void) {
         //cx16_k_joystick_scan();
         update_inp_dualstick();
         update_inp_menu();
+        update_inp_cheat();
         update_inp_mouse();
         game_tick();
     }

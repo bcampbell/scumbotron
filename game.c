@@ -268,21 +268,29 @@ static void tick_STATE_PLAY()
         enter_STATE_KILLED();
         return;
     }
-#if 0
-    // CHEAT
-    if (plat_inp_menu() & INP_MENU_START) {
-        // skip to next level
-        ++level;
-        level_init(level);
-        enter_STATE_GETREADY();
-        return;
-    }
-#endif
     if (gobs_lockcnt == 0 ) {
         enter_STATE_CLEARED();
         return;
     }
     level_baiter_check();
+    // CHEAT
+    {
+        uint8_t cheat = plat_inp_cheat();
+        if (cheat & INP_CHEAT_NEXTLEVEL) {
+            // skip to next level
+            ++level;
+            level_init(level);
+            enter_STATE_GETREADY();
+            return;
+        }
+        if (cheat & INP_CHEAT_POWERUP) {
+            player_powerup(0);
+        }
+        if (cheat & INP_CHEAT_EXTRALIFE) {
+            player_extra_life(0);
+        }
+    }
+    // ENDCHEAT
 }
 
 static void render_STATE_PLAY()

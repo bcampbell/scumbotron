@@ -30,8 +30,8 @@ void player_create(uint8_t plr);  // to create player at start of game
 void player_reset(uint8_t plr);   // reset player for getready stage
 void player_tick(uint8_t plr);
 void player_add_score(uint8_t points);
-void player_powerup_life(uint8_t plr);
-void player_powerup_weapon(uint8_t plr);
+void player_extra_life(uint8_t plr);    // give extra life
+void player_powerup(uint8_t plr);   // power up weapon
 
 #define MAX_SHOTS 7
 // shot vars

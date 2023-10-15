@@ -181,13 +181,13 @@ bool player_collisions()
 }
 
 // give player an extra life
-void player_powerup_life(uint8_t plr)
+void player_extra_life(uint8_t plr)
 {
     ++player_lives;
 }
 
 // increase player weapon
-void player_powerup_weapon(uint8_t plr)
+void player_powerup(uint8_t plr)
 {
     if (plrweapon[plr] < (NUM_WEAPONS-1)) {
         plrweapon[plr]++;

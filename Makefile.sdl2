@@ -33,7 +33,7 @@ $(EXPORT_DIR)/spr16.c: sprites16.png
 	tools/png2sprites -w 16 -h 16 -fmt 8bpp -num 128 -c -var export_spr16_bin $< $@
 
 $(EXPORT_DIR)/spr32.c: sprites32.png
-	tools/png2sprites -w 32 -h 32 -num 8 -fmt 8bpp -c -var export_spr32_bin $< $@
+	tools/png2sprites -w 32 -h 32 -num 3 -fmt 8bpp -c -var export_spr32_bin $< $@
 
 # speech bubble sprites
 $(EXPORT_DIR)/spr64x8.c: sprites64x8.png

@@ -991,8 +991,8 @@ void powerup_tick(uint8_t d)
 bool powerup_playercollide(uint8_t g, uint8_t plr)
 {
     switch(gobdat[g]) {
-        case 0: player_powerup_life(plr); break;
-        case 1: player_powerup_weapon(plr); break;
+        case 0: player_extra_life(plr); break;
+        case 1: player_powerup(plr); break;
         default: break;
     }
 
