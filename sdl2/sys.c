@@ -55,7 +55,7 @@ static void update_inp_dualstick();
 int16_t plat_mouse_x = 0;
 int16_t plat_mouse_y = 0;
 uint8_t plat_mouse_buttons = 0;
-bool plat_mouse_show = true;
+static uint8_t mouse_watchdog = 0; // >0 = active
 // end PLAT_HAS_MOUSE
 static void update_inp_mouse();
 
@@ -321,20 +321,32 @@ static void update_inp_mouse()
 {
     int x,y;
     Uint32 b = SDL_GetMouseState(&x, &y);
-    plat_mouse_buttons = 0;
+    uint8_t mb = 0;
     if (b & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        plat_mouse_buttons |= 0x01;
+        mb |= 0x01;
     }
     if (b & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        plat_mouse_buttons |= 0x02;
+        mb |= 0x02;
     }
     if (b & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
-        plat_mouse_buttons |= 0x04;
+        mb |= 0x04;
     }
+
     float lx, ly;
     SDL_RenderWindowToLogical(renderer, x,y, &lx, &ly);
-    plat_mouse_x = (int16_t)(lx * (float)FX_ONE);
-    plat_mouse_y = (int16_t)(ly * (float)FX_ONE);
+    int16_t mx = (int16_t)(lx * (float)FX_ONE);
+    int16_t my = (int16_t)(ly * (float)FX_ONE);
+
+    if (mb != 0 || mx != plat_mouse_x || my != plat_mouse_y) {
+        plat_mouse_buttons = mb;
+        plat_mouse_x = mx;
+        plat_mouse_y = my;
+        mouse_watchdog = 60;
+    } else {
+       if (mouse_watchdog > 0) {
+           --mouse_watchdog;
+       }
+    }
 }
 
 static void update_inp_menu()
@@ -826,7 +838,7 @@ int main(int argc, char* argv[]) {
         update_inp_cheat();
         plat_render_start();
         game_render();
-        if (plat_mouse_show) {
+        if (mouse_watchdog > 0) {
             sprout16(plat_mouse_x, plat_mouse_y, 0);
         }
         plat_render_finish();

@@ -35,19 +35,8 @@ static void update_inp_cheat();
 int16_t plat_mouse_x = 0;
 int16_t plat_mouse_y = 0;
 uint8_t plat_mouse_buttons = 0;
-bool plat_mouse_show = true;
+static uint8_t mouse_watchdog = 0; // >0 = active
 // end PLAT_HAS_MOUSE
-
-
-#if 0
-// kernal shims from glue.s (until xarklabs shims are merged)
-uint8_t* cx16_k_memory_decompress(uint8_t* src, uint8_t* dest);
-typedef struct { int x, y; } mouse_pos_t;
-unsigned char cx16_k_mouse_get(mouse_pos_t *mouse_pos_ptr);	// returns mouse button byte
-void cx16_k_mouse_config(unsigned char showmouse, unsigned char xsize8, unsigned char ysize8);
-long cx16_k_joystick_get(unsigned char sticknum);
-void cx16_k_joystick_scan(void);
-#endif
 
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
 #define SPR16_NUM 128
@@ -1007,9 +996,20 @@ static void update_inp_menu()
 static void update_inp_mouse()
 {
     mouse_pos_t m;
-    plat_mouse_buttons = cx16_k_mouse_get(&m);
-    plat_mouse_x = m.x <<FX;
-    plat_mouse_y = m.y <<FX;
+    uint8_t mb = cx16_k_mouse_get(&m);
+    int16_t mx = m.x << FX;
+    int16_t my = m.y << FX;
+
+    if (mb != 0 || mx != plat_mouse_x || my != plat_mouse_y) {
+        plat_mouse_buttons = mb;
+        plat_mouse_x = mx;
+        plat_mouse_y = my;
+        mouse_watchdog = 60;
+    } else {
+       if (mouse_watchdog > 0) {
+           --mouse_watchdog;
+       }
+    }
 }
 
 static void update_inp_cheat()
@@ -1150,7 +1150,9 @@ int main(void) {
         waitvbl();
         plat_render_start();
         game_render();
-        sprout16(plat_mouse_x, plat_mouse_y, 0);
+        if (mouse_watchdog > 0) {
+            sprout16(plat_mouse_x, plat_mouse_y, 0);
+        }
 
         debug_gamepad();
         //debug_getin();

@@ -179,9 +179,8 @@ static void render_STATE_TITLESCREEN()
 
     if ((tick/32) & 0x01) {
         plat_text((SCREEN_TEXT_W-20)/2, 23, "PRESS ENTER TO PLAY", 1);
-        plat_text((SCREEN_TEXT_W-20)/2 + 6, 23, "ENTER", 1);
+        //plat_text((SCREEN_TEXT_W-20)/2 + 6, 23, "ENTER", 15);
     }
-
 }
 
 /*

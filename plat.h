@@ -76,7 +76,6 @@ void plat_cursor_render(int16_t x, int16_t y);
 extern int16_t plat_mouse_x;
 extern int16_t plat_mouse_y;
 extern uint8_t plat_mouse_buttons;   // left:0x01 right:0x02 middle:0x04
-extern bool plat_mouse_show;        // show mouse pointer?
 #endif // PLAT_HAS_MOUSE
 
 // start PLAT_HAS_TEXTENTRY (fns should be no-ops if not supported)
