@@ -243,7 +243,7 @@ static void render_STATE_GETREADY()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text(10,10,"GET READY", (tick/2) & 0x0f);
+    plat_text((SCREEN_TEXT_W-9)/2, 10, "GET READY", (tick/2) & 0x0f);
 }
 
 
@@ -332,7 +332,7 @@ static void render_STATE_KILLED()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text(10,10,"OWWWWWWWW", (tick/2) & 0x0f);
+    plat_text((SCREEN_TEXT_W-8)/2, 10, "OWWWWWWWW", (tick/2) & 0x0f);
 }
 
 /*
@@ -360,7 +360,7 @@ static void render_STATE_CLEARED()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text(10,10,"CLEAR     ", (tick/2) & 0x0f);
+    plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
 }
 
 /*
@@ -383,7 +383,7 @@ static void tick_STATE_GAMEOVER()
 
 static void render_STATE_GAMEOVER()
 {
-    plat_text(10, 10, "GAME OVER", (tick/2) & 0x0f);
+    plat_text((SCREEN_TEXT_W-9)/2, 10, "GAME OVER", (tick/2) & 0x0f);
 }
 
 /*
