@@ -3,8 +3,7 @@ from math import sin,cos,pi
 from fractions import Fraction
 
 steps = 24
-FX = 1<<6   # fixedpoint multiplier
-r = (8 * FX)
+r = 127
 
 tx = []
 ty = []
@@ -14,7 +13,7 @@ while i < steps:
     theta = i * (2 * pi) / steps
 
     x = r * sin(theta)
-    y = -r * cos(theta)
+    y = r * -cos(theta)
 
     tx.append(x)
     ty.append(y)

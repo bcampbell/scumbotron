@@ -33,7 +33,7 @@ void player_add_score(uint8_t points);
 void player_extra_life(uint8_t plr);    // give extra life
 void player_powerup(uint8_t plr);   // power up weapon
 
-#define MAX_SHOTS 7
+#define MAX_SHOTS 16
 // shot vars
 extern int16_t shotx[MAX_SHOTS];
 extern int16_t shoty[MAX_SHOTS];

@@ -33,7 +33,8 @@ uint8_t shotkind[MAX_SHOTS];
 static uint8_t shot_alloc();
 
 #define NUM_WEAPONS 3
-static uint8_t weapon_fire_delay[NUM_WEAPONS] = {8, 7, 6};
+//static uint8_t weapon_fire_delay[NUM_WEAPONS] = {8, 7, 6};
+static uint8_t weapon_fire_delay[NUM_WEAPONS] = {5,5,5};
 
 // player
 
@@ -292,6 +293,7 @@ static void plr_digital_move(uint8_t d, uint8_t move)
     }
 }
 
+
 static void plr_shoot(uint8_t p, uint8_t theta) {
     uint8_t s = shot_alloc();
     // FIRE!
@@ -303,8 +305,8 @@ static void plr_shoot(uint8_t p, uint8_t theta) {
     shottimer[s] = 24;
     shotx[s] = plrx[p];
     shoty[s] = plry[p];
-    shotvx[s] = circ24x[theta];
-    shotvy[s] = circ24y[theta];
+    shotvx[s] = sin24(theta) * 4;
+    shotvy[s] = -cos24(theta) * 4;
     shotdir[s] = theta;
     shotkind[s] = plrweapon[p];
 }

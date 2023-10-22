@@ -21,9 +21,13 @@ uint8_t arctan8(int16_t x, int16_t y);
 extern const uint8_t angle24toangle8[24];
 
 
-// circle of radius 512
-// TODO: replace with byte-oriented sincos24 table
-extern const int16_t circ24x[24];
-extern const int16_t circ24y[24];
+extern const int8_t sincos24[24+6];
+
+// sin table for angle24 (0..23)
+static inline int8_t sin24(uint8_t theta) {return sincos24[theta];}
+static inline int8_t cos24(uint8_t theta) {return sincos24[6+theta];}
+
+static inline uint8_t inc24(uint8_t a) { return a<23 ? a+1 : 0; }
+static inline uint8_t dec24(uint8_t a) { return a>0 ? a-1 : 23; }
 
 #endif // MISC_H
