@@ -250,10 +250,13 @@ static void render_STATE_GETREADY()
  * STATE_PLAY
  */
 
+static uint8_t state_play_cleartime;
+
 void enter_STATE_PLAY()
 {
     state = STATE_PLAY;
     statetimer = 0;
+    state_play_cleartime = 0;
     plat_clr();
 }
 
@@ -268,18 +271,22 @@ static void tick_STATE_PLAY()
         return;
     }
     if (gobs_lockcnt == 0 ) {
-        enter_STATE_CLEARED();
+        if(++state_play_cleartime > 120) {
+            enter_STATE_CLEARED();
+        }
         return;
     }
+    state_play_cleartime = 0;
     level_baiter_check();
     // CHEAT
     {
         uint8_t cheat = plat_inp_cheat();
         if (cheat & INP_CHEAT_NEXTLEVEL) {
-            // skip to next level
-            ++level;
-            level_init(level);
-            enter_STATE_GETREADY();
+            for (uint8_t g; g<MAX_GOBS; ++g) {
+                if (gob_is_blastable(g)) {
+                    gobkind[g] = GK_NONE;
+                }
+            }
             return;
         }
         if (cheat & INP_CHEAT_POWERUP) {
@@ -300,8 +307,10 @@ static void render_STATE_PLAY()
     if (level >= 20  && (tick/16)&0x01) {
         plat_text((SCREEN_TEXT_W-20)/2, 10, "ERROR: TOO MANY FISH", 1);
     }
+    if (gobs_lockcnt == 0 ) {
+        plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
+    }
 }
-
 
 /*
  * STATE_KILLED
@@ -336,17 +345,35 @@ static void render_STATE_KILLED()
 
 /*
  * STATE_CLEARED
+ * Show a summary of the level just completed.
  */
+
+// state-specific vars
+static uint8_t state_cleared_unblasted_count;   // gobs that could have been blasterd but weren't
+static uint8_t state_cleared_marine_count;  // collected marines
+
 void enter_STATE_CLEARED()
 {
     state = STATE_CLEARED;
     statetimer = 0;
     plat_clr();
+
+    state_cleared_unblasted_count = 0;
+    state_cleared_marine_count = 0;
+    for (uint8_t g = 0; g < MAX_GOBS; ++g) {
+        if (gob_is_blastable(g)) {
+            ++state_cleared_unblasted_count;
+        }
+        if (gobkind[g] == GK_MARINE && marine_is_trailing(g)) {
+            ++state_cleared_marine_count;
+        }
+    }
 }
 
 static void tick_STATE_CLEARED()
 {
-    if (++statetimer > 60) {
+    ++statetimer;
+    if (statetimer >= 30) {
         // next level
         ++level;
         level_init(level);
@@ -356,10 +383,25 @@ static void tick_STATE_CLEARED()
 
 static void render_STATE_CLEARED()
 {
-    gobs_render();
-    player_renderall();
+//    gobs_render();
+//    player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
+//    plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
+#if 0
+    if (statetimer > 0) {
+        if(state_cleared_unblasted_count == 0) {
+            plat_text((SCREEN_TEXT_W-5)/2, 12, "VERY CLEAR BONUS", (tick/2) & 0x0f);
+        }
+
+        for (uint8_t i=0; i<state_cleared_marine_count; ++i) {
+            if (statetimer > 30 + (i*2)) {
+                int16_t x = ((SCREEN_W/2) - (i*16)/2)<<FX; 
+                //plat_text((i*2) + (SCREEN_TEXT_W-5)/2, 14, "M", (tick/2) & 0x0f);
+                plat_marine_render(x, (14*8)<<FX);
+            }
+        }
+    }
+#endif
 }
 
 /*

@@ -24,7 +24,7 @@
 #define STATE_STORY_OHNO 13 // story part 2
 #define STATE_STORY_ATTACK 14 // story part 3
 #define STATE_STORY_RUNAWAY 15 // story part 4
-#define STATE_STORY_WHATNOW 16 // story finished
+#define STATE_STORY_WHATNOW 16 // story part 5
 #define STATE_STORY_DONE 17 // story finished
  
 extern uint8_t state;

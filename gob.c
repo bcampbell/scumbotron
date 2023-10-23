@@ -14,10 +14,9 @@ int16_t gobvy[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
-// these two set by gobs_tick()
+// these are set by gobs_tick()
 uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
-
 
 // Force direction into valid bits (no up+down, for example)
 const uint8_t dir_fix[16] = {
@@ -132,7 +131,7 @@ void gobs_tick(bool spawnphase)
             case GK_VULGON:  vulgon_tick(i); break;
             case GK_POOMERANG: poomerang_tick(i); break;
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
-            case GK_MARINE:  marine_tick(i); break;
+            case GK_MARINE: marine_tick(i); break;
             case GK_BRAIN:  brain_tick(i); break;
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_RIFASHARK:  rifashark_tick(i); break;
@@ -1163,16 +1162,6 @@ static int16_t rndspd(int16_t s)
         return -s;
     } else {
         return s;
-    }
-}
-
-// helper - return true if marine has been collected and is trailing after player.
-static bool marine_is_trailing(uint8_t g)
-{
-    if (gobflags[g] & GF_COLLIDES_PLAYER) {
-        return false;
-    } else {
-        return true;
     }
 }
 

@@ -55,7 +55,7 @@ extern int16_t gobvy[MAX_GOBS];
 extern uint8_t gobdat[MAX_GOBS];
 extern uint8_t gobtimer[MAX_GOBS];
 
-// these two set by gobs_tick()
+// these are set by gobs_tick()
 extern uint8_t gobs_lockcnt;   // num gobs holding level open.
 extern uint8_t gobs_spawncnt;  // num gobs spawning.
 
@@ -76,11 +76,19 @@ void gobs_reset();
 void gobs_spawning();   // put active gobs into spawn mode.
 void gobs_create(uint8_t kind, uint8_t n);
 
-uint8_t rnd();
-
 // generic gob fns
 void gob_move_bounce_x(uint8_t d);
 void gob_move_bounce_y(uint8_t d);
+
+static inline bool gob_is_blastable(uint8_t g) {
+    uint8_t k = gobkind[g];
+    if (k == GK_NONE || k == GK_HZAPPER || k == GK_VZAPPER || k==GK_MARINE) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 
 static inline int16_t gob_size(uint8_t d) {
     switch (gobkind[d]) {
@@ -176,6 +184,10 @@ void marine_create(uint8_t g);
 void marine_tick(uint8_t g);
 void marine_reset(uint8_t g);
 bool marine_playercollide(uint8_t g, uint8_t plr);
+// return true if marine has been collected and is trailing after player.
+static inline bool marine_is_trailing(uint8_t g) {
+    return (gobflags[g] & GF_COLLIDES_PLAYER) ? false : true;
+};
 
 // Brain fns
 void brain_create(uint8_t d);
