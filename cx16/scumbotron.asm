@@ -166,8 +166,8 @@ _unpackloop
 
 	; run the game!
 	; installed game code still has llvm-mos BASIC header:
-	; 7773 sys 2071.
-	jmp $0817
+	; 7773 sys 2072.
+	jmp $0818
 
 	.endlogical
 shifted_end
