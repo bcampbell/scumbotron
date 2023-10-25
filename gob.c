@@ -14,9 +14,12 @@ int16_t gobvy[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
+bool gobs_certainbonus;
+
 // these are set by gobs_tick()
 uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
+uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
 
 // Force direction into valid bits (no up+down, for example)
 const uint8_t dir_fix[16] = {
@@ -71,6 +74,7 @@ void gobs_clear()
     }
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
+    gobs_clearablecnt = 0;
     bub_clear();
 }
 
@@ -79,6 +83,7 @@ void gobs_tick(bool spawnphase)
     uint8_t i;
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
+    gobs_clearablecnt = 0;
     for (i = 0; i < MAX_GOBS; ++i) {
         if (gobkind[i] == GK_NONE) {
             continue;
@@ -101,6 +106,9 @@ void gobs_tick(bool spawnphase)
         }
         if (gobflags[i] & GF_LOCKS_LEVEL) {
             ++gobs_lockcnt;
+        }
+        if (gob_is_clearable(i)) {
+            ++gobs_clearablecnt;
         }
         // Decrease highlight timer (lower 3 bits) if non-zero.
         if (gobflags[i] & GF_HIGHLIGHT_MASK) {
@@ -518,9 +526,10 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
-    if (rnd() > 250) {
+    if (rnd() > 250 || gobs_certainbonus) {
         // transform into powerup
         powerup_create(d, gobx[d], goby[d], rnd() & 0x01);
+        gobs_certainbonus = false;
     }
 }
 

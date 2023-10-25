@@ -55,9 +55,14 @@ extern int16_t gobvy[MAX_GOBS];
 extern uint8_t gobdat[MAX_GOBS];
 extern uint8_t gobtimer[MAX_GOBS];
 
+
+// set when level is completely cleared
+extern bool gobs_certainbonus;
+
 // these are set by gobs_tick()
 extern uint8_t gobs_lockcnt;   // num gobs holding level open.
 extern uint8_t gobs_spawncnt;  // num gobs spawning.
+extern uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
 
 // table to filter out illegal directions (left+right etc)
 extern const uint8_t dir_fix[16];
@@ -79,16 +84,6 @@ void gobs_create(uint8_t kind, uint8_t n);
 // generic gob fns
 void gob_move_bounce_x(uint8_t d);
 void gob_move_bounce_y(uint8_t d);
-
-static inline bool gob_is_blastable(uint8_t g) {
-    uint8_t k = gobkind[g];
-    if (k == GK_NONE || k == GK_HZAPPER || k == GK_VZAPPER || k==GK_MARINE) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
 
 static inline int16_t gob_size(uint8_t d) {
     switch (gobkind[d]) {
@@ -234,5 +229,17 @@ void bossseg_shot(uint8_t g, uint8_t shot);
 void bossseg_tick(uint8_t g);
 void bossseg_reset(uint8_t g);
 void bossseg_destruct(uint8_t g, uint8_t delay);
+
+
+// Returns true if player can clear this gob from the level (by shooting or collecting)
+static inline bool gob_is_clearable(uint8_t g) {
+    uint8_t k = gobkind[g];
+    if ((k == GK_MARINE && marine_is_trailing(g)) || 
+        k == GK_NONE || k == GK_HZAPPER || k == GK_VZAPPER) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 #endif // GOB_H

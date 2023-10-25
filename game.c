@@ -196,6 +196,8 @@ void enter_STATE_NEWGAME()
     player_score = 0;
     level_init(level);
 
+    gobs_certainbonus = false;
+
     player_create(0);
     state = STATE_NEWGAME;
     statetimer = 0;
@@ -270,6 +272,10 @@ static void tick_STATE_PLAY()
         enter_STATE_KILLED();
         return;
     }
+    if (gobs_clearablecnt == 0) {
+        // Make sure the next thing the player clobbers yields a powerup.
+        gobs_certainbonus = true;
+    }
     if (gobs_lockcnt == 0 ) {
         if(++state_play_cleartime > 120) {
             enter_STATE_CLEARED();
@@ -283,7 +289,7 @@ static void tick_STATE_PLAY()
         uint8_t cheat = plat_inp_cheat();
         if (cheat & INP_CHEAT_NEXTLEVEL) {
             for (uint8_t g; g<MAX_GOBS; ++g) {
-                if (gob_is_blastable(g)) {
+                if (gobflags[g] & GF_LOCKS_LEVEL) {
                     gobkind[g] = GK_NONE;
                 }
             }
@@ -349,7 +355,6 @@ static void render_STATE_KILLED()
  */
 
 // state-specific vars
-static uint8_t state_cleared_unblasted_count;   // gobs that could have been blasterd but weren't
 static uint8_t state_cleared_marine_count;  // collected marines
 
 void enter_STATE_CLEARED()
@@ -358,16 +363,13 @@ void enter_STATE_CLEARED()
     statetimer = 0;
     plat_clr();
 
-    state_cleared_unblasted_count = 0;
     state_cleared_marine_count = 0;
     for (uint8_t g = 0; g < MAX_GOBS; ++g) {
-        if (gob_is_blastable(g)) {
-            ++state_cleared_unblasted_count;
-        }
         if (gobkind[g] == GK_MARINE && marine_is_trailing(g)) {
             ++state_cleared_marine_count;
         }
     }
+
 }
 
 static void tick_STATE_CLEARED()
