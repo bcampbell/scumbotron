@@ -44,14 +44,8 @@ static uint8_t mouse_watchdog = 0; // >0 = active
 #define SPR32_NUM 3
 #define SPR64x8_SIZE (32*8) // 64x8, 4bpp
 #define SPR64x8_NUM 4
-extern unsigned char export_palette_zbin[];
-extern unsigned int export_palette_zbin_len;
-extern unsigned char export_spr16_zbin[];
-extern unsigned int export_spr16_zbin_len;
-extern unsigned char export_spr32_zbin[];
-extern unsigned int export_spr32_zbin_len;
-extern unsigned char export_spr64x8_zbin[];
-extern unsigned int export_spr64x8_zbin_len;
+extern unsigned char export_palette_bin[];
+extern unsigned int export_palette_bin_len;
 
 // Our VERA memory map
 #define VRAM_SPRITES16 0x10000
@@ -289,6 +283,10 @@ void plat_clr()
 
 void plat_init()
 {
+    // It's assumed the exported graphics data is already loaded into VRAM.
+    // In theory we could load the graphics off disk here instead of using the
+    // scumbotron.asm unpacker.
+
     uint8_t vid;
     irq_init();
     sfx_init();
@@ -332,18 +330,10 @@ void plat_init()
     // Init mouse
     cx16_k_mouse_config(1, SCREEN_W/8, SCREEN_H/8);
 
-    // Load compressed data into vram.
-    // Use the $A000 bank ram as a decompression buffer. So the uncompressed
-    // chunks need to be <8KB.
-    // Would be nice to decompress directly to VERA, but see:
-    // https://www.commanderx16.com/forum/index.php?/topic/4931-memory_decompress-not-working/
-
+    // Load palette into VRAM
     {
-        // The palette (actually, the compressing the palette likely adds a
-        // few bytes, but simpler to handle all exported data the same).
-        const volatile uint8_t* src = BANK_RAM;
+        const volatile uint8_t* src = export_palette_bin;
         uint8_t i;
-        cx16_k_memory_decompress(export_palette_zbin, (uint8_t*)BANK_RAM);
         veraaddr0(VRAM_PALETTE, VERA_INC_1);
         // just 16 colours
         for (i=0; i<16*2; ++i) {
@@ -356,7 +346,7 @@ void plat_init()
             VERA.data0 = 0x0f;
         }
     }
-
+#if 0
     {
         // Uncompress 16x16 sprites
         // We're uncompressing into 8KB bank... so
@@ -399,6 +389,7 @@ void plat_init()
             VERA.data0 = *src++;
         }
     }
+#endif
 
     // stand-in images for effect layers
     {

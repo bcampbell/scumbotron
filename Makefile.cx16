@@ -8,7 +8,7 @@ BUILD_DIR=build_cx16
 EXPORT_DIR=export_cx16
 
 SRCS = cx16/sys_cx16.c game.c gob.c player.c highscore.c misc.c bub.c story.c
-SRCS_EXPORTED = $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c)
+SRCS_EXPORTED = $(addprefix $(EXPORT_DIR)/, palette.c)
 SRCS_ASM = cx16/irq.s
 #cx16/glue.s 
 
@@ -24,6 +24,24 @@ DEPFLAGS = -MMD -MP -MF $@.d
 
 DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
+
+# We need to compress both the code and the graphics data,
+# otherwise we'll never fit into a single .prg file.
+# And I really don't want to be loading data files off disk.
+#
+# So, to do this, we compile the code as game.prg, which
+# assumes the graphics data is already in vram.
+# Then we build scumbotron.prg which includes compressed code
+# and data, and has a little unpacker routine which:
+# 1. decompresses the gfx data and loads it into vram.
+# 2. decompresses game.prg and runs it.
+#
+# This seems to gain us about 12KB of space for more code - which
+# doesn't sound like a lot, but is a big deal!
+$(BUILD_DIR)/scumbotron.prg: cx16/scumbotron.asm $(EXPORT_DIR)/spr16.bin $(EXPORT_DIR)/spr32.bin $(EXPORT_DIR)/spr64x8.bin $(BUILD_DIR)/game.prg
+	cx16/pack.sh
+
+# game.prg is the game proper, which assumes the graphics are already in vram.
 $(BUILD_DIR)/game.prg: $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
@@ -50,11 +68,8 @@ $(EXPORT_DIR)/spr32.bin: sprites32.png
 $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp $< $@
 
-# These two rules compress .bin files then convert them to .c source.
-%.zbin: %.bin
-	lzsa -f2 -r $< $@
-
-%.c: %.zbin
+# Turn palette into c source
+%.c: %.bin
 	xxd -i -n export_`basename $<` $< $@
 
 # Tell make not to delete the intermediate .c files - we want to check them
@@ -62,8 +77,8 @@ $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 .PRECIOUS: $(SRCS_EXPORTED)
 
 .PHONY: run
-run: $(BUILD_DIR)/game.prg
-	x16emu -prg $(BUILD_DIR)/game.prg -joy1 -run
+run: $(BUILD_DIR)/scumbotron.prg
+	x16emu -prg $(BUILD_DIR)/scumbotron.prg -joy1 -run
 
 .PHONY: clean
 clean:
