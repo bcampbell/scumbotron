@@ -5,7 +5,11 @@
 #include "../gob.h" // for ZAPPER_*
 #include "../misc.h"
 
+
 // Platform-specifics for cx16
+
+// To break:
+// asm ("stp");
 
 // irq.s
 // Joystick 0 is the built-into-the-kernal keyboard joystick,
@@ -286,7 +290,6 @@ void plat_init()
     // It's assumed the exported graphics data is already loaded into VRAM.
     // In theory we could load the graphics off disk here instead of using the
     // scumbotron.asm unpacker.
-
     uint8_t vid;
     irq_init();
     sfx_init();
@@ -332,11 +335,12 @@ void plat_init()
 
     // Load palette into VRAM
     {
-        const volatile uint8_t* src = export_palette_bin;
+        const uint8_t* src = export_palette_bin;
         uint8_t i;
         veraaddr0(VRAM_PALETTE, VERA_INC_1);
         // just 16 colours
-        for (i=0; i<16*2; ++i) {
+        for (i=0; i<16; ++i) {
+            VERA.data0 = *src++;
             VERA.data0 = *src++;
         }
 

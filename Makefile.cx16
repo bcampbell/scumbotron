@@ -78,7 +78,7 @@ $(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
 
 .PHONY: run
 run: $(BUILD_DIR)/scumbotron.prg
-	x16emu -prg $(BUILD_DIR)/scumbotron.prg -joy1 -run
+	x16emu -debug -prg $(BUILD_DIR)/scumbotron.prg -joy1 -run
 
 .PHONY: clean
 clean:

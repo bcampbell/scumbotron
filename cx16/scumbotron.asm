@@ -166,8 +166,8 @@ _unpackloop
 
 	; run the game!
 	; installed game code still has llvm-mos BASIC header:
-	; 7773 sys 2072.
-	jmp $0818
+	; 7773 sys 2071.
+	jmp $0817 ; or ".byte $DB ;STP" to break
 
 	.endlogical
 shifted_end
@@ -178,7 +178,6 @@ gfx
 	.binary "gfx.zbin"
 gfx_end
 
-num_code_chunks=5
 code00
 	.binary "game00.zbin"
 code00_end
@@ -195,6 +194,8 @@ code04
 	.binary "game04.zbin"
 code04_end
 
+
+num_code_chunks=5
 code_chunks
 	.word code00, code00_end-code00
 	.word code01, code01_end-code01
