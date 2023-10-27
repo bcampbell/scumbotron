@@ -331,7 +331,7 @@ void plat_init()
     VERA.layer0.vscroll = 12*8; // 16bit
 
     // Init mouse
-    cx16_k_mouse_config(1, SCREEN_W/8, SCREEN_H/8);
+    cx16_k_mouse_config(0xff, SCREEN_W/8, SCREEN_H/8);
 
     // Load palette into VRAM
     {
