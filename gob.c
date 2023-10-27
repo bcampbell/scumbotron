@@ -978,22 +978,32 @@ void frag_shot(uint8_t d, uint8_t shot)
  * Powerup
  */
 
-void powerup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind)
+void powerup_create(uint8_t g, int16_t x, int16_t y, uint8_t kind)
 {
-    gobkind[d] = GK_POWERUP;
-    gobflags[d] = GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
-    gobx[d] = x;
-    goby[d] = y;
-    gobvx[d] = (uint16_t)rnd() - 128;
-    gobvy[d] = (uint16_t)rnd() - 128;
-    gobdat[d] = kind;  // 0 = extra life
-    gobtimer[d] = 0;
+    gobkind[g] = GK_POWERUP;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
+    gobx[g] = x;
+    goby[g] = y;
+    gobvx[g] = ((uint16_t)rnd() - 128)/2;
+    gobvy[g] = ((uint16_t)rnd() - 128)/2;
+    gobdat[g] = kind;  // 0 = extra life
+    gobtimer[g] = 20;
 }
 
-void powerup_tick(uint8_t d)
+void powerup_tick(uint8_t g)
 {
-    gob_move_bounce_x(d);
-    gob_move_bounce_y(d);
+    if(((tick+g)&0x0f) == 0) {
+        gob_seek_x(g, plrx[0], FX_ONE/16, FX_ONE/2);
+        gob_seek_y(g, plry[0], FX_ONE/16, FX_ONE/2);
+        // slow timeout
+        if (gobtimer[g]==0) {
+            gobkind[g] = GK_NONE;
+        } else {
+            --gobtimer[g];
+        }
+    }
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
 }
 
 bool powerup_playercollide(uint8_t g, uint8_t plr)
