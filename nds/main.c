@@ -69,13 +69,7 @@ static void drawbox(int x, int y, int w, int h, uint8_t ch, uint8_t colour);
 static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour);
 static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour);
 
-static uint8_t inp_dualstick_state = 0;
-static uint8_t inp_menu_state = 0;
-static uint8_t inp_menu_pressed = 0;
-static void update_inp_dualstick();
-static void update_inp_menu();
-
-static void update_inp_dualstick()
+uint8_t plat_raw_dualstick()
 {
     static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
         {KEY_UP, INP_UP},
@@ -96,10 +90,10 @@ static void update_inp_dualstick()
             state |= key_mapping[i].bitmask;
         }
     }
-    inp_dualstick_state = state;
+    return state;
 }
 
-static void update_inp_menu()
+uint8_t plat_raw_menukeys()
 {
     static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
         {KEY_UP, INP_UP},
@@ -119,22 +113,10 @@ static void update_inp_menu()
             state |= key_mapping[i].bitmask;
         }
     }
-    // Which ones were pressed since last check?
-    inp_menu_pressed = (~inp_menu_state) & state;
-    inp_menu_state = state;
+    return state;
 }
 
-uint8_t plat_inp_dualsticks()
-{
-    return inp_dualstick_state;
-}
-
-uint8_t plat_inp_menu()
-{
-    return inp_menu_pressed;
-}
-
-uint8_t plat_inp_cheat()
+uint8_t plat_raw_cheatkeys()
 {
     // TODO: support some cheat keys
     return 0;
@@ -720,17 +702,9 @@ int main(void) {
 
         rendereffects();
 
-        //drawbox(1,1,5,10,'a',1);
-        //drawbox(2,2,10,30,'Z',3);
-
-
         do_colour_cycling();
-        //plat_render_start();
-        //plat_render_finish();
         //sfx_tick();
 		scanKeys();
-        update_inp_dualstick();
-        update_inp_menu();
         game_tick();
 
         sprMain = 0;

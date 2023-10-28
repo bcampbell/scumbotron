@@ -42,15 +42,6 @@ uint16_t screen_h;
 
 static SDL_Palette *palette;
 
-static uint8_t inp_dualstick_state = 0;
-static uint8_t inp_menu_state = 0;
-static uint8_t inp_menu_pressed = 0;
-static uint8_t inp_cheat_state = 0;
-static uint8_t inp_cheat_pressed = 0;
-static void update_inp_menu();
-static void update_inp_cheat();
-static void update_inp_dualstick();
-
 // start PLAT_HAS_MOUSE
 int16_t plat_mouse_x = 0;
 int16_t plat_mouse_y = 0;
@@ -101,9 +92,9 @@ void plat_init()
 
 
 //    if (fullscreen)
-    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+//    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
-    fenster = SDL_CreateWindow("ZapZapZappityZapZap",
+    fenster = SDL_CreateWindow("Scumbotron",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               640, 480, flags);
     if (!fenster) {
@@ -289,34 +280,6 @@ static void pumpevents()
     }
 }
 
-// 
-static void update_inp_dualstick()
-{
-    uint8_t state = 0;
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    uint8_t i;
-    static const struct {
-        uint8_t scancode;
-        uint8_t bitmask;
-    } mapping[8] = {
-        {SDL_SCANCODE_UP, INP_FIRE_UP},
-        {SDL_SCANCODE_DOWN, INP_FIRE_DOWN},
-        {SDL_SCANCODE_LEFT, INP_FIRE_LEFT},
-        {SDL_SCANCODE_RIGHT, INP_FIRE_RIGHT},
-        {SDL_SCANCODE_W, INP_UP},
-        {SDL_SCANCODE_S, INP_DOWN},
-        {SDL_SCANCODE_A, INP_LEFT},
-        {SDL_SCANCODE_D, INP_RIGHT},
-    };
-   
-    for (i = 0; i < 8; ++i) {
-        if (keys[mapping[i].scancode]) {
-            state |= mapping[i].bitmask;
-        }
-    }
-    inp_dualstick_state = state;
-}
-
 static void update_inp_mouse()
 {
     int x,y;
@@ -349,7 +312,37 @@ static void update_inp_mouse()
     }
 }
 
-static void update_inp_menu()
+
+
+
+uint8_t plat_raw_dualstick()
+{
+    uint8_t state = 0;
+    const Uint8 *keys = SDL_GetKeyboardState(NULL);
+    uint8_t i;
+    static const struct {
+        uint8_t scancode;
+        uint8_t bitmask;
+    } mapping[8] = {
+        {SDL_SCANCODE_UP, INP_FIRE_UP},
+        {SDL_SCANCODE_DOWN, INP_FIRE_DOWN},
+        {SDL_SCANCODE_LEFT, INP_FIRE_LEFT},
+        {SDL_SCANCODE_RIGHT, INP_FIRE_RIGHT},
+        {SDL_SCANCODE_W, INP_UP},
+        {SDL_SCANCODE_S, INP_DOWN},
+        {SDL_SCANCODE_A, INP_LEFT},
+        {SDL_SCANCODE_D, INP_RIGHT},
+    };
+
+    for (i = 0; i < 8; ++i) {
+        if (keys[mapping[i].scancode]) {
+            state |= mapping[i].bitmask;
+        }
+    }
+    return state;
+}
+
+uint8_t plat_raw_menukeys()
 {
     uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -372,12 +365,10 @@ static void update_inp_menu()
             state |= mapping[i].bitmask;
         }
     }
-    // Which ones were pressed since last check?
-    inp_menu_pressed = (~inp_menu_state) & state;
-    inp_menu_state = state;
+    return state;
 }
 
-static void update_inp_cheat()
+uint8_t plat_raw_cheatkeys()
 {
     uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -390,25 +381,7 @@ static void update_inp_cheat()
     if (keys[SDL_SCANCODE_F3]) {
         state |= INP_CHEAT_NEXTLEVEL;
     }
-    inp_cheat_pressed = (~inp_cheat_state) & state;
-    inp_cheat_state = state;
-}
-
-
-
-uint8_t plat_inp_dualsticks()
-{
-    return inp_dualstick_state;
-}
-
-uint8_t plat_inp_menu()
-{
-    return inp_menu_pressed;
-}
-
-uint8_t plat_inp_cheat()
-{
-    return inp_cheat_pressed;
+    return state;
 }
 
 void plat_render_start()
@@ -832,10 +805,7 @@ int main(int argc, char* argv[]) {
     int frame = 0;
     while(1) {
         pumpevents();
-        update_inp_dualstick();
         update_inp_mouse();
-        update_inp_menu();
-        update_inp_cheat();
         plat_render_start();
         game_render();
         if (mouse_watchdog > 0) {

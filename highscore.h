@@ -1,6 +1,8 @@
 #ifndef HIGHSCORE_H_INCLUDED
 #define HIGHSCORE_H_INCLUDED
 
+#include <stdint.h>
+
 #define HIGHSCORE_COUNT 10
 #define HIGHSCORE_NAME_SIZE 8
 

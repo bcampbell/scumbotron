@@ -123,18 +123,15 @@ void plat_addeffect(int16_t x, int16_t y, uint8_t kind);
 #define INP_MENU_START 0x40
 
 // Returns direction + FIRE_ bits.
-uint8_t plat_inp_dualsticks();
-
+uint8_t plat_raw_dualstick();
 
 // Returns direction + MENU_ bits.
-// Latched, so only returns when buttons are pressed (not held).
-uint8_t plat_inp_menu();
-
+uint8_t plat_raw_menukeys();
 
 #define INP_CHEAT_POWERUP 0x01
 #define INP_CHEAT_EXTRALIFE 0x02
 #define INP_CHEAT_NEXTLEVEL 0x04
 
-uint8_t plat_inp_cheat();
+uint8_t plat_raw_cheatkeys();
 
 #endif // SYS_H

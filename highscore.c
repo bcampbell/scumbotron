@@ -1,7 +1,8 @@
+#include "highscore.h"
 #include "plat.h"
 #include "game.h"
+#include "input.h"
 #include "misc.h"
-#include "highscore.h"
 
 highscore highscore_table[HIGHSCORE_COUNT];
 
@@ -103,7 +104,7 @@ void enter_STATE_HIGHSCORES()
 
 void tick_STATE_HIGHSCORES()
 {
-    uint8_t inp = plat_inp_menu();
+    uint8_t inp = inp_menukeys;
     if (inp & (INP_MENU_START | INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
@@ -186,7 +187,7 @@ void tick_STATE_ENTERHIGHSCORE()
 
     // Joystick editing
     {
-        uint8_t inp = plat_inp_menu();
+        uint8_t inp = inp_menukeys;
         if (inp & INP_MENU_START) {
             finished = true;
         }

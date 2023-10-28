@@ -22,18 +22,7 @@ extern void waitvbl();
 extern void inp_enabletextentry();
 extern void inp_disabletextentry();
 
-static uint8_t inp_dualstick_state = 0;
-static uint8_t inp_menu_state = 0;
-static uint8_t inp_menu_pressed = 0;
-static void update_inp_dualstick();
-static void update_inp_menu();
 static void update_inp_mouse();
-
-// start CHEAT
-static uint8_t inp_cheat_state = 0;
-static uint8_t inp_cheat_pressed = 0;
-static void update_inp_cheat();
-//end CHEAT
 
 // start PLAT_HAS_MOUSE
 int16_t plat_mouse_x = 0;
@@ -929,64 +918,6 @@ static inline bool inp_keypressed(uint8_t key) {
 #define KEYCODE_F4 0x73
 #define KEYCODE_F5 0x74
 
-static void update_inp_dualstick()
-{
-    uint8_t state = 0;
-
-    // Keys pretending to be a joypad.
-    // (cx16 provides a key-driven joypad as joystick 0, but the mapping
-    // is no good for twin-stick style controls)
-    if (inp_keypressed(KEYCODE_W)) { state |= INP_UP; }
-    if (inp_keypressed(KEYCODE_A)) { state |= INP_LEFT; }
-    if (inp_keypressed(KEYCODE_S)) { state |= INP_DOWN; }
-    if (inp_keypressed(KEYCODE_D)) { state |= INP_RIGHT; }
-    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_FIRE_LEFT; }
-    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_FIRE_UP; }
-    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_FIRE_DOWN; }
-    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_FIRE_RIGHT; }
-
-    // Read the first _real_ joypad, if plugged in
-    uint16_t j1 = (uint16_t)cx16_k_joystick_get(1);
-    if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
-    if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
-    if (!(j1 & JOY_LEFT_MASK)) {state |= INP_LEFT;}
-    if (!(j1 & JOY_RIGHT_MASK)) {state |= INP_RIGHT;}
-    if (!(j1 & 0x4000)) {state |= INP_FIRE_UP;}     // X
-    if (!(j1 & 0x0080)) {state |= INP_FIRE_DOWN;}   //B
-    if (!(j1 & 0x0040)) {state |= INP_FIRE_LEFT;}   //Y
-    if (!(j1 & 0x8000)) {state |= INP_FIRE_RIGHT;}  //A
-
-    inp_dualstick_state = state;
-}
-
-
-static void update_inp_menu()
-{
-    uint8_t state = 0;
-
-    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_UP; }
-    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_LEFT; }
-    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
-    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
-    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_START; }
-
-    long j1 = (uint16_t)cx16_k_joystick_get(1);
-    if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
-    if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
-    if (!(j1 & JOY_LEFT_MASK)) {state |= INP_LEFT;}
-    if (!(j1 & JOY_RIGHT_MASK)) {state |= INP_RIGHT;}
-    //if (!(j1 & 0x4000)) {state |= ???;}     // X
-    //if (!(j1 & 0x0080)) {state |= ???;}   //B
-    //if (!(j1 & 0x0040)) {state |= ???;}   //Y
-    if (!(j1 & 0x8000)) {state |= INP_MENU_A;}  // A
-    if (!(j1 & 0x0080)) {state |= INP_MENU_B;}  // A
-    if (!(j1 & 0x0010)) {state |= INP_MENU_START;}  // START
-
-    // Which ones were pressed since last check?
-    // TODO: calculate separately for keys and joystick!
-    inp_menu_pressed = (~inp_menu_state) & state;
-    inp_menu_state = state;
-}
 
 static void update_inp_mouse()
 {
@@ -1007,29 +938,68 @@ static void update_inp_mouse()
     }
 }
 
-static void update_inp_cheat()
+
+uint8_t plat_raw_dualstick()
+{
+    uint8_t raw = 0;
+
+    // Keys pretending to be a joypad.
+    // (cx16 provides a key-driven joypad as joystick 0, but the mapping
+    // is no good for twin-stick style controls)
+    if (inp_keypressed(KEYCODE_W)) { raw |= INP_UP; }
+    if (inp_keypressed(KEYCODE_A)) { raw |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_S)) { raw |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_D)) { raw |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_LEFTARROW)) { raw |= INP_FIRE_LEFT; }
+    if (inp_keypressed(KEYCODE_UPARROW)) { raw |= INP_FIRE_UP; }
+    if (inp_keypressed(KEYCODE_DOWNARROW)) { raw |= INP_FIRE_DOWN; }
+    if (inp_keypressed(KEYCODE_RIGHTARROW)) { raw |= INP_FIRE_RIGHT; }
+
+    // Read the first _real_ joypad, if plugged in
+    uint16_t j1 = (uint16_t)cx16_k_joystick_get(1);
+    if (!(j1 & JOY_UP_MASK)) {raw |= INP_UP;}
+    if (!(j1 & JOY_DOWN_MASK)) {raw |= INP_DOWN;}
+    if (!(j1 & JOY_LEFT_MASK)) {raw |= INP_LEFT;}
+    if (!(j1 & JOY_RIGHT_MASK)) {raw |= INP_RIGHT;}
+    if (!(j1 & 0x4000)) {raw |= INP_FIRE_UP;}     // X
+    if (!(j1 & 0x0080)) {raw |= INP_FIRE_DOWN;}   //B
+    if (!(j1 & 0x0040)) {raw |= INP_FIRE_LEFT;}   //Y
+    if (!(j1 & 0x8000)) {raw |= INP_FIRE_RIGHT;}  //A
+    return raw;
+}
+
+uint8_t plat_raw_menukeys()
+{
+    uint8_t state = 0;
+
+    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_UP; }
+    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_START; }
+
+    long j1 = (uint16_t)cx16_k_joystick_get(1);
+    if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
+    if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
+    if (!(j1 & JOY_LEFT_MASK)) {state |= INP_LEFT;}
+    if (!(j1 & JOY_RIGHT_MASK)) {state |= INP_RIGHT;}
+    //if (!(j1 & 0x4000)) {state |= ???;}     // X
+    //if (!(j1 & 0x0080)) {state |= ???;}   //B
+    //if (!(j1 & 0x0040)) {state |= ???;}   //Y
+    if (!(j1 & 0x8000)) {state |= INP_MENU_A;}  // A
+    if (!(j1 & 0x0080)) {state |= INP_MENU_B;}  // A
+    if (!(j1 & 0x0010)) {state |= INP_MENU_START;}  // START
+    
+    return state;
+}
+
+uint8_t plat_raw_cheatkeys()
 {
     uint8_t state = 0;
     if (inp_keypressed(KEYCODE_F1)) { state |= INP_CHEAT_POWERUP; }
     if (inp_keypressed(KEYCODE_F2)) { state |= INP_CHEAT_EXTRALIFE; }
     if (inp_keypressed(KEYCODE_F3)) { state |= INP_CHEAT_NEXTLEVEL; }
-    inp_cheat_pressed = (~inp_cheat_state) & state;
-    inp_cheat_state = state;
-}
-
-uint8_t plat_inp_dualsticks()
-{
-    return inp_dualstick_state;
-}
-
-uint8_t plat_inp_menu()
-{
-    return inp_menu_pressed;
-}
-
-uint8_t plat_inp_cheat()
-{
-    return inp_cheat_pressed;
+    return state;
 }
 
 
@@ -1154,9 +1124,6 @@ int main(void) {
         plat_render_finish();
         sfx_tick();
         //cx16_k_joystick_scan();
-        update_inp_dualstick();
-        update_inp_menu();
-        update_inp_cheat();
         update_inp_mouse();
         game_tick();
     }

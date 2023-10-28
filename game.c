@@ -1,8 +1,9 @@
-#include "plat.h"
-#include "gob.h"
-#include "player.h"
-#include "highscore.h"
 #include "game.h"
+#include "gob.h"
+#include "highscore.h"
+#include "input.h"
+#include "plat.h"
+#include "player.h"
 
 uint8_t state;
 uint16_t statetimer;
@@ -39,6 +40,8 @@ void game_init()
 
 void game_tick()
 {
+    inp_tick();
+
     switch(state) {
     case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
     case STATE_TITLESCREEN: tick_STATE_TITLESCREEN(); break;
@@ -129,7 +132,7 @@ void enter_STATE_TITLESCREEN()
 
 static void tick_STATE_TITLESCREEN()
 {
-    uint8_t inp = plat_inp_menu();
+    uint8_t inp = inp_menukeys;
     if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
         return;
@@ -286,7 +289,7 @@ static void tick_STATE_PLAY()
     level_baiter_check();
     // CHEAT
     {
-        uint8_t cheat = plat_inp_cheat();
+        uint8_t cheat = inp_cheatkeys;
         if (cheat & INP_CHEAT_NEXTLEVEL) {
             for (uint8_t g; g<MAX_GOBS; ++g) {
                 if (gobflags[g] & GF_LOCKS_LEVEL) {

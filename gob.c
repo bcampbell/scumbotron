@@ -21,26 +21,6 @@ uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
 uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
 
-// Force direction into valid bits (no up+down, for example)
-const uint8_t dir_fix[16] = {
-    0,              // 0000
-    DIR_RIGHT,      // 0001 right
-    DIR_LEFT,       // 0010 left
-    0,              // 0011 left+right
-    DIR_DOWN,       // 0100 down
-    DIR_DOWN|DIR_RIGHT,   // 0101 down+right           
-    DIR_DOWN|DIR_LEFT,   // 0110 down+left           
-    0,              // 0111 down+left+right
-
-    DIR_UP,         // 1000 up
-    DIR_UP|DIR_RIGHT,   // 1001 up+right
-    DIR_UP|DIR_LEFT,   // 1010 up+left
-    0,              // 1011 up+left+right
-    0,              // 1100 up+down
-    0,              // 1101 up+down+right           
-    0,              // 1110 up+down+left           
-    0,              // 1111 all
-};
 
 #define ANGLE_DUD 0 // Shouldn't be used, but want to show invalid values.
 

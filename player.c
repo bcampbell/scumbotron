@@ -1,5 +1,6 @@
 #include "player.h"
 #include "plat.h"
+#include "input.h"
 #include "gob.h"
 #include "misc.h"
 
@@ -207,51 +208,13 @@ void player_powerup(uint8_t plr)
 
 static void plr_digital_move(uint8_t d, uint8_t move)
 {
-#ifdef MOVE_WITH_INTERIA_DISABLED_FOR_NOW
-    // move
-    {
-        int16_t vy = plrvy[d];
-        if (move & DIR_UP) {
-            vy -= PLAYER_ACCEL;
-            if (vy < -PLAYER_MAXSPD) {
-                vy = -PLAYER_MAXSPD;
-            }
-        } else if (move & DIR_DOWN) {
-            vy += PLAYER_ACCEL;
-            if (vy > PLAYER_MAXSPD) {
-                vy = PLAYER_MAXSPD;
-            }
-        }
-        plry[d] += vy;
-        vy = dampvel(vy);
-        plrvy[d] = vy;
-    }
-
-    {
-        int16_t vx = plrvx[d];
-        if (move & DIR_LEFT) {
-            vx -= PLAYER_ACCEL;
-            if (vx < -PLAYER_MAXSPD) {
-                vx = -PLAYER_MAXSPD;
-            }
-        } else if (move & DIR_RIGHT) {
-            vx += PLAYER_ACCEL;
-            if (vx > PLAYER_MAXSPD) {
-                vx = PLAYER_MAXSPD;
-            }
-        }
-        plrx[d] += vx;
-        vx = dampvel(vx);
-        plrvx[d] = vx;
-    }
-#endif
-
     // move
     {
         int16_t vy = 0;
         if (move & DIR_UP) {
             vy = -PLAYER_MAXSPD;
-        } else if (move & DIR_DOWN) {
+        }
+        if (move & DIR_DOWN) {
             vy = PLAYER_MAXSPD;
         }
         plry[d] += vy;
@@ -262,7 +225,8 @@ static void plr_digital_move(uint8_t d, uint8_t move)
         int16_t vx = 0;
         if (move & DIR_LEFT) {
             vx = -PLAYER_MAXSPD;
-        } else if (move & DIR_RIGHT) {
+        }
+        if (move & DIR_RIGHT) {
             vx = PLAYER_MAXSPD;
         }
         plrx[d] += vx;
@@ -312,9 +276,9 @@ static void plr_shoot(uint8_t p, uint8_t theta) {
 }
 
 void player_tick(uint8_t p) {
-    uint8_t sticks = plat_inp_dualsticks();
-    uint8_t move = dir_fix[sticks & 0x0F];
-    uint8_t fire = dir_fix[(sticks>>4) & 0x0F];
+    uint8_t sticks = inp_dualstick;
+    uint8_t move = sticks & 0x0F;
+    uint8_t fire = (sticks>>4) & 0x0F;
 
     plr_digital_move(p, move);
 
