@@ -1,8 +1,9 @@
 #include "player.h"
-#include "plat.h"
-#include "input.h"
+#include "effects.h"
 #include "gob.h"
+#include "input.h"
 #include "misc.h"
+#include "plat.h"
 
 uint8_t player_lives;
 uint32_t player_score;
@@ -176,7 +177,7 @@ bool player_collisions()
         }
         if (norwegian_blue) {
             plralive[p] = 0;    // mark as dead
-            plat_addeffect(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+            effects_add(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
         }
     }
     return norwegian_blue;

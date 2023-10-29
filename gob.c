@@ -1,4 +1,5 @@
 #include "gob.h"
+#include "effects.h"
 #include "plat.h"
 #include "player.h"
 #include "misc.h"
@@ -74,7 +75,7 @@ void gobs_tick(bool spawnphase)
             if( gobtimer[i] == 8) {
                 // don't play spawn effect for boss segments
                 if (gobkind[i] != GK_BOSSSEG) {
-                    plat_addeffect(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
+                    effects_add(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
                 }
             } else if( gobtimer[i] == 0) {
                 // done spawning.
@@ -502,7 +503,7 @@ void gob_seek_y(uint8_t d, int16_t target, int16_t accel, int16_t maxspd)
 void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 {
     player_add_score(points);
-    plat_addeffect(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+    effects_add(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
@@ -1269,7 +1270,7 @@ void brain_tick(uint8_t g)
             //gobkind[g] = GK_NONE;
             // convert marine to zombie
             marine_zombify(targ);
-            plat_addeffect(gobx[g]+(8<<FX), goby[g]+(8<<FX), EK_ZOMBIFY);
+            effects_add(gobx[g]+(8<<FX), goby[g]+(8<<FX), EK_ZOMBIFY);
             return;
         }
 

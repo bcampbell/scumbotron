@@ -96,14 +96,6 @@ void plat_gatso(uint8_t t);
 #define SFX_KABOOM 2
 void plat_sfx_play(uint8_t effect);
 
-// (visual) effect kinds
-#define EK_NONE 0
-#define EK_SPAWN 1
-#define EK_KABOOM 2
-#define EK_ZOMBIFY 3
-void plat_addeffect(int16_t x, int16_t y, uint8_t kind);
-
-
 #define DIR_UP 0x08
 #define DIR_DOWN 0x04
 #define DIR_LEFT 0x02
@@ -133,5 +125,10 @@ uint8_t plat_raw_menukeys();
 #define INP_CHEAT_NEXTLEVEL 0x04
 
 uint8_t plat_raw_cheatkeys();
+
+
+// Draw a box in chars (effects layer)
+void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
+
 
 #endif // SYS_H

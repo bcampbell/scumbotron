@@ -68,15 +68,12 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch,
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
-static void drawrect(const SDL_Rect *r, uint8_t colour);
-static void fillrect(const SDL_Rect *r, uint8_t colour);
 
 static inline void sprout16(int16_t x, int16_t y, uint8_t img);
 static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout32(int16_t x, int16_t y, uint8_t img);
 static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
 static inline void sprout64x8(int16_t x, int16_t y, uint8_t img);
-static void rendereffects();
 
 void plat_gatso(uint8_t t)
 {
@@ -92,7 +89,7 @@ void plat_init()
 
 
 //    if (fullscreen)
-//    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
 
     fenster = SDL_CreateWindow("Scumbotron",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
@@ -392,8 +389,6 @@ void plat_render_start()
     // cycle colour 15
     i = (((tick >> 1)) & 0x7) + 2;
     SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
-
-    rendereffects();
 }
 
 void plat_render_finish()
@@ -512,43 +507,79 @@ static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour)
     }
 }
 
-static void drawrect(const SDL_Rect *r, uint8_t colour)
+static void plonkchar(uint8_t cx, uint8_t cy, uint8_t ch, uint8_t colour)
 {
-    SDL_Rect b;
-    if (!SDL_IntersectRect(&screen->clip_rect, r, &b)) {
-        return;
+    blit8_matte(export_chars_bin + (8 * 8 * ch), 8, 8, screen, cx*8, cy*8, colour);
+}
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+{
+    for (uint8_t cy = cy_begin; cy < cy_end; ++cy) {
+        plonkchar(cx, cy, ch, colour);
     }
+}
+
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+{
+    for (uint8_t cx = cx_begin; cx < cx_end; ++cx) {
+        plonkchar(cx, cy, ch, colour);
+    }
+}
+
+static inline int8_t cclip(int8_t v, int8_t low, int8_t high)
+{
+    if (v < low) {
+        return low;
+    } else if (v > high) {
+        return high;
+    } else {
+        return v;
+    }
+}
+
+// draw box in char coords, with clipping
+// (note cx,cy can be negative)
+void plat_drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
+{
+    int8_t x0,y0,x1,y1;
+    x0 = cclip(cx, 0, SCREEN_W / 8);
+    x1 = cclip(cx + w, 0, SCREEN_W / 8);
+    y0 = cclip(cy, 0, SCREEN_H / 8);
+    y1 = cclip(cy + h, 0, SCREEN_H / 8);
 
     // top
-    hline_noclip(b.x, b.x + b.w, b.y, colour);
+    if (y0 == cy) {
+        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y0, ch, colour);
+    }
+    if (h<=1) {
+        return;
+    }
 
     // bottom
-    if (b.h<2) {
+    if (y1 - 1 == cy + h-1) {
+        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y1 - 1, ch, colour);
+    }
+    if (h<=2) {
         return;
     }
-    hline_noclip(b.x, b.x + b.w, b.y + b.h - 1, colour);
 
     // left (excluding top and bottom)
-    vline_noclip(b.x, b.y + 1, b.y + b.h - 1, colour);
+    if (x0 == cx) {
+        vline_chars_noclip((uint8_t)x0, (uint8_t)y0, (uint8_t)y1, ch, colour);
+    }
+    if (w <= 1) {
+        return;
+    }
 
     // right (excluding top and bottom)
-    if (b.w < 2) {
-        return;
-    }
-    vline_noclip(b.x + b.w-1, b.y + 1, b.y + b.h - 1, colour);
-}
-
-static void fillrect(const SDL_Rect *r, uint8_t colour)
-{
-    SDL_Rect b;
-    if (!SDL_IntersectRect(&screen->clip_rect, r, &b)) {
-        return;
-    }
-
-    for (int y = b.y; y < (b.y + b.h); ++y) {
-        hline_noclip(b.x, b.x + b.w, y, colour);
+    if (x1 - 1 == cx + w - 1) {
+        vline_chars_noclip((uint8_t)x1 - 1, (uint8_t)y0, (uint8_t)y1, ch, colour);
     }
 }
+
+
 
 
 // blit with colour 0 transparent.
@@ -672,92 +703,6 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state) {
             vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
             sprout16(x, y, SPR16_VZAPPER_ON);
             break;
-    }
-}
-
-/*
- * Visual Effects
- */
-
-#define MAX_EFFECTS 8
-static uint8_t ekind[MAX_EFFECTS];
-static uint8_t etimer[MAX_EFFECTS];
-static int16_t ex[MAX_EFFECTS];
-static int16_t ey[MAX_EFFECTS];
-
-
-void plat_addeffect(int16_t x, int16_t y, uint8_t kind)
-{
-    // find free one
-    uint8_t e = 0;
-    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
-        ++e;
-    }
-    if (e==MAX_EFFECTS) {
-        return; // none free
-    }
-
-    ex[e] = x;
-    ey[e] = y;
-    ekind[e] = kind;
-    etimer[e] = 0;
-}
-
-static void do_spawneffect(uint8_t e) {
-    int t = (int)etimer[e]++;
-    int x = ex[e]>>FX;
-    int y = ey[e]>>FX;
-
-    t = 14-t;
-
-    if(t>0) {
-        SDL_Rect r = {x-t*8, y-t*8, t*8*2, t*8*2};
-        drawrect(&r, t);
-    } else {
-        ekind[e] = EK_NONE;
-    }
-}
-
-static void do_kaboomeffect(uint8_t e) {
-    int t = (int)etimer[e]++;
-    int x = ex[e]>>FX;
-    int y = ey[e]>>FX;
-
-    int f = t*t;
-    if(t<15) {
-        SDL_Rect r = {x-f/2, y-f/2, f, f};
-        drawrect(&r, t);
-    } else {
-        ekind[e] = EK_NONE;
-    }
-}
-
-static void do_zombifyeffect(uint8_t e) {
-    int t = (int)etimer[e]++;
-    int x = ex[e]>>FX;
-    int y = ey[e]>>FX;
-
-    int w = t*32;
-    int h = 4 + t;
-    if(t<15) {
-        SDL_Rect r = {x-w / 2, y-h / 2, w, h};
-        fillrect(&r, t);
-    } else {
-        ekind[e] = EK_NONE;
-    }
-}
-
-
-static void rendereffects()
-{
-    uint8_t e;
-    for(e = 0; e < MAX_EFFECTS; ++e) {
-        switch (ekind[e]) {
-            case EK_NONE: continue;
-            case EK_SPAWN: do_spawneffect(e); break;
-            case EK_KABOOM: do_kaboomeffect(e); break;
-            case EK_ZOMBIFY: do_zombifyeffect(e); break;
-        }
     }
 }
 

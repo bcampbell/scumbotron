@@ -39,13 +39,6 @@ extern unsigned int export_spr8x32_bin_len;
 
 volatile uint8_t tick = 0;
 
-#define MAX_EFFECTS 8
-static uint8_t ekind[MAX_EFFECTS];
-static uint8_t etimer[MAX_EFFECTS];
-static uint8_t ex[MAX_EFFECTS];
-static uint8_t ey[MAX_EFFECTS];
-static void rendereffects();
-
 // track sprite usage during frame
 int sprMain;
 int sprSub;
@@ -65,9 +58,8 @@ static void clr_bg1();
 static void do_colour_cycling();
 static uint8_t glyph(char ascii);
 
-static void drawbox(int x, int y, int w, int h, uint8_t ch, uint8_t colour);
-static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour);
-static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour);
+static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
+static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
 
 uint8_t plat_raw_dualstick()
 {
@@ -519,7 +511,8 @@ static void clr_bg1()
  * effects
  */
 
-static int cclip(int v, int low, int high)
+
+static inline int8_t cclip(int8_t v, int8_t low, int8_t high)
 {
     if (v < low) {
         return low;
@@ -530,6 +523,7 @@ static int cclip(int v, int low, int high)
     }
 }
 
+
 static uint16_t* bg1_mapaddr_main(int cx, int cy)
     { return BG_MAP_RAM(9) + ((cy - TOP_MAIN / 8) * 32) + cx; }
 
@@ -537,15 +531,15 @@ static uint16_t* bg1_mapaddr_sub(int cx, int cy)
     { return BG_MAP_RAM_SUB(9) + ((cy - TOP_SUB / 8) * 32) + cx; }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uint8_t colour)
+static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
-    int cy;
+    uint8_t cy;
     uint16_t *dest;
     uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
-    int cy_begin_main = cclip(cy_begin, TOP_MAIN/8, BOTTOM_MAIN/8);
-    int cy_end_main = cclip(cy_end, TOP_MAIN/8, BOTTOM_MAIN/8);
-    int cy_begin_sub = cclip(cy_begin, TOP_SUB/8, BOTTOM_SUB/8);
-    int cy_end_sub = cclip(cy_end, TOP_SUB/8, BOTTOM_SUB/8);
+    int8_t cy_begin_main = cclip(cy_begin, TOP_MAIN/8, BOTTOM_MAIN/8);
+    int8_t cy_end_main = cclip(cy_end, TOP_MAIN/8, BOTTOM_MAIN/8);
+    int8_t cy_begin_sub = cclip(cy_begin, TOP_SUB/8, BOTTOM_SUB/8);
+    int8_t cy_end_sub = cclip(cy_end, TOP_SUB/8, BOTTOM_SUB/8);
 
     // Main display
     dest = bg1_mapaddr_main(cx, cy_begin_main);
@@ -562,9 +556,9 @@ static void vline_chars_noclip(int cx, int cy_begin, int cy_end, uint8_t ch, uin
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uint8_t colour)
+static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
 {
-    int cx;
+    uint8_t cx;
     uint16_t *dest;
     uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
     if ( cy >= (TOP_MAIN / 8) && cy < (BOTTOM_MAIN / 8)) {
@@ -585,7 +579,7 @@ static void hline_chars_noclip(int cx_begin, int cx_end, int cy, uint8_t ch, uin
 
 // draw box in char coords, with clipping
 // (note cx,cy can be negative)
-static void drawbox(int cx, int cy, int w, int h, uint8_t ch, uint8_t colour)
+void plat_drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
 {
     int x0,y0,x1,y1;
     x0 = cclip(cx, 0, SCREEN_W / 8);
@@ -623,70 +617,6 @@ static void drawbox(int cx, int cy, int w, int h, uint8_t ch, uint8_t colour)
     }
 }
 
-void plat_addeffect(int16_t x, int16_t y, uint8_t kind)
-{
-    // find free one
-    uint8_t e = 0;
-    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
-        ++e;
-    }
-    if (e==MAX_EFFECTS) {
-        return; // none free
-    }
-
-    ex[e] = (((x >> FX) + 4) / 8);
-    ey[e] = (((y >> FX) + 4) / 8);
-    ekind[e] = kind;
-    etimer[e] = 0;
-}
-
-
-
-static void do_spawneffect(uint8_t e) {
-    uint8_t t = 16-etimer[e];
-    uint8_t cx = ex[e];
-    uint8_t cy = ey[e];
-    drawbox(cx-t, cy-t, t*2, t*2, 0, t);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
-}
-
-static void do_kaboomeffect(uint8_t e) {
-    uint8_t t = etimer[e];
-    uint8_t cx = ex[e];
-    uint8_t cy = ey[e];
-    drawbox(cx-t, cy-t, t*2, t*2, 0, t);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
-}
-
-static void do_zombifyeffect(uint8_t e) {
-    uint8_t t = etimer[e];
-    uint8_t cx = ex[e];
-    uint8_t cy = ey[e];
-    drawbox(cx-t, cy-1, t*2, 2, 0, t);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
-}
-
-static void rendereffects()
-{
-    uint8_t e;
-    for(e = 0; e < MAX_EFFECTS; ++e) {
-        switch (ekind[e]) {
-            case EK_NONE: continue;
-            case EK_SPAWN: do_spawneffect(e); break;
-            case EK_KABOOM: do_kaboomeffect(e); break;
-            case EK_ZOMBIFY: do_zombifyeffect(e); break;
-        }
-    }
-}
-
-
-
 
 /*
  * main
@@ -699,8 +629,6 @@ int main(void) {
 	while(1) {
         clr_bg0();
         clr_bg1();
-
-        rendereffects();
 
         do_colour_cycling();
         //sfx_tick();

@@ -1,4 +1,5 @@
 #include "game.h"
+#include "effects.h"
 #include "gob.h"
 #include "highscore.h"
 #include "input.h"
@@ -35,6 +36,7 @@ static void level_baiter_check();
 void game_init()
 {
     highscore_init();
+    effects_init();
     enter_STATE_ATTRACT();
 }
 
@@ -86,6 +88,7 @@ void game_render()
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
+    effects_render();
 }
 
 /*

@@ -1,8 +1,8 @@
-#include "plat.h"
+#include "effects.h"
 #include "game.h"
 #include "input.h"
 #include "misc.h"
-
+#include "plat.h"
 
 /*
  * STATE_GALLERY_BADDIES
@@ -59,7 +59,7 @@ void render_STATE_GALLERY_BADDIES()
         const uint8_t c = 15;
         const uint8_t appear = 20 + i*10;
         if (statetimer == (appear-8)) {
-            plat_addeffect(x,y,EK_SPAWN);
+            effects_add(x,y,EK_SPAWN);
         }
         if (statetimer < appear) {
             continue;
@@ -160,7 +160,7 @@ void render_STATE_GALLERY_GOODIES()
         const uint8_t c = 15;
         const uint8_t appear = 20 + i*30;
         if (statetimer == (appear-8)) {
-            plat_addeffect(x,y,EK_SPAWN);
+            effects_add(x,y,EK_SPAWN);
         }
         if (statetimer < appear) {
             continue;
