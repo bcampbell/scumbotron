@@ -165,9 +165,14 @@ _unpackloop
 	bne _unpackloop	
 
 	; run the game!
-	; installed game code still has llvm-mos BASIC header:
+	; installed game code still has llvm-mos BASIC header.
 	; 7773 sys 2071.
-	jmp $0817 ; or ".byte $DB ;STP" to break
+
+	; NOTE: for some reason, llvm-mos isn't consistent here.
+	; Minor changes to the code jiggle this entry address...
+	; No idea why. I've seen 2071, 2072, 2075, 2082, 2088...
+
+	jmp 2075
 
 	.endlogical
 shifted_end
