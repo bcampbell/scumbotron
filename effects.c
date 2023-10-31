@@ -40,6 +40,35 @@ static void do_zombifyeffect(uint8_t e) {
 }
 
 
+
+static void do_warpeffect(uint8_t e) {
+    uint8_t t = etimer[e];
+
+    uint8_t cx=0;
+    uint8_t cy=0;
+    uint8_t cw = SCREEN_TEXT_W;
+    uint8_t ch = SCREEN_TEXT_H;
+
+
+    const uint8_t DUR = 64;
+    while(cw >= 2 && ch >= 2) {
+        uint8_t c = 0;
+        if (t >= 16 && t < (DUR-(16+8))) {
+            c = (t-16)&0x0f;
+        }
+        ++t;
+        plat_drawbox(cx, cy, cw, ch, 1, c);
+        ++cx;
+        ++cy;
+        cw -= 2;
+        ch -= 2;
+    }
+    if (++etimer[e] >= DUR) {
+        ekind[e] = EK_NONE;
+    }
+}
+
+
 void effects_init()
 {
     // clear effect table
@@ -77,6 +106,7 @@ void effects_render()
             case EK_SPAWN: do_spawneffect(e); break;
             case EK_KABOOM: do_kaboomeffect(e); break;
             case EK_ZOMBIFY: do_zombifyeffect(e); break;
+            case EK_WARP: do_warpeffect(e); break;
         }
     }
 }

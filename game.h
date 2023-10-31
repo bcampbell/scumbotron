@@ -8,24 +8,25 @@
 #define STATE_TITLESCREEN 1
 // gameplay states
 #define STATE_NEWGAME 2
-#define STATE_GETREADY 3        // pause, get ready
-#define STATE_PLAY 4            // main gameplay
-#define STATE_CLEARED 5         // level is cleared of bad dudes
-#define STATE_KILLED 6          // player just died (but has another life)
-#define STATE_GAMEOVER 7
+#define STATE_ENTERLEVEL 3      // entering a new level
+#define STATE_GETREADY 4        // pause, get ready
+#define STATE_PLAY 5            // main gameplay
+#define STATE_CLEARED 6         // level is cleared of bad dudes
+#define STATE_KILLED 7          // player just died (but has another life)
+#define STATE_GAMEOVER 8
 // highscore states
-#define STATE_HIGHSCORES 8      // show high scores
-#define STATE_ENTERHIGHSCORE 9  // enter a new high score
+#define STATE_HIGHSCORES 9      // show high scores
+#define STATE_ENTERHIGHSCORE 10  // enter a new high score
 // gallery sequence
-#define STATE_GALLERY_BADDIES 10 // dude gallery screen
-#define STATE_GALLERY_GOODIES 11 // hero gallery screen
+#define STATE_GALLERY_BADDIES 11 // dude gallery screen
+#define STATE_GALLERY_GOODIES 12 // hero gallery screen
 // story sequence
-#define STATE_STORY_INTRO 12 // story part 1
-#define STATE_STORY_OHNO 13 // story part 2
-#define STATE_STORY_ATTACK 14 // story part 3
-#define STATE_STORY_RUNAWAY 15 // story part 4
-#define STATE_STORY_WHATNOW 16 // story part 5
-#define STATE_STORY_DONE 17 // story finished
+#define STATE_STORY_INTRO 13 // story part 1
+#define STATE_STORY_OHNO 14 // story part 2
+#define STATE_STORY_ATTACK 15 // story part 3
+#define STATE_STORY_RUNAWAY 16 // story part 4
+#define STATE_STORY_WHATNOW 17 // story part 5
+#define STATE_STORY_DONE 18 // story finished
  
 extern uint8_t state;
 extern uint16_t statetimer;
@@ -34,6 +35,7 @@ extern uint16_t statetimer;
 void enter_STATE_ATTRACT();
 void enter_STATE_TITLESCREEN();
 void enter_STATE_NEWGAME();
+void enter_STATE_ENTERLEVEL();
 void enter_STATE_GETREADY();
 void enter_STATE_PLAY();
 void enter_STATE_CLEARED();

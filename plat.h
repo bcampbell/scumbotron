@@ -35,6 +35,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 // draw null-terminated string
 void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
+// TODO: should just pass in level and score as bcd
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score);
 
 // Render bonkers encoding where each byte encodes a 4x2 block of pixels,

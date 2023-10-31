@@ -3,18 +3,21 @@
 #include "gob.h"
 #include "highscore.h"
 #include "input.h"
+#include "misc.h"
 #include "plat.h"
 #include "player.h"
 
 uint8_t state;
 uint16_t statetimer;
 static uint8_t level;
+static uint8_t level_bcd;   // level number as BCD.
 static uint8_t baiter_timer;
 static uint8_t baiter_count;
 
 static void tick_STATE_ATTRACT();
 static void tick_STATE_TITLESCREEN();
 static void tick_STATE_NEWGAME();
+static void tick_STATE_ENTERLEVEL();
 static void tick_STATE_GETREADY();
 static void tick_STATE_PLAY();
 static void tick_STATE_CLEARED();
@@ -24,6 +27,7 @@ static void tick_STATE_GAMEOVER();
 static void render_STATE_ATTRACT();
 static void render_STATE_TITLESCREEN();
 static void render_STATE_NEWGAME();
+static void render_STATE_ENTERLEVEL();
 static void render_STATE_GETREADY();
 static void render_STATE_PLAY();
 static void render_STATE_CLEARED();
@@ -48,6 +52,7 @@ void game_tick()
     case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
     case STATE_TITLESCREEN: tick_STATE_TITLESCREEN(); break;
     case STATE_NEWGAME:     tick_STATE_NEWGAME(); break;
+    case STATE_ENTERLEVEL:     tick_STATE_ENTERLEVEL(); break;
     case STATE_GETREADY:    tick_STATE_GETREADY(); break;
     case STATE_PLAY:        tick_STATE_PLAY(); break;
     case STATE_CLEARED:     tick_STATE_CLEARED(); break;
@@ -68,10 +73,12 @@ void game_tick()
 
 void game_render()
 {
+    effects_render();
     switch(state) {
         case STATE_ATTRACT:     render_STATE_ATTRACT(); break;
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
         case STATE_NEWGAME:     render_STATE_NEWGAME(); break;
+        case STATE_ENTERLEVEL:  render_STATE_ENTERLEVEL(); break;
         case STATE_GETREADY:    render_STATE_GETREADY(); break;
         case STATE_PLAY:        render_STATE_PLAY(); break;
         case STATE_CLEARED:     render_STATE_CLEARED(); break;
@@ -88,7 +95,6 @@ void game_render()
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
-    effects_render();
 }
 
 /*
@@ -141,6 +147,10 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
+    if (plat_raw_cheatkeys() & INP_CHEAT_POWERUP) {
+        effects_add(0,0,EK_WARP);
+        statetimer = 0;
+    }
     if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
         enter_STATE_ATTRACT();
     }
@@ -198,24 +208,64 @@ void enter_STATE_NEWGAME()
 {
     // init new game
     level = 0;
+    level_bcd = 0;
     player_lives = 3;
     player_score = 0;
-    level_init(level);
 
     gobs_certainbonus = false;
 
     player_create(0);
-    state = STATE_NEWGAME;
-    statetimer = 0;
+    //state = STATE_NEWGAME;
+    //statetimer = 0;
+    enter_STATE_ENTERLEVEL();
 }
 
 static void tick_STATE_NEWGAME()
 {
-    enter_STATE_GETREADY();
 }
 
 static void render_STATE_NEWGAME()
 {
+}
+
+/*
+ * STATE_ENTERLEVEL
+ *
+ * Set up level, show warp effect.
+ */
+void enter_STATE_ENTERLEVEL()
+{
+    gobs_clear();
+    //player_create(0);
+    state = STATE_ENTERLEVEL;
+    statetimer = 0;
+    effects_add(0,0,EK_WARP);
+}
+
+static void tick_STATE_ENTERLEVEL()
+{
+    ++statetimer;
+    if (statetimer == 64) {
+        // Set up all the bad dudes
+        level_init(level);
+        enter_STATE_GETREADY();
+    }
+}
+
+static void render_STATE_ENTERLEVEL()
+{
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    uint8_t cw = (SCREEN_TEXT_W-8)/2;
+    plat_textn(cw, ch, "LEVEL", 5, (tick/2) & 0x0f);
+    uint8_t b = level_bcd;
+    char buf[2] = {' ', ' '};
+    if (b & 0xf0) {
+        buf[0] = '0' + (b>>4);
+        buf[1] = '0' + (b & 0x0f);
+    } else {
+        buf[0] = '0' + (b & 0x0f);
+    }
+    plat_textn(cw+5+1, ch, buf, 2, (tick/2) & 0x0f);
 }
 
 
@@ -243,6 +293,10 @@ static void tick_STATE_GETREADY()
     if(gobs_spawncnt == 0) {
         enter_STATE_PLAY();
     }
+
+    //if (++statetimer >= 48) {
+    //    enter_STATE_PLAY();
+    //}
 }
 
 static void render_STATE_GETREADY()
@@ -250,7 +304,8 @@ static void render_STATE_GETREADY()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text((SCREEN_TEXT_W-9)/2, 10, "GET READY", (tick/2) & 0x0f);
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    plat_text((SCREEN_TEXT_W-9)/2, ch, "GET READY", (tick/2) & 0x0f);
 }
 
 
@@ -319,11 +374,12 @@ static void render_STATE_PLAY()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
     if (level >= 20  && (tick/16)&0x01) {
-        plat_text((SCREEN_TEXT_W-20)/2, 10, "ERROR: TOO MANY FISH", 1);
+        plat_text((SCREEN_TEXT_W-20)/2, ch, "ERROR: TOO MANY FISH", 1);
     }
     if (gobs_lockcnt == 0 ) {
-        plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
+        plat_text((SCREEN_TEXT_W-5)/2, ch, "CLEAR", (tick/2) & 0x0f);
     }
 }
 
@@ -355,7 +411,8 @@ static void render_STATE_KILLED()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    plat_text((SCREEN_TEXT_W-8)/2, 10, "OWWWWWWWW", (tick/2) & 0x0f);
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    plat_text((SCREEN_TEXT_W-8)/2, ch, "OWWWWWWWW", (tick/2) & 0x0f);
 }
 
 /*
@@ -378,7 +435,6 @@ void enter_STATE_CLEARED()
             ++state_cleared_marine_count;
         }
     }
-
 }
 
 static void tick_STATE_CLEARED()
@@ -387,8 +443,8 @@ static void tick_STATE_CLEARED()
     if (statetimer >= 30) {
         // next level
         ++level;
-        level_init(level);
-        enter_STATE_GETREADY();
+        level_bcd = bin2bcd8(level);
+        enter_STATE_ENTERLEVEL();
     }
 }
 
@@ -435,7 +491,8 @@ static void tick_STATE_GAMEOVER()
 
 static void render_STATE_GAMEOVER()
 {
-    plat_text((SCREEN_TEXT_W-9)/2, 10, "GAME OVER", (tick/2) & 0x0f);
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    plat_text((SCREEN_TEXT_W-9)/2, ch, "GAME OVER", (tick/2) & 0x0f);
 }
 
 /*
@@ -444,7 +501,6 @@ static void render_STATE_GAMEOVER()
 
 static void level_init(uint8_t level)
 {
-    gobs_clear();
 
     switch (level) {
         case 0:

@@ -8,6 +8,7 @@
 #define EK_SPAWN 1
 #define EK_KABOOM 2
 #define EK_ZOMBIFY 3
+#define EK_WARP 4
 
 void effects_init();
 void effects_add(int16_t x, int16_t y, uint8_t kind);

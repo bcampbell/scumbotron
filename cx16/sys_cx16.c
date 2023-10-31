@@ -515,7 +515,6 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
     VERA.data0 = screencode(' ');
     VERA.data0 = c;
 
-   
     uint8_t bcd = bin2bcd8(level);
     VERA.data0 = screencode(hexdigits[bcd >> 4]);
     VERA.data0 = c;
