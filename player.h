@@ -36,7 +36,7 @@ void player_extra_life(uint8_t plr);    // give extra life
 void player_powerup(uint8_t plr);   // power up weapon
 void player_next_weapon(uint8_t plr);   // upgrade to next weapon type
 
-#define MAX_SHOTS 16
+#define MAX_SHOTS 12
 // shot vars
 extern int16_t shotx[MAX_SHOTS];
 extern int16_t shoty[MAX_SHOTS];

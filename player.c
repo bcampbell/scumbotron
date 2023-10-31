@@ -453,19 +453,19 @@ void shot_collisions()
 {
     uint8_t s;
     for (s = 0; s < MAX_SHOTS; ++s) {
+        if (shottimer[s] == 0) {
+            continue;   // inactive
+        }
         // Take centre point of shot.
         int16_t sx = shotx[s] + (8<<FX);
         int16_t sy = shoty[s] + (8<<FX);
         uint8_t d;
-        if (shottimer[s] == 0) {
-            continue;   // inactive
-        }
         for (d = 0; d < MAX_GOBS; ++d) {
-            int16_t dy0 = goby[d];
-            int16_t dy1 = goby[d] + gob_size(d);
             if (gobkind[d] == GK_NONE || (gobflags[d] & GF_COLLIDES_SHOT) == 0) {
                 continue;
             }
+            int16_t dy0 = goby[d];
+            int16_t dy1 = goby[d] + gob_size(d);
             if (sy >= dy0 && sy < dy1) {
                 int16_t dx0 = gobx[d];
                 int16_t dx1 = gobx[d] + gob_size(d);
