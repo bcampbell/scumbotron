@@ -509,7 +509,11 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
 
     if (rnd() > 250 || gobs_certainbonus) {
         // transform into powerup
-        powerup_create(d, gobx[d], goby[d], rnd() & 0x01);
+        uint8_t kind = rnd() & 0x03;
+        if (kind == 3) {
+            kind = 0;
+        }
+        powerup_create(d, gobx[d], goby[d], kind);
         gobs_certainbonus = false;
     }
 }
@@ -794,7 +798,7 @@ void tank_tick(uint8_t g)
 
 void tank_shot(uint8_t g, uint8_t shot)
 {
-    uint8_t power = shotkind[shot] + 1;
+    uint8_t power = shotpower[shot] + 1;
     if (gobdat[g] <= power ) {
         // boom.
         gob_standard_kaboom(g, shot, 100);
@@ -904,7 +908,7 @@ void fragger_shot(uint8_t d, uint8_t shot)
     gob_standard_kaboom(d, shot, 100);
 
     // Bigger shots don't cause fragmentation.
-    uint8_t power = shotkind[shot] + 1;
+    uint8_t power = shotpower[shot] + 1;
     if (power <= 1) {
         int16_t x = gobx[d];
         int16_t y = goby[d];
@@ -992,6 +996,7 @@ bool powerup_playercollide(uint8_t g, uint8_t plr)
     switch(gobdat[g]) {
         case 0: player_extra_life(plr); break;
         case 1: player_powerup(plr); break;
+        case 2: player_next_weapon(plr); break;
         default: break;
     }
 

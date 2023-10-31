@@ -303,6 +303,9 @@ static void tick_STATE_PLAY()
         }
         if (cheat & INP_CHEAT_POWERUP) {
             player_powerup(0);
+            player_powerup(0);
+            player_next_weapon(0);
+            player_next_weapon(0);
         }
         if (cheat & INP_CHEAT_EXTRALIFE) {
             player_extra_life(0);

@@ -8,6 +8,7 @@
 uint8_t player_lives;
 uint32_t player_score;
 
+
 // player vars
 int16_t plrx[MAX_PLAYERS];
 int16_t plry[MAX_PLAYERS];
@@ -16,7 +17,13 @@ int16_t plrvy[MAX_PLAYERS];
 uint8_t plrtimer[MAX_PLAYERS];
 uint8_t plrfacing[MAX_PLAYERS]; // DIR_ bits
 uint8_t plralive[MAX_PLAYERS]; // 0=dead
+#define WEAPON_SINGLESHOT 0
+#define WEAPON_DOUBLESHOT 1
+#define WEAPON_TRIPLESHOT 2
 uint8_t plrweapon[MAX_PLAYERS];
+uint8_t pad[8];
+uint8_t plrweaponpower[MAX_PLAYERS];    // 0..2
+uint8_t padtoo[8];
 uint8_t plrweaponage[MAX_PLAYERS];
 
 int16_t plrhistx[MAX_PLAYERS][PLR_HIST_LEN];
@@ -30,13 +37,12 @@ int16_t shotvx[MAX_SHOTS];
 int16_t shotvy[MAX_SHOTS];
 uint8_t shotdir[MAX_SHOTS];
 uint8_t shottimer[MAX_SHOTS];
-uint8_t shotkind[MAX_SHOTS];
+uint8_t shotpower[MAX_SHOTS]; // 0..2
 
 static uint8_t shot_alloc();
 
-#define NUM_WEAPONS 3
+#define MAX_WEAPON_POWER 2
 //static uint8_t weapon_fire_delay[NUM_WEAPONS] = {8, 7, 6};
-static uint8_t weapon_fire_delay[NUM_WEAPONS] = {5,5,5};
 
 // player
 
@@ -59,15 +65,30 @@ void player_add_score(uint8_t points)
     player_score += points;
 }
 
-void player_create(uint8_t p) {
+void player_create(uint8_t p)
+{
     player_reset(p);
     // One-time init stuff (things that persists between levels).
-    plrweapon[p] = 0;
+    plrweapon[p] = WEAPON_SINGLESHOT;
+    plrweaponpower[p] = 0;
     plrweaponage[p] = 0;
 }
 
-void player_reset(uint8_t p) {
+void player_killed(uint8_t p)
+{
+    plralive[p] = 0;    // mark as dead
+    int16_t px0 = plrx[p] + (4 << FX);
+    int16_t py0 = plry[p] + (4 << FX);
+    effects_add(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+    // reset weapon
+    plrweapon[p] = WEAPON_SINGLESHOT;
+    plrweaponpower[p] = 0;
+    plrweaponage[p] = 0;
+}
 
+
+void player_reset(uint8_t p)
+{
     const int16_t x = ((SCREEN_W / 2) - 8) << FX;
     const int16_t y = ((SCREEN_H / 2) - 8) << FX;
     uint8_t i;
@@ -105,7 +126,7 @@ void player_renderall()
             // inactive.
             continue;
         }
-        plat_shot_render(shotx[s], shoty[s], shotdir[s], shotkind[s]);
+        plat_shot_render(shotx[s], shoty[s], shotdir[s], shotpower[s]);
     }
 }
 
@@ -176,8 +197,7 @@ bool player_collisions()
             }
         }
         if (norwegian_blue) {
-            plralive[p] = 0;    // mark as dead
-            effects_add(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+            player_killed(p);
         }
     }
     return norwegian_blue;
@@ -189,22 +209,30 @@ void player_extra_life(uint8_t plr)
     ++player_lives;
 }
 
-// increase player weapon
+// increase player weapon power
 void player_powerup(uint8_t plr)
 {
-    if (plrweapon[plr] < (NUM_WEAPONS-1)) {
-        plrweapon[plr]++;
+    if (plrweaponpower[plr] < 2) {
+        ++plrweaponpower[plr];
         plrweaponage[plr] = 0;
     }
 }
 
-
+void player_next_weapon(uint8_t plr)
+{
+    uint8_t w = plrweapon[plr];
+    if (w<WEAPON_TRIPLESHOT) {
+        ++w;
+    }
+    plrweapon[plr] = w;
+    plrweaponage[plr] = 0;
+}
 
 
 // Control schemes:
 // 1. keyboard/digital gamepad
 // 2. keyboard+mouse
-// 3. analog twin stick
+// 3. TODO: analog twin stick
 //
 
 static void plr_digital_move(uint8_t d, uint8_t move)
@@ -257,24 +285,79 @@ static void plr_digital_move(uint8_t d, uint8_t move)
         }
     }
 }
-
-
-static void plr_shoot(uint8_t p, uint8_t theta) {
-    uint8_t s = shot_alloc();
-    // FIRE!
-    plat_sfx_play(SFX_LASER);
-    plrtimer[p] = 0;
-    if (s >= MAX_SHOTS) {
-        return;
-    }
+static void shot_init(uint8_t s, int16_t x, int16_t y, uint8_t theta, uint8_t power)
+{
     shottimer[s] = 24;
-    shotx[s] = plrx[p];
-    shoty[s] = plry[p];
+    shotx[s] = x;
+    shoty[s] = y;
     shotvx[s] = sin24(theta) * 4;
     shotvy[s] = -cos24(theta) * 4;
     shotdir[s] = theta;
-    shotkind[s] = plrweapon[p];
+    shotpower[s] = power;
 }
+
+uint8_t add24(uint8_t theta, uint8_t v) {
+    theta += v;
+    if (theta >=24) {
+        theta -= 24;
+    }
+    return theta;
+}
+
+
+static void plr_shoot(uint8_t p, uint8_t theta) {
+    // FIRE!
+    plat_sfx_play(SFX_LASER);
+
+    uint8_t weapon = plrweapon[p];
+    uint8_t power = plrweaponpower[p];
+    if (weapon == WEAPON_SINGLESHOT) {
+        uint8_t s = shot_alloc();
+
+        if (s >= MAX_SHOTS) {
+            return;
+        }
+        int16_t x = plrx[p];
+        int16_t y = plry[p];
+        shot_init(s, x, y, theta, power);
+    } else if (weapon == WEAPON_DOUBLESHOT) {
+        uint8_t n = add24(theta,6);
+
+        int16_t xoff = sin24(n) * 2;
+        int16_t yoff = cos24(n) * 2;
+
+        uint8_t s = shot_alloc();
+        if (s >= MAX_SHOTS) {
+            return;
+        }
+        shot_init(s, plrx[p] + xoff, plry[p] - yoff, theta, power);
+        s = shot_alloc();
+        if (s >= MAX_SHOTS) {
+            return;
+        }
+        shot_init(s, plrx[p] - xoff, plry[p] + yoff, theta, power); 
+    } else if (weapon == WEAPON_TRIPLESHOT) {
+       uint8_t s = shot_alloc();
+       if (s >= MAX_SHOTS) {
+           return;
+       }
+       shot_init(s, plrx[p], plry[p], theta, power);
+
+       s = shot_alloc();
+       if (s >= MAX_SHOTS) {
+           return;
+       }
+       shot_init(s, plrx[p], plry[p], dec24(theta), power);
+
+       s = shot_alloc();
+       if (s >= MAX_SHOTS) {
+           return;
+       }
+       shot_init(s, plrx[p], plry[p], inc24(theta), power);
+    }
+}
+
+
 
 void player_tick(uint8_t p) {
     uint8_t sticks = inp_dualstick;
@@ -283,18 +366,24 @@ void player_tick(uint8_t p) {
 
     plr_digital_move(p, move);
 
-    // downgrade weapon (update every 4th frame)
-    if((tick & 0x03) == 0 && plrweapon[p] > 0) {
+    // maybe downgrade weapon (update every 4th frame)
+    if((tick & 0x03) == 0) {
       if (++plrweaponage[p] >= 200) {
         // downgrade.
-        --plrweapon[p];
+        if (plrweaponpower[p] > 0) {
+            --plrweaponpower[p];
+        } else {
+            if (plrweapon[p] > WEAPON_SINGLESHOT) {
+                --plrweapon[p];
+            }
+        }
         plrweaponage[p] = 0;
       }
     }
 
 
     // check firing
-    if (plrtimer[p] >= weapon_fire_delay[plrweapon[p]]) {
+    if (plrtimer[p] >= 5) {
         if (fire) {
             uint8_t theta = dir_to_angle24[fire];
             plr_shoot(p, theta);
