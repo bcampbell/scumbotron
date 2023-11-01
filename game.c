@@ -235,6 +235,7 @@ static void render_STATE_NEWGAME()
  */
 void enter_STATE_ENTERLEVEL()
 {
+    plat_clr();
     gobs_clear();
     //player_create(0);
     state = STATE_ENTERLEVEL;
