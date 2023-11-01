@@ -168,11 +168,65 @@ _unpackloop
 	; installed game code still has llvm-mos BASIC header.
 	; 7773 sys 2071.
 
-	; NOTE: for some reason, llvm-mos isn't consistent here.
-	; Minor changes to the code jiggle this entry address...
-	; No idea why. I've seen 2071, 2072, 2075, 2082, 2088...
+	; NOTE: for some reason, llvm-mos isn't consistent with _start address,
+    ; is the address that appears in the BASIC sys statement.
+	; I've seen 2061 2071, 2072, 2075, 2082, 2087, 2088...
+	; I think it sometimes just decides to place other small data sections
+    ; before the main code chunk?
 
-	jmp 2075
+	; Read the SYS address from our BASIC stub.
+	; This is stupid - it should be a fixed location, but hey.
+
+	lda #<$0806
+	sta r0
+	lda #>$0806
+	sta r0+1
+	jsr asc4_to_word
+	
+	; FINALLY! We can run the game.
+	jmp (r1)	
+
+
+	; asc4_to_word converts a 4-digit ascii(/petscii) number into
+	; binary.
+	; in: r0 = addr of ascii number
+	; out: r1 = result
+	; destroys: a x y
+asc4_to_word
+
+	ldy #4	; assume 4 digits
+	; r1 = 0
+	lda #0
+	sta r1
+	sta r1+1
+
+asc_to_word_loop
+	dey
+	bpl fetch_digit
+	rts	; done.
+
+fetch_digit
+	lda (r0),y
+	sec
+	sbc #$30	; '0'
+	tax
+	; loop x times, adding the column value
+mult_loop
+	dex
+	bmi asc_to_word_loop
+	clc
+	lda tens_lo,y
+	adc r1
+	sta r1
+	lda tens_hi,y
+	adc r1+1
+	sta r1+1
+	jmp mult_loop
+
+tens_lo
+	.byte <1000, <100, <10, <1
+tens_hi
+	.byte >1000, >100, >10, >1
 
 	.endlogical
 shifted_end
@@ -195,17 +249,17 @@ code02_end
 code03
 	.binary "game03.zbin"
 code03_end
-code04
-	.binary "game04.zbin"
-code04_end
+;code04
+;	.binary "game04.zbin"
+;code04_end
 
 
-num_code_chunks=5
+num_code_chunks=4
 code_chunks
 	.word code00, code00_end-code00
 	.word code01, code01_end-code01
 	.word code02, code02_end-code02
 	.word code03, code03_end-code03
-	.word code04, code04_end-code04
+;	.word code04, code04_end-code04
 
 
