@@ -6,7 +6,7 @@ static uint8_t ekind[MAX_EFFECTS];
 static uint8_t etimer[MAX_EFFECTS];
 static uint8_t ex[MAX_EFFECTS];
 static uint8_t ey[MAX_EFFECTS];
-
+static const char* etxt[MAX_EFFECTS];
 
 
 static void do_spawneffect(uint8_t e) {
@@ -39,6 +39,17 @@ static void do_zombifyeffect(uint8_t e) {
     }
 }
 
+static void do_texteffect(uint8_t e) {
+    static const uint8_t bluefade[8] = {1,1,1,1,8,9,10,0}; 
+    uint8_t t = etimer[e]++;
+    uint8_t cx = ex[e];
+    uint8_t cy = ey[e];
+
+    plat_text(cx,cy,etxt[e],bluefade[t]);
+    if (bluefade[t] == 0) {
+        ekind[e] = EK_NONE;
+    }
+}
 
 
 static void do_warpeffect(uint8_t e) {
@@ -97,6 +108,25 @@ void effects_add(int16_t x, int16_t y, uint8_t kind)
 }
 
 
+void effects_start_text(int16_t x, int16_t y, const char* txt)
+{
+    // find free one
+    uint8_t e = 0;
+    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
+        ++e;
+    }
+    if (e==MAX_EFFECTS) {
+        return; // none free
+    }
+
+    ekind[e] = EK_TEXT;
+
+    ex[e] = (((x >> FX) + 4) / 8);
+    ey[e] = (((y >> FX) + 4) / 8);
+    etxt[e] = txt;
+    etimer[e] = 0;
+}
+
 void effects_render()
 {
     uint8_t e;
@@ -107,6 +137,7 @@ void effects_render()
             case EK_KABOOM: do_kaboomeffect(e); break;
             case EK_ZOMBIFY: do_zombifyeffect(e); break;
             case EK_WARP: do_warpeffect(e); break;
+            case EK_TEXT: do_texteffect(e); break;
         }
     }
 }

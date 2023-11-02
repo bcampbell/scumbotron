@@ -24,6 +24,19 @@ uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
 uint8_t gobs_num_marines;  // num of unrescued marines
 uint8_t gobs_num_marines_trailing;  // num of marines currently trailing player
 
+// score stuff - use enums to shortcut formatting etc...
+#define SCORE_10 0
+#define SCORE_20 1
+#define SCORE_50 2
+#define SCORE_75 3
+#define SCORE_100 4
+#define SCORE_200 5
+#define SCORE_250 6
+#define SCORE_NUM 7 // the number of score values we use.
+
+static uint8_t score_vals[SCORE_NUM] = {10,20,50,75,100,200,250};
+static const char* score_strings[SCORE_NUM] = {"10","20","50","75","100","200","250"};
+
 
 #define ANGLE_DUD 0 // Shouldn't be used, but want to show invalid values.
 
@@ -505,11 +518,13 @@ void gob_seek_y(uint8_t d, int16_t target, int16_t accel, int16_t maxspd)
 }
 
 
-// no shot if 0xff
-void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t points)
+// score is a SCORE_n enum
+void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
 {
-    player_add_score(points);
+    player_add_score(score_vals[score]);
     effects_add(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
+
+    effects_start_text(gobx[d], goby[d]+(8<<FX), score_strings[score]);
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
@@ -542,7 +557,7 @@ void block_reset(uint8_t d)
 
 void block_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 10);
+    gob_standard_kaboom(d, shot, SCORE_10);
 }
 
 
@@ -602,7 +617,7 @@ void grunt_tick(uint8_t g)
 
 void grunt_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, 50);
+    gob_standard_kaboom(g, shot, SCORE_50);
 }
 
 
@@ -648,7 +663,7 @@ void baiter_tick(uint8_t g)
 
 void baiter_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, 75);
+    gob_standard_kaboom(g, shot, SCORE_75);
 }
 
 
@@ -727,7 +742,7 @@ void amoeba_spawn(uint8_t kind, int16_t x, int16_t y, int16_t vx, int16_t vy) {
 void amoeba_shot(uint8_t d, uint8_t shot)
 {
     if (gobkind[d] == GK_AMOEBA_SMALL) {
-        gob_standard_kaboom(d, shot, 20);
+        gob_standard_kaboom(d, shot, SCORE_20);
         return;
     }
 
@@ -735,7 +750,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
         int16_t x = gobx[d];
         int16_t y = goby[d];
         const int16_t v = FX<<5;
-        gob_standard_kaboom(d, shot, 50);
+        gob_standard_kaboom(d, shot, SCORE_50);
         amoeba_spawn(GK_AMOEBA_SMALL, x, y, -v, v);
         amoeba_spawn(GK_AMOEBA_SMALL, x, y, v, v);
         amoeba_spawn(GK_AMOEBA_SMALL, x, y, 0, -v);
@@ -746,7 +761,7 @@ void amoeba_shot(uint8_t d, uint8_t shot)
         int16_t x = gobx[d];
         int16_t y = goby[d];
         const int16_t v = FX<<5;
-        gob_standard_kaboom(d, shot, 75);
+        gob_standard_kaboom(d, shot, SCORE_75);
         amoeba_spawn(GK_AMOEBA_MED, x, y, -v, v);
         amoeba_spawn(GK_AMOEBA_MED, x, y, v, v);
         amoeba_spawn(GK_AMOEBA_MED, x, y, 0, -v);
@@ -807,7 +822,7 @@ void tank_shot(uint8_t g, uint8_t shot)
     uint8_t power = shotpower[shot] + 1;
     if (gobdat[g] <= power ) {
         // boom.
-        gob_standard_kaboom(g, shot, 100);
+        gob_standard_kaboom(g, shot, SCORE_100);
     } else {
         gobdat[g] -= power;
         // knockback
@@ -911,7 +926,7 @@ void fragger_tick(uint8_t d)
 void fragger_shot(uint8_t d, uint8_t shot)
 {
     // boom.
-    gob_standard_kaboom(d, shot, 100);
+    gob_standard_kaboom(d, shot, SCORE_100);
 
     // Bigger shots don't cause fragmentation.
     uint8_t power = shotpower[shot] + 1;
@@ -962,7 +977,7 @@ void frag_tick(uint8_t d)
 void frag_shot(uint8_t d, uint8_t shot)
 {
     // boom.
-    gob_standard_kaboom(d, shot, 20);
+    gob_standard_kaboom(d, shot, SCORE_20);
 }
 
 /*
@@ -1071,7 +1086,7 @@ void vulgon_shot(uint8_t d, uint8_t shot)
     gobdat[d]++; // add to anger
     if (gobdat[d] >= 3) {
         // boom.
-        gob_standard_kaboom(d, shot, 100);
+        gob_standard_kaboom(d, shot, SCORE_100);
     } else {
         // knockback
         gobvx[d] += (shotvx[shot] >> 4);
@@ -1102,7 +1117,7 @@ void poomerang_tick(uint8_t d)
 
 void poomerang_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 20);
+    gob_standard_kaboom(d, shot, SCORE_20);
 }
 
 /*
@@ -1152,7 +1167,7 @@ void happyslapper_tick(uint8_t d)
 
 void happyslapper_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 75);
+    gob_standard_kaboom(d, shot, SCORE_75);
 }
 
 /*
@@ -1226,6 +1241,11 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
         }
     }
     gobdat[g] = idx + 3;
+
+    // give points
+    player_add_score(score_vals[SCORE_100]);
+    effects_start_text(gobx[g], goby[g] + (8<<FX), score_strings[SCORE_100]);
+
     return false;   // Don't kill player.
 }
 /*
@@ -1309,7 +1329,7 @@ void brain_tick(uint8_t g)
 
 void brain_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 75);
+    gob_standard_kaboom(d, shot, SCORE_75);
 }
 
 /*
@@ -1346,7 +1366,7 @@ void zombie_tick(uint8_t d)
 
 void zombie_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, 75);
+    gob_standard_kaboom(d, shot, SCORE_75);
 }
 
 /*
@@ -1420,7 +1440,7 @@ void rifashark_tick(uint8_t g)
 
 void rifashark_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, 20);
+    gob_standard_kaboom(g, shot, SCORE_20);
 }
 
 
@@ -1493,7 +1513,7 @@ void rifaspawner_tick(uint8_t g)
 
 void rifaspawner_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, 20);
+    gob_standard_kaboom(g, shot, SCORE_20);
 }
 
 
@@ -1564,7 +1584,7 @@ void boss_shot(uint8_t g, uint8_t shot)
             bossseg_destruct(child, delay);
             delay += 4;
         }
-        gob_standard_kaboom(g, shot, 250);
+        gob_standard_kaboom(g, shot, SCORE_250);
         return;
     }
     --life;
@@ -1720,7 +1740,7 @@ void bossseg_tick(uint8_t g)
     if (bossseg_state(g) == SEGSTATE_DESTRUCT) {
         // parent gone - we're counting down to destruction.
         if (gobtimer[g] == 0) {
-            gob_standard_kaboom(g, 0xff, 50);   // 0xff=no shot
+            gob_standard_kaboom(g, 0xff, SCORE_50);   // 0xff=no shot
         } else {
             --gobtimer[g];
         }
