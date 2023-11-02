@@ -315,6 +315,8 @@ static void render_STATE_GETREADY()
  */
 
 static uint8_t state_play_cleartime;
+static bool save_em_all_bonus;
+static bool very_clear_bonus;
 
 void enter_STATE_PLAY()
 {
@@ -322,10 +324,15 @@ void enter_STATE_PLAY()
     statetimer = 0;
     state_play_cleartime = 0;
     plat_clr();
+    save_em_all_bonus = false;
+    very_clear_bonus = false;
 }
+
+
 
 static void tick_STATE_PLAY()
 {
+
     gobs_tick(false);    // not spawnphase
     player_tickall();
     shot_collisions();
@@ -334,11 +341,31 @@ static void tick_STATE_PLAY()
         enter_STATE_KILLED();
         return;
     }
+
+    // blasted everything that can be blasted?
     if (gobs_clearablecnt == 0) {
         // Make sure the next thing the player clobbers yields a powerup.
         gobs_certainbonus = true;
+
+        if (!very_clear_bonus) {
+            // TODO: play bonus sound effect
+            player_add_score(200);
+            very_clear_bonus = true;
+        }
+
     }
+
+    // blasted everything which is keeping the level running?
     if (gobs_lockcnt == 0 ) {
+        // saved all the marines?
+        if (!save_em_all_bonus &&
+            gobs_num_marines == 0 &&
+            gobs_num_marines_trailing>0) {
+            // TODO: play bonus sound effect
+            player_add_score(200);
+            save_em_all_bonus = true; 
+        }
+
         if(++state_play_cleartime > 120) {
             enter_STATE_CLEARED();
         }
@@ -375,12 +402,25 @@ static void render_STATE_PLAY()
     gobs_render();
     player_renderall();
     plat_hud(level, player_lives, player_score);
-    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    uint8_t cy = (SCREEN_TEXT_H/2) - 3;
     if (level >= 20  && (tick/16)&0x01) {
-        plat_text((SCREEN_TEXT_W-20)/2, ch, "ERROR: TOO MANY FISH", 1);
+        plat_text((SCREEN_TEXT_W-20)/2, cy, "ERROR: TOO MANY FISH", 1);
     }
+
     if (gobs_lockcnt == 0 ) {
-        plat_text((SCREEN_TEXT_W-5)/2, ch, "CLEAR", (tick/2) & 0x0f);
+        uint8_t cx = (SCREEN_TEXT_W-5)/2;
+        plat_textn(cx, cy, "CLEAR", 5, (tick/2) & 0x0f);
+
+        if (very_clear_bonus) {
+            cy += 2;
+            uint8_t cx = (SCREEN_TEXT_W-18)/2;
+            plat_text(cx, cy, "+ VERY-CLEAR BONUS", 1);
+        }
+        if (save_em_all_bonus) {
+            cy += 2;
+            uint8_t cx = (SCREEN_TEXT_W-29)/2;
+            plat_text(cx, cy, " + COLLECT-THE-WHOLE-SET BONUS", 1);
+        }
     }
 }
 
@@ -418,58 +458,29 @@ static void render_STATE_KILLED()
 
 /*
  * STATE_CLEARED
- * Show a summary of the level just completed.
+ * Stub state - just sets up next level and goes to STATE_ENTERLEVEL
  */
-
-// state-specific vars
-static uint8_t state_cleared_marine_count;  // collected marines
 
 void enter_STATE_CLEARED()
 {
-    state = STATE_CLEARED;
-    statetimer = 0;
     plat_clr();
 
-    state_cleared_marine_count = 0;
-    for (uint8_t g = 0; g < MAX_GOBS; ++g) {
-        if (gobkind[g] == GK_MARINE && marine_is_trailing(g)) {
-            ++state_cleared_marine_count;
-        }
-    }
+    //state = STATE_CLEARED;
+    //statetimer = 0;
+
+    // next level
+    ++level;
+    level_bcd = bin2bcd8(level);
+    enter_STATE_ENTERLEVEL();
 }
 
 static void tick_STATE_CLEARED()
 {
-    ++statetimer;
-    if (statetimer >= 30) {
-        // next level
-        ++level;
-        level_bcd = bin2bcd8(level);
-        enter_STATE_ENTERLEVEL();
-    }
 }
+
 
 static void render_STATE_CLEARED()
 {
-//    gobs_render();
-//    player_renderall();
-    plat_hud(level, player_lives, player_score);
-//    plat_text((SCREEN_TEXT_W-5)/2, 10, "CLEAR", (tick/2) & 0x0f);
-#if 0
-    if (statetimer > 0) {
-        if(state_cleared_unblasted_count == 0) {
-            plat_text((SCREEN_TEXT_W-5)/2, 12, "VERY CLEAR BONUS", (tick/2) & 0x0f);
-        }
-
-        for (uint8_t i=0; i<state_cleared_marine_count; ++i) {
-            if (statetimer > 30 + (i*2)) {
-                int16_t x = ((SCREEN_W/2) - (i*16)/2)<<FX; 
-                //plat_text((i*2) + (SCREEN_TEXT_W-5)/2, 14, "M", (tick/2) & 0x0f);
-                plat_marine_render(x, (14*8)<<FX);
-            }
-        }
-    }
-#endif
 }
 
 /*

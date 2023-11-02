@@ -21,6 +21,8 @@ bool gobs_certainbonus;
 uint8_t gobs_lockcnt;   // num gobs holding level open.
 uint8_t gobs_spawncnt;  // num gobs spawning.
 uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
+uint8_t gobs_num_marines;  // num of unrescued marines
+uint8_t gobs_num_marines_trailing;  // num of marines currently trailing player
 
 
 #define ANGLE_DUD 0 // Shouldn't be used, but want to show invalid values.
@@ -56,6 +58,8 @@ void gobs_clear()
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
     gobs_clearablecnt = 0;
+    gobs_num_marines = 0;
+    gobs_num_marines_trailing = 0;
     bub_clear();
 }
 
@@ -65,6 +69,8 @@ void gobs_tick(bool spawnphase)
     gobs_lockcnt = 0;
     gobs_spawncnt = 0;
     gobs_clearablecnt = 0;
+    gobs_num_marines = 0;
+    gobs_num_marines_trailing = 0;
     for (i = 0; i < MAX_GOBS; ++i) {
         if (gobkind[i] == GK_NONE) {
             continue;
@@ -1187,11 +1193,13 @@ void marine_reset(uint8_t g)
 void marine_tick(uint8_t g)
 {
     if (marine_is_trailing(g)) {
+        ++gobs_num_marines_trailing;
         uint8_t p = 0;  // Player to follow.
         uint8_t idx = plrhistidx[p] - gobdat[g];
         gobx[g] = plrhistx[p][idx & (PLR_HIST_LEN-1)];
         goby[g] = plrhisty[p][idx & (PLR_HIST_LEN-1)];
     } else {
+        ++gobs_num_marines;
         // Random walking.
         if ((tick & 0x3f) == 0) {
             // New direction.

@@ -63,6 +63,8 @@ extern bool gobs_certainbonus;
 extern uint8_t gobs_lockcnt;   // num gobs holding level open.
 extern uint8_t gobs_spawncnt;  // num gobs spawning.
 extern uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
+extern uint8_t gobs_num_marines;  // num of unrescued marines
+extern uint8_t gobs_num_marines_trailing;  // num of marines currently trailing player
 
 // table to convert DIR_ bits to angle 0..23
 extern const uint8_t dir_to_angle24[16];
@@ -232,7 +234,7 @@ void bossseg_destruct(uint8_t g, uint8_t delay);
 // Returns true if player can clear this gob from the level (by shooting or collecting)
 static inline bool gob_is_clearable(uint8_t g) {
     uint8_t k = gobkind[g];
-    if ((k == GK_MARINE && marine_is_trailing(g)) || 
+    if (k == GK_MARINE ||
         k == GK_NONE || k == GK_HZAPPER || k == GK_VZAPPER) {
         return false;
     } else {
