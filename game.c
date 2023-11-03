@@ -537,29 +537,29 @@ static void level_init(uint8_t level)
             gobs_create(GK_AMOEBA_BIG, 2);
             gobs_create(GK_MARINE, 5);
             break;
+
         case 4:
+            gobs_create(GK_TANK, 3);
+            gobs_create(GK_AMOEBA_BIG, 3);
+            gobs_create(GK_BLOCK, 8);
+            gobs_create(GK_MARINE, 3);
+            break;
+        case 5:
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_HAPPYSLAPPER, 4);
+            gobs_create(GK_MARINE, 3);
+            break;
+        case 6:
             gobs_create(GK_BLOCK, 4);
             gobs_create(GK_FRAGGER, 10);
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_MARINE, 3);
             break;
-        case 5:
-//            gobs_create(GK_BLOCK, 10);
+        case 7:
             gobs_create(GK_GRUNT, 20);
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_VULGON, 1);
             gobs_create(GK_MARINE, 3);
-            break;
-        case 6:
-            gobs_create(GK_GRUNT, 10);
-            gobs_create(GK_HAPPYSLAPPER, 10);
-            gobs_create(GK_MARINE, 3);
-            break;
-        case 7:
-            gobs_create(GK_TANK, 10);
-            gobs_create(GK_RIFASPAWNER, 5);
-            gobs_create(GK_BLOCK, 10);
-            gobs_create(GK_MARINE, 5);
             break;
         case 8:
             gobs_create(GK_BLOCK, 30);
@@ -580,8 +580,8 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 3);
             break;
         case 11:
-            gobs_create(GK_BLOCK, 20);
             gobs_create(GK_BRAIN, 1);
+            gobs_create(GK_TANK, 4);
             gobs_create(GK_MARINE, 16);
             break;
         case 12:
@@ -608,12 +608,17 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 8);
             break;
         case 16:
+            gobs_create(GK_VULGON, 8);
+            gobs_create(GK_BLOCK, 8);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 17:
             gobs_create(GK_BLOCK, 30);
             gobs_create(GK_VULGON, 3);
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_MARINE, 3);
             break;
-        case 17:
+        case 18:
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_FRAGGER, 10);
             gobs_create(GK_AMOEBA_BIG, 5);
@@ -621,13 +626,45 @@ static void level_init(uint8_t level)
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_MARINE, 3);
             break;
-        case 18:
+        case 19:
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_GRUNT, 30);
             gobs_create(GK_HAPPYSLAPPER, 20);
             gobs_create(GK_MARINE, 3);
             break;
-        case 19:
+        case 20:
+            gobs_create(GK_TANK, 10);
+            gobs_create(GK_RIFASPAWNER, 5);
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 21:
+            gobs_create(GK_FRAGGER, 30);
+            gobs_create(GK_BLOCK, 8);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 22:
+            gobs_create(GK_VULGON, 8);
+            gobs_create(GK_BLOCK, 8);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 23:
+            gobs_create(GK_HAPPYSLAPPER, 16);
+            gobs_create(GK_TANK, 6);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 24:
+            gobs_create(GK_RIFASHARK, 24);
+            gobs_create(GK_FRAGGER, 6);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 25:
+            gobs_create(GK_VULGON, 8);
+            gobs_create(GK_VZAPPER, 5);
+            gobs_create(GK_BLOCK, 8);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 26:
             // nails, but good combo :-)
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_FRAGGER, 10);

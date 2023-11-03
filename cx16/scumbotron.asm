@@ -249,17 +249,17 @@ code02_end
 code03
 	.binary "game03.zbin"
 code03_end
-;code04
-;	.binary "game04.zbin"
-;code04_end
+code04
+	.binary "game04.zbin"
+code04_end
 
 
-num_code_chunks=4
+num_code_chunks=5
 code_chunks
 	.word code00, code00_end-code00
 	.word code01, code01_end-code01
 	.word code02, code02_end-code02
 	.word code03, code03_end-code03
-;	.word code04, code04_end-code04
+	.word code04, code04_end-code04
 
 
