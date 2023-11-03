@@ -182,7 +182,7 @@ void gobs_render()
                 plat_amoeba_small_render(gobx[d], goby[d]);
                 break;
             case GK_TANK:
-                plat_tank_render(gobx[d], goby[d], gobtimer[d] > 0);
+                plat_tank_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
             case GK_HZAPPER:
                 plat_hzapper_render(gobx[d], goby[d], zapper_state(d));
@@ -776,7 +776,7 @@ void tank_create(uint8_t g)
 {
     gobkind[g] = GK_TANK;
     gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobdat[g] = 4;  // life
+    gobdat[g] = 10;  // life
     tank_reset(g);
 }
 
@@ -785,7 +785,6 @@ void tank_reset(uint8_t g)
     gob_randompos(g);
     gobvx[g] = 0;
     gobvy[g] = 0;
-    gobtimer[g] = 0;    // highlight timer
 }
 
 
@@ -795,11 +794,6 @@ void tank_tick(uint8_t g)
     const int16_t vy = (5<<FX);
     int16_t px = plrx[0];
     int16_t py = plry[0];
-
-    if (gobtimer[g] > 0) {
-        --gobtimer[g];
-    }
-
 
     // update every 32 frames
     if (((tick+g) & 0x1f) != 0x00) {
@@ -828,7 +822,7 @@ void tank_shot(uint8_t g, uint8_t shot)
         // knockback
         gobx[g] += shotvx[shot]/2;
         goby[g] += shotvy[shot]/2;
-        gobtimer[g] = 8;
+        gob_highlight(g,7);
     }
 }
 
