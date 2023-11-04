@@ -1,11 +1,11 @@
 #include "game.h"
-#include "effects.h"
 #include "gob.h"
 #include "highscore.h"
 #include "input.h"
 #include "misc.h"
 #include "plat.h"
 #include "player.h"
+#include "vfx.h"
 
 uint8_t state;
 uint16_t statetimer;
@@ -40,7 +40,7 @@ static void level_baiter_check();
 void game_init()
 {
     highscore_init();
-    effects_init();
+    vfx_init();
     enter_STATE_ATTRACT();
 }
 
@@ -73,7 +73,7 @@ void game_tick()
 
 void game_render()
 {
-    effects_render();
+    vfx_render();
     switch(state) {
         case STATE_ATTRACT:     render_STATE_ATTRACT(); break;
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
@@ -147,10 +147,10 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
-    if (plat_raw_cheatkeys() & INP_CHEAT_POWERUP) {
-        effects_add(0,0,EK_WARP);
-        statetimer = 0;
-    }
+    //if (plat_raw_cheatkeys() & INP_CHEAT_POWERUP) {
+    //    vfx_play_warp();
+    //    statetimer = 0;
+    //}
     if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
         enter_STATE_ATTRACT();
     }
@@ -240,7 +240,7 @@ void enter_STATE_ENTERLEVEL()
     //player_create(0);
     state = STATE_ENTERLEVEL;
     statetimer = 0;
-    effects_add(0,0,EK_WARP);
+    vfx_play_warp();
 }
 
 static void tick_STATE_ENTERLEVEL()

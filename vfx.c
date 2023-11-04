@@ -1,5 +1,13 @@
-#include "effects.h"
+#include "vfx.h"
 #include "plat.h"
+
+// (visual) effect kinds
+#define EK_NONE 0
+#define EK_SPAWN 1
+#define EK_KABOOM 2
+#define EK_ZOMBIFY 3
+#define EK_WARP 4
+#define EK_QUICKTEXT 5
 
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
@@ -80,7 +88,7 @@ static void do_warpeffect(uint8_t e) {
 }
 
 
-void effects_init()
+void vfx_init()
 {
     // clear effect table
     uint8_t i;
@@ -90,7 +98,7 @@ void effects_init()
 }
 
 
-void effects_add(int16_t x, int16_t y, uint8_t kind)
+static void generic_add(int16_t x, int16_t y, uint8_t kind, const char* txt)
 {
     // find free one
     uint8_t e = 0;
@@ -101,33 +109,47 @@ void effects_add(int16_t x, int16_t y, uint8_t kind)
         return; // none free
     }
 
-    ex[e] = (((x >> FX) + 4) / 8);
-    ey[e] = (((y >> FX) + 4) / 8);
     ekind[e] = kind;
-    etimer[e] = 0;
-}
-
-
-void effects_start_text(int16_t x, int16_t y, const char* txt)
-{
-    // find free one
-    uint8_t e = 0;
-    while( e < MAX_EFFECTS && ekind[e]!=EK_NONE) {
-        ++e;
-    }
-    if (e==MAX_EFFECTS) {
-        return; // none free
-    }
-
-    ekind[e] = EK_TEXT;
-
     ex[e] = (((x >> FX) + 4) / 8);
     ey[e] = (((y >> FX) + 4) / 8);
     etxt[e] = txt;
     etimer[e] = 0;
 }
 
-void effects_render()
+void vfx_play_quicktext(int16_t x, int16_t y, const char* txt)
+{
+    generic_add(x, y, EK_QUICKTEXT, txt);
+}
+
+void vfx_play_kaboom(int16_t x, int16_t y)
+{
+    generic_add(x, y, EK_KABOOM, 0);
+}
+
+void vfx_play_spawn(int16_t x, int16_t y)
+{
+    generic_add(x, y, EK_SPAWN, 0);
+}
+
+void vfx_play_zombify(int16_t x, int16_t y)
+{
+    generic_add(x, y, EK_ZOMBIFY, 0);
+}
+
+void vfx_play_warp()
+{
+    generic_add(0, 0, EK_WARP, 0);
+}
+
+
+// TODO: kill
+void vfx_add(int16_t x, int16_t y, uint8_t kind)
+{
+    generic_add(x,y, kind, 0);
+}
+
+
+void vfx_render()
 {
     uint8_t e;
     for(e = 0; e < MAX_EFFECTS; ++e) {
@@ -137,7 +159,7 @@ void effects_render()
             case EK_KABOOM: do_kaboomeffect(e); break;
             case EK_ZOMBIFY: do_zombifyeffect(e); break;
             case EK_WARP: do_warpeffect(e); break;
-            case EK_TEXT: do_texteffect(e); break;
+            case EK_QUICKTEXT: do_texteffect(e); break;
         }
     }
 }

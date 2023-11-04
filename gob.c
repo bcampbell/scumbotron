@@ -1,9 +1,9 @@
 #include "gob.h"
-#include "effects.h"
+#include "bub.h"
+#include "misc.h"
 #include "plat.h"
 #include "player.h"
-#include "misc.h"
-#include "bub.h"
+#include "vfx.h"
 
 // gob tables
 uint8_t gobkind[MAX_GOBS];
@@ -94,7 +94,7 @@ void gobs_tick(bool spawnphase)
             if( gobtimer[i] == 8) {
                 // don't play spawn effect for boss segments
                 if (gobkind[i] != GK_BOSSSEG) {
-                    effects_add(gobx[i]+(8<<FX), goby[i]+(8<<FX), EK_SPAWN);
+                    vfx_play_spawn(gobx[i] + (8<<FX), goby[i] + (8<<FX));
                 }
             } else if( gobtimer[i] == 0) {
                 // done spawning.
@@ -522,9 +522,8 @@ void gob_seek_y(uint8_t d, int16_t target, int16_t accel, int16_t maxspd)
 void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
 {
     player_add_score(score_vals[score]);
-    effects_add(gobx[d]+(8<<FX), goby[d]+(8<<FX), EK_KABOOM);
-
-    effects_start_text(gobx[d], goby[d]+(8<<FX), score_strings[score]);
+    vfx_play_kaboom(gobx[d] + (8<<FX), goby[d] + (8<<FX));
+    vfx_play_quicktext(gobx[d], goby[d]+(8<<FX), score_strings[score]);
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
@@ -1238,7 +1237,7 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
 
     // give points
     player_add_score(score_vals[SCORE_100]);
-    effects_start_text(gobx[g], goby[g] + (8<<FX), score_strings[SCORE_100]);
+    vfx_play_quicktext(gobx[g], goby[g] + (8<<FX), score_strings[SCORE_100]);
 
     return false;   // Don't kill player.
 }
@@ -1296,7 +1295,7 @@ void brain_tick(uint8_t g)
             //gobkind[g] = GK_NONE;
             // convert marine to zombie
             marine_zombify(targ);
-            effects_add(gobx[g]+(8<<FX), goby[g]+(8<<FX), EK_ZOMBIFY);
+            vfx_play_zombify(gobx[g]+(8<<FX), goby[g]+(8<<FX));
             return;
         }
 

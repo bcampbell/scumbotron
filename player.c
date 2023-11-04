@@ -1,9 +1,9 @@
 #include "player.h"
-#include "effects.h"
 #include "gob.h"
 #include "input.h"
 #include "misc.h"
 #include "plat.h"
+#include "vfx.h"
 
 uint8_t player_lives;
 uint32_t player_score;
@@ -79,7 +79,7 @@ void player_killed(uint8_t p)
     plralive[p] = 0;    // mark as dead
     int16_t px0 = plrx[p] + (4 << FX);
     int16_t py0 = plry[p] + (4 << FX);
-    effects_add(px0+(8<<FX), py0+(8<<FX), EK_KABOOM);
+    vfx_play_kaboom(px0+(8<<FX), py0+(8<<FX));
     // reset weapon
     plrweapon[p] = WEAPON_SINGLESHOT;
     plrweaponpower[p] = 0;
