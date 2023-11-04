@@ -11,5 +11,6 @@ void vfx_play_kaboom(int16_t x, int16_t y);
 void vfx_play_zombify(int16_t x, int16_t y);
 void vfx_play_warp();
 void vfx_play_quicktext(int16_t x, int16_t y, const char* txt);
+void vfx_play_alerttext(const char* txt);
 
 #endif // SCUMBOTRON_EFFECTS_H

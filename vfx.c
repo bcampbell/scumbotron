@@ -138,9 +138,17 @@ void vfx_play_quicktext(int16_t x, int16_t y, const char* txt)
     generic_add(x, y, EK_QUICKTEXT, txt);
 }
 
-void vfx_play_alerttext(int16_t x, int16_t y, const char* txt)
+void vfx_play_alerttext(const char* txt)
 {
-    generic_add(x, y, EK_ALERTTEXT, txt);
+    uint8_t n = 0;
+    const char* p = txt;
+    while (*p++) {
+        ++n;
+    }
+
+    uint8_t cx = (SCREEN_TEXT_W - n)/2;
+    uint8_t cy = (SCREEN_TEXT_H / 4);
+    generic_add((cx * 8) << FX, (cy * 8) << FX, EK_ALERTTEXT, txt);
 }
 
 void vfx_play_kaboom(int16_t x, int16_t y)

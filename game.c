@@ -692,25 +692,32 @@ static void level_baiter_check()
     if ((tick & 0x0f) == 0x0f) {
         // 16*100 = 1600 (about 25 secs)
         // 16*33 = about 9 secs
-        uint8_t threshold = baiter_count == 0 ? 100 : 33;
+        uint8_t threshold = baiter_count == 0 ? 75 : 33;
         ++baiter_timer;
         if (baiter_timer > threshold) {
             uint8_t i;
             baiter_timer = 0;
+            if (baiter_count == 0) {
+                // just a warning...
+                vfx_play_alerttext("HURRY UP!");
+            } else {
+                if (baiter_count == 1) {
+                    vfx_play_alerttext("LOOK OUT!");
+                }
+                // spawn `em!
+                for (i = 0; i < baiter_count; ++i) {
+                    uint8_t b = gob_alloc();
+                    if (b >= MAX_GOBS) {
+                        return;
+                    }
+                    baiter_create(b);
+                    gob_randompos(b);
+                    gobflags[b] |= GF_SPAWNING;
+                    gobtimer[b] = 8 + (i*8);
+                }
+            }
             if (baiter_count < 15) {
                 ++baiter_count;
-            }
-            // spawn `em!
-            for (i = 0; i < baiter_count; ++i) {
-                uint8_t b = gob_alloc();
-                if (b >= MAX_GOBS) {
-                    return;
-                }
-                // TODO: spawning.
-                baiter_create(b);
-                gob_randompos(b);
-                gobflags[b] |= GF_SPAWNING;
-                gobtimer[b] = 8 + (i*8);
             }
         }
     }
