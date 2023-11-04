@@ -523,7 +523,7 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
 {
     player_add_score(score_vals[score]);
     vfx_play_kaboom(gobx[d] + (8<<FX), goby[d] + (8<<FX));
-    vfx_play_quicktext(gobx[d], goby[d]+(8<<FX), score_strings[score]);
+    vfx_play_quicktext(gobx[d], goby[d]+(4<<FX), score_strings[score]);
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
@@ -1237,7 +1237,7 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
 
     // give points
     player_add_score(score_vals[SCORE_100]);
-    vfx_play_quicktext(gobx[g], goby[g] + (8<<FX), score_strings[SCORE_100]);
+    vfx_play_quicktext(gobx[g], goby[g] + (4<<FX), score_strings[SCORE_100]);
 
     return false;   // Don't kill player.
 }
