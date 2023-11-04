@@ -212,7 +212,7 @@ void gobs_render()
                 plat_marine_render(gobx[d], goby[d]);
                 break;
             case GK_BRAIN:
-                plat_brain_render(gobx[d], goby[d]);
+                plat_brain_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
             case GK_ZOMBIE:
                 plat_zombie_render(gobx[d], goby[d]);
@@ -1251,6 +1251,7 @@ void brain_create(uint8_t d)
     gobkind[d] = GK_BRAIN;
     gobflags[d] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     brain_reset(d);
+    gobdat[d] = 8;  // life
 }
 
 void brain_reset(uint8_t d)
@@ -1259,8 +1260,6 @@ void brain_reset(uint8_t d)
     gobtimer[d] = 0;
     gobvx[d] = 0;
     gobvy[d] = 0;
-    // reset time - add a little random variation to disperse them.
-    gobdat[d] = HAPPYSLAPPER_SLEEP_TIME + HAPPYSLAPPER_RUN_TIME + (rnd() % 0x0f);
 }
 
 
@@ -1323,8 +1322,9 @@ void brain_tick(uint8_t g)
 
 void brain_shot(uint8_t d, uint8_t shot)
 {
-    gob_standard_kaboom(d, shot, SCORE_75);
+    tank_shot(d,shot);
 }
+
 
 /*
  * Zombie

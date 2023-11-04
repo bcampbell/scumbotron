@@ -236,10 +236,15 @@ void plat_cursor_render(int16_t x, int16_t y)
     }
 }
 
-void plat_brain_render(int16_t x, int16_t y)
+void plat_brain_render(int16_t x, int16_t y, bool highlight)
 {
-    sprout16(x, y, SPR16_BRAIN + ((tick>>4) & 0x01));
+    if (highlight) {
+        sprout16_highlight(x, y, SPR16_BRAIN + ((tick>>4) & 0x01));
+    } else {
+        sprout16(x, y, SPR16_BRAIN + ((tick>>4) & 0x01));
+    }
 }
+
 
 void plat_zombie_render(int16_t x, int16_t y)
 {
