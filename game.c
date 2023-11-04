@@ -349,7 +349,8 @@ static void tick_STATE_PLAY()
 
         if (!very_clear_bonus) {
             // TODO: play bonus sound effect
-            player_add_score(200);
+            player_add_score(250);
+            player_add_score(250);
             very_clear_bonus = true;
         }
 
@@ -362,7 +363,8 @@ static void tick_STATE_PLAY()
             gobs_num_marines == 0 &&
             gobs_num_marines_trailing>0) {
             // TODO: play bonus sound effect
-            player_add_score(200);
+            player_add_score(250);
+            player_add_score(250);
             save_em_all_bonus = true; 
         }
 
@@ -410,16 +412,16 @@ static void render_STATE_PLAY()
     if (gobs_lockcnt == 0 ) {
         uint8_t cx = (SCREEN_TEXT_W-5)/2;
         plat_textn(cx, cy, "CLEAR", 5, (tick/2) & 0x0f);
-
+        ++cy;
         if (very_clear_bonus) {
             cy += 2;
-            uint8_t cx = (SCREEN_TEXT_W-18)/2;
-            plat_text(cx, cy, "+ VERY-CLEAR BONUS", 1);
+            uint8_t cx = (SCREEN_TEXT_W-32)/2;
+            plat_text(cx, cy, "      500  VERY-CLEAR BONUS     ", 1);
         }
         if (save_em_all_bonus) {
             cy += 2;
-            uint8_t cx = (SCREEN_TEXT_W-29)/2;
-            plat_text(cx, cy, " + COLLECT-THE-WHOLE-SET BONUS", 1);
+            uint8_t cx = (SCREEN_TEXT_W-32)/2;
+            plat_text(cx, cy, "500  COLLECT-THE-WHOLE-SET BONUS", 1);
         }
     }
 }
