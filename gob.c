@@ -30,12 +30,13 @@ uint8_t gobs_num_marines_trailing;  // num of marines currently trailing player
 #define SCORE_50 2
 #define SCORE_75 3
 #define SCORE_100 4
-#define SCORE_200 5
-#define SCORE_250 6
-#define SCORE_NUM 7 // the number of score values we use.
+#define SCORE_150 5
+#define SCORE_200 6
+#define SCORE_250 7
+#define SCORE_NUM 8 // the number of score values we use.
 
-static uint8_t score_vals[SCORE_NUM] = {10,20,50,75,100,200,250};
-static const char* score_strings[SCORE_NUM] = {"10","20","50","75","100","200","250"};
+static uint8_t score_vals[SCORE_NUM] = {10,20,50,75,100,150,200,250};
+static const char* score_strings[SCORE_NUM] = {"10","20","50","75","100","150","200","250"};
 
 
 #define ANGLE_DUD 0 // Shouldn't be used, but want to show invalid values.
@@ -144,6 +145,8 @@ void gobs_tick(bool spawnphase)
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_RIFASHARK:  rifashark_tick(i); break;
             case GK_RIFASPAWNER:  rifaspawner_tick(i); break;
+            case GK_TURRET:  turret_tick(i); break;
+            case GK_MISSILE:  missile_tick(i); break;
             case GK_BOSS:  boss_tick(i); break;
             case GK_BOSSSEG:  bossseg_tick(i); break;
             default:
@@ -223,6 +226,12 @@ void gobs_render()
             case GK_RIFASPAWNER:
                 plat_rifaspawner_render(gobx[d], goby[d]);
                 break;
+            case GK_TURRET:
+                plat_turret_render(gobx[d], goby[d], gobtimer[d], gobflags[d] & GF_HIGHLIGHT_MASK);
+                break;
+            case GK_MISSILE:
+                plat_missile_render(gobx[d], goby[d], gobdat[d]);
+                break;
             case GK_BOSS:
                 plat_boss_render(gobx[d], goby[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
@@ -263,6 +272,8 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_ZOMBIE:       zombie_shot(d, s); break;
         case GK_RIFASHARK:    rifashark_shot(d, s); break;
         case GK_RIFASPAWNER:  rifaspawner_shot(d, s); break;
+        case GK_TURRET:       turret_shot(d, s); break;
+        case GK_MISSILE:      missile_shot(d, s); break;
         case GK_BOSS:         boss_shot(d, s); break;
         case GK_BOSSSEG:      bossseg_shot(d, s); break;
         default:
@@ -310,6 +321,8 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_ZOMBIE: zombie_create(d); break;
             case GK_RIFASHARK: rifashark_create(d); break;
             case GK_RIFASPAWNER: rifaspawner_create(d); break;
+            case GK_TURRET: turret_create(d); break;
+            case GK_MISSILE: missile_create(d); break;
             case GK_BOSS: boss_create(d); break;
             // Not all kinds can be created. Some are spawned by others.
             case GK_BOSSSEG:
@@ -352,6 +365,8 @@ void gobs_reset() {
             case GK_ZOMBIE:       zombie_reset(g); break;
             case GK_RIFASHARK:    rifashark_reset(g); break;
             case GK_RIFASPAWNER:  rifaspawner_reset(g); break;
+            case GK_TURRET:       turret_reset(g); break;
+            case GK_MISSILE:      missile_reset(g); break;
             case GK_BOSS:         boss_reset(g); break;
             case GK_BOSSSEG:      bossseg_reset(g); break;
             default:
@@ -485,6 +500,23 @@ int16_t gob_manhattan_dist(uint8_t a, uint8_t b)
         dy = -dy;
     }
     return dx + dy;
+}
+
+// generic gob_shot handler with knockback.
+// assumes gobdat holds life.
+void gob_knockback_shot(uint8_t g, uint8_t shot, uint8_t scoreenum)
+{
+    uint8_t power = shotpower[shot] + 1;
+    if (gobdat[g] <= power ) {
+        // boom.
+        gob_standard_kaboom(g, shot, scoreenum);
+    } else {
+        gobdat[g] -= power;
+        // knockback
+        gobx[g] += shotvx[shot]/2;
+        goby[g] += shotvy[shot]/2;
+        gob_highlight(g,7);
+    }
 }
 
 
@@ -784,6 +816,8 @@ void tank_reset(uint8_t g)
     gob_randompos(g);
     gobvx[g] = 0;
     gobvy[g] = 0;
+
+    gobtimer[g] = g*4;  // stagger firing
 }
 
 
@@ -808,21 +842,13 @@ void tank_tick(uint8_t g)
     } else if (py > goby[g]) {
         goby[g] += vy;
     }
+
+    
 }
 
 void tank_shot(uint8_t g, uint8_t shot)
 {
-    uint8_t power = shotpower[shot] + 1;
-    if (gobdat[g] <= power ) {
-        // boom.
-        gob_standard_kaboom(g, shot, SCORE_100);
-    } else {
-        gobdat[g] -= power;
-        // knockback
-        gobx[g] += shotvx[shot]/2;
-        goby[g] += shotvy[shot]/2;
-        gob_highlight(g,7);
-    }
+    gob_knockback_shot(g, shot, SCORE_150);
 }
 
 /*
@@ -1319,9 +1345,9 @@ void brain_tick(uint8_t g)
     goby[g] = y;
 }
 
-void brain_shot(uint8_t d, uint8_t shot)
+void brain_shot(uint8_t g, uint8_t shot)
 {
-    tank_shot(d,shot);
+    gob_knockback_shot(g, shot, SCORE_150);
 }
 
 
@@ -1412,6 +1438,9 @@ void rifashark_tick(uint8_t g)
         int16_t dx = plrx[0] - gobx[g];
         int16_t dy = plry[0] - goby[g];
         uint8_t theta = arctan8(dx, dy);
+        uint8_t newdir = turntoward8(gobdat[g], theta);
+        rifashark_setdir(g, newdir );
+        /* OLD
         int8_t delta = theta - gobdat[g];
         // find shortest route
         if (delta < -4) {
@@ -1425,6 +1454,7 @@ void rifashark_tick(uint8_t g)
         } else if (delta < 0) {
             rifashark_setdir(g, (gobdat[g] - 1) & 7);
         }
+        */
     }
 
     gobx[g] += gobvx[g];
@@ -1506,9 +1536,123 @@ void rifaspawner_tick(uint8_t g)
 
 void rifaspawner_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, SCORE_20);
+    gob_standard_kaboom(g, shot, SCORE_200);
 }
 
+/*
+ * Turret
+ * gobtimer: dir (0..7)
+ * gobdat: life
+ *
+ */
+
+void turret_create(uint8_t g)
+{
+    gobkind[g] = GK_TURRET;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobdat[g] = 12;   // life
+    turret_reset(g);
+}
+
+void turret_reset(uint8_t g)
+{
+    gob_randompos(g);
+    gobtimer[g] = rnd() & 0x07;     //dir
+}
+
+
+void turret_tick(uint8_t g)
+{
+    if (((tick + g) & 0x0f) == 0) {
+        // turn to player
+        int16_t dx = plrx[0] - gobx[g];
+        int16_t dy = plry[0] - goby[g];
+        uint8_t dir8 = arctan8(dx, dy);
+
+        gobtimer[g] = turntoward8(gobtimer[g], dir8);
+      
+        // accelerate toward player if facing
+        gob_seek_x(g, plrx[0], (1<<FX)/16, (1<<FX)/16);
+        gob_seek_y(g, plry[0], (1<<FX)/16, (1<<FX)/16);
+    }
+
+    if (((tick + g) & 0x1f) == 0) {
+        // FIRE!
+        uint8_t m = gob_alloc();
+        if (m < MAX_GOBS) {
+            uint8_t dir8 = gobtimer[g];
+            missile_spawn(m, gobx[g], goby[g], dir8);
+        }
+    }
+
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
+}
+
+void turret_shot(uint8_t g, uint8_t shot)
+{
+    gob_knockback_shot(g, shot, SCORE_150);
+}
+
+/*
+ * Missile
+ * gobdat: dir (0..7)
+ * gobtimer: time remaining
+ *
+ */
+
+static const int8_t missile_vx[8] = {
+    0,4,6,4, 0,-4,-6,-4,
+};
+static const int8_t missile_vy[8] = {
+    -6,-4,0,4, 6,4,0,-4,
+};
+static void missile_setdir(uint8_t g, uint8_t dir8) {
+    gobdat[g] = dir8;
+    gobvx[g] = missile_vx[dir8]<<4;
+    gobvy[g] = missile_vy[dir8]<<4;
+}
+
+void missile_create(uint8_t g)
+{
+    gobkind[g] = GK_MISSILE;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    missile_reset(g);
+}
+
+void missile_reset(uint8_t g)
+{
+    gob_randompos(g);
+    gobtimer[g] = 64;
+    missile_setdir(g, rnd() & 0x07);
+}
+
+void missile_spawn(uint8_t g, int16_t x, int16_t y, uint8_t dir8)
+{
+    gobkind[g] = GK_MISSILE;
+    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobx[g] = x;
+    goby[g] = y;
+    gobtimer[g] = 128;
+    missile_setdir(g, dir8);
+}
+
+void missile_tick(uint8_t g)
+{
+    if (gobtimer[g] == 0)
+    {
+        gobkind[g] = GK_NONE;
+        return;
+    }
+    --gobtimer[g];
+    gobx[g] += gobvx[g];
+    goby[g] += gobvy[g];
+}
+
+void missile_shot(uint8_t g, uint8_t shot)
+{
+    gob_standard_kaboom(g, shot, SCORE_20);
+}
 
 /*
  * Boss

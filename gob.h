@@ -31,8 +31,10 @@
 #define GK_ZOMBIE 20
 #define GK_RIFASHARK 21
 #define GK_RIFASPAWNER 22
-#define GK_BOSS 23
-#define GK_BOSSSEG 24
+#define GK_TURRET 23
+#define GK_MISSILE 24
+#define GK_BOSS 25
+#define GK_BOSSSEG 26
 
 // Flags
 // lower 3 bits used for highlight timer
@@ -84,11 +86,14 @@ void gobs_create(uint8_t kind, uint8_t n);
 // generic gob fns
 void gob_move_bounce_x(uint8_t d);
 void gob_move_bounce_y(uint8_t d);
+void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t scoreenum);
+void gob_knockback_shot(uint8_t g, uint8_t shot, uint8_t scoreenum);
 
 static inline int16_t gob_size(uint8_t d) {
     switch (gobkind[d]) {
         case GK_AMOEBA_BIG: return 32<<FX;
         case GK_AMOEBA_SMALL: return 12<<FX;
+        case GK_MISSILE: return 12<<FX;
         case GK_BOSS: return 32<<FX;
         case GK_BOSSSEG: return 16<<FX;
         default: return 16<<FX;
@@ -208,6 +213,20 @@ void rifaspawner_create(uint8_t d);
 void rifaspawner_tick(uint8_t d);
 void rifaspawner_reset(uint8_t d);
 void rifaspawner_shot(uint8_t d, uint8_t shot);
+
+// Turret fns
+void turret_create(uint8_t g);
+void turret_spawn(uint8_t g, int16_t x, int16_t y, uint8_t dir);
+void turret_tick(uint8_t g);
+void turret_reset(uint8_t g);
+void turret_shot(uint8_t g, uint8_t shot);
+
+// Missile fns
+void missile_create(uint8_t g);
+void missile_spawn(uint8_t g, int16_t x, int16_t y, uint8_t dir);
+void missile_tick(uint8_t g);
+void missile_reset(uint8_t g);
+void missile_shot(uint8_t g, uint8_t shot);
 
 // Boss fns.
 void boss_create(uint8_t g);

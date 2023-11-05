@@ -30,4 +30,5 @@ static inline int8_t cos24(uint8_t theta) {return sincos24[6+theta];}
 static inline uint8_t inc24(uint8_t a) { return a<23 ? a+1 : 0; }
 static inline uint8_t dec24(uint8_t a) { return a>0 ? a-1 : 23; }
 
+uint8_t turntoward8(uint8_t dir, uint8_t target);
 #endif // MISC_H

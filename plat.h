@@ -65,8 +65,10 @@ void plat_happyslapper_render(int16_t x, int16_t y, bool sleeping);
 void plat_marine_render(int16_t x, int16_t y);
 void plat_brain_render(int16_t x, int16_t y, bool highlight);
 void plat_zombie_render(int16_t x, int16_t y);
-void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir);
+void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir8);
 void plat_rifaspawner_render(int16_t x, int16_t y);
+void plat_turret_render(int16_t x, int16_t y, uint8_t dir8, bool highlight);
+void plat_missile_render(int16_t x, int16_t y, uint8_t dir8);
 void plat_boss_render(int16_t x, int16_t y, bool highlight);
 void plat_bossseg_render(int16_t x, int16_t y, uint8_t phase, bool atrest, bool highlight);
 

@@ -38,14 +38,15 @@
 #define SPR16_PLR_L 52
 #define SPR16_PLR_R 54
 #define SPR16_MARINE 56
-#define SPR16_WIBBLER 58
+#define SPR16_BOSS_SEG 58
 #define SPR16_SHOT 64
 #define SPR16_SHOT_MED 68
 #define SPR16_SHOT_HEAVY 72
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
+#define SPR16_TURRET 80
+#define SPR16_MISSILE 88
 #define SPR16_RIFASHARK 96
-#define SPR16_BOSS_SEG 88
 #define SPR16_RIFASPAWNER 92+16
 
 #define SPR32_AMOEBA_BIG 0
@@ -254,10 +255,10 @@ void plat_zombie_render(int16_t x, int16_t y)
     sprout16(x, y, SPR16_ZOMBIE + ((tick>>4) & 0x01));
 }
 
-void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir)
+void plat_rifashark_render(int16_t x, int16_t y, uint8_t dir8)
 {
     uint8_t f = (tick & 0x10);
-    sprout16(x, y, SPR16_RIFASHARK + dir + f);
+    sprout16(x, y, SPR16_RIFASHARK + dir8 + f);
 }
 
 void plat_rifaspawner_render(int16_t x, int16_t y)
@@ -267,5 +268,21 @@ void plat_rifaspawner_render(int16_t x, int16_t y)
         f=7-f;
     }
     sprout16(x, y, SPR16_RIFASPAWNER + f);
+}
+
+void plat_turret_render(int16_t x, int16_t y, uint8_t dir8, bool highlight)
+{
+    uint8_t f = SPR16_TURRET + dir8;
+    if (highlight) {
+        sprout16_highlight(x, y, f);
+    } else {
+        sprout16(x, y, f);
+    }
+}
+
+void plat_missile_render(int16_t x, int16_t y, uint8_t dir8)
+{
+    uint8_t f = SPR16_MISSILE + dir8;
+    sprout16(x, y, f);
 }
 

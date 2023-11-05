@@ -250,3 +250,24 @@ const int8_t sincos24[24+6] = {
 };
 
 
+uint8_t turntoward8(uint8_t dir, uint8_t target)
+{
+    int8_t d = target-dir;
+
+    // find shortest route
+    if (d < -4) {
+        d += 8;
+    }
+    if (d > 4) {
+        d -= 8;
+    }
+
+    // turn
+    if (d > 0) {
+        dir = (dir+1) & 0x07;
+    } else if (d < 0) {
+        dir = (dir-1) & 0x07;
+    }
+    return dir;
+}
+
