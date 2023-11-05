@@ -47,7 +47,7 @@ extern volatile uint8_t tick;
 
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
 void plat_shot_render(int16_t x, int16_t y, uint8_t direction, uint8_t power);
-void plat_powerup_render(int16_t x, int16_t y, uint8_t kind);
+void plat_pickup_render(int16_t x, int16_t y, uint8_t kind);
 void plat_block_render(int16_t x, int16_t y);
 void plat_grunt_render(int16_t x, int16_t y);
 void plat_baiter_render(int16_t x, int16_t y);

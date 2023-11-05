@@ -22,7 +22,7 @@
 #define GK_VZAPPER 11
 #define GK_FRAGGER 12
 #define GK_FRAG 13
-#define GK_POWERUP 14
+#define GK_PICKUP 14
 #define GK_VULGON 15
 #define GK_POOMERANG 16
 #define GK_HAPPYSLAPPER 17
@@ -154,10 +154,10 @@ void frag_tick(uint8_t d);
 void frag_spawn(uint8_t f, int16_t x, int16_t y, uint8_t dir);
 void frag_shot(uint8_t d, uint8_t shot);
 
-// powerup fns
-void powerup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind);
-void powerup_tick(uint8_t d);
-bool powerup_playercollide(uint8_t g, uint8_t plr);
+// pickup fns
+void pickup_create(uint8_t d, int16_t x, int16_t y, uint8_t kind);
+void pickup_tick(uint8_t d);
+bool pickup_playercollide(uint8_t g, uint8_t plr);
 
 // vulgon fns
 void vulgon_create(uint8_t d);

@@ -68,7 +68,7 @@ void render_STATE_GALLERY_BADDIES()
         switch(i) {
             // row 1
             case 0:
-                plat_grunt_render(x - (8 << FX), y); 
+                plat_grunt_render(x - (8 << FX), y);
                 plat_text(cx - 2, cy, "GRUNT", c);
                 break;
             case 1:
@@ -76,34 +76,34 @@ void render_STATE_GALLERY_BADDIES()
                 plat_text(cx - 3, cy1,  "BLOCK", c);
                 break;
             case 2:
-                plat_fragger_render(x - (8 << FX), y); 
-                plat_text(cx - 3, cy, "FRAGGER", c); 
+                plat_fragger_render(x - (8 << FX), y);
+                plat_text(cx - 3, cy, "FRAGGER", c);
                 break;
             // row 2
             case 3:
-                plat_amoeba_big_render(x - (16 << FX), y - (8 << FX)); 
+                plat_amoeba_big_render(x - (16 << FX), y - (8 << FX));
                 plat_text(cx - 3, cy, "AMOEBA", c);
                 break;
             case 4:
                 plat_tank_render(x - (8 << FX), y, false);
-                plat_text(cx - 2, cy, "TANK", c); 
+                plat_text(cx - 2, cy, "TANK", c);
                 break;
             case 5:
-                plat_happyslapper_render(x - (8 << FX), y, false); 
-                plat_text(cx - 6, cy, "HAPPYSLAPPER", c); 
+                plat_happyslapper_render(x - (8 << FX), y, false);
+                plat_text(cx - 6, cy, "HAPPYSLAPPER", c);
                 break;
             // row 3
             case 6:
-                plat_vulgon_render(x - (8 << FX), y, false, 0); 
-                plat_text(cx - 3, cy, "VULGON", c); 
+                plat_vulgon_render(x - (8 << FX), y, false, 0);
+                plat_text(cx - 3, cy, "VULGON", c);
                 break;
             case 7:
-                plat_poomerang_render(x - (8 << FX), y); 
-                plat_text(cx - 4, cy, "POOMERANG", c); 
+                plat_poomerang_render(x - (8 << FX), y);
+                plat_text(cx - 4, cy, "POOMERANG", c);
                 break;
             case 8:
-                plat_hzapper_render(x - (8 << FX), y, 0); 
-                plat_text(cx - 3, cy, "ZAPPER", c); 
+                plat_hzapper_render(x - (8 << FX), y, 0);
+                plat_text(cx - 3, cy, "ZAPPER", c);
                 break;
         }
     }
@@ -175,18 +175,18 @@ void render_STATE_GALLERY_GOODIES()
             // row 2 (3 items)
             case 1:
                 plat_text(cx - 4, cy, "POWERUPS", c);
-                plat_powerup_render(x - (24<<FX), y, 0); 
-                plat_powerup_render(x, y, 0); 
-                plat_powerup_render(x + (24<<FX), y, 0); 
+                plat_pickup_render(x - (24<<FX), y, 0);
+                plat_pickup_render(x, y, 1);
+                plat_pickup_render(x + (24<<FX), y, 2);
                 break;
             // row 3 (5 items)
             case 2:
-                plat_text(cx - 13, cy, "HEAVILY ARMED SPACE MARINES", c); 
-                plat_marine_render(x - (48 << FX), y); 
-                plat_marine_render(x - (24 << FX), y); 
-                plat_marine_render(x + (0 << FX), y); 
-                plat_marine_render(x + (24 << FX), y); 
-                plat_marine_render(x + (48 << FX), y); 
+                plat_text(cx - 13, cy, "HEAVILY ARMED SPACE MARINES", c);
+                plat_marine_render(x - (48 << FX), y);
+                plat_marine_render(x - (24 << FX), y);
+                plat_marine_render(x + (0 << FX), y);
+                plat_marine_render(x + (24 << FX), y);
+                plat_marine_render(x + (48 << FX), y);
                 break;
         }
     }
@@ -246,7 +246,7 @@ static void render_robo_rain(uint8_t t) {
     }
 }
 
-static const uint8_t bluefade[8] = {1,1,1,1,8,9,10,0}; 
+static const uint8_t bluefade[8] = {1,1,1,1,8,9,10,0};
 static void render_marine_formation(uint16_t t) {
     rnd_seed(53);
     const int16_t s = 24;
@@ -273,7 +273,7 @@ static void render_marine_formation(uint16_t t) {
         const uint8_t tduration = 32;
         const uint16_t tbegin = 80 + (hup*8);
         const uint16_t tend = tbegin + tduration;
-        uint8_t hy = 7 + ((rnd()&7)<<1) + (hup&1); 
+        uint8_t hy = 7 + ((rnd()&7)<<1) + (hup&1);
         if (t >= tbegin && t < tend) {
             uint8_t c = bluefade[(t-tbegin)/4];
             plat_text(hx, hy, "HUP",c);
@@ -312,7 +312,7 @@ static void render_marine_disorder(uint8_t t) {
         const uint8_t tduration = 32;
         const uint16_t tbegin = 70 + (hup*8);
         const uint16_t tend = tbegin + tduration;
-        uint8_t hy = 14 + ((rnd()&3)<<1) + (hup&3); 
+        uint8_t hy = 14 + ((rnd()&3)<<1) + (hup&3);
         if (t >= tbegin && t < tend) {
             uint8_t c = bluefade[(t-tbegin)/4];
             plat_text(hx, hy, "RUN AWAY!",c);
@@ -425,7 +425,7 @@ void render_STATE_STORY_ATTACK()
     if (statetimer < appeartime) {
         return;
     }
-    plat_text(cx - 14, 5, "HEAVILY ARMED SPACE MARINES!", 15); 
+    plat_text(cx - 14, 5, "HEAVILY ARMED SPACE MARINES!", 15);
     render_marine_formation((uint16_t)(statetimer - appeartime));
 }
 

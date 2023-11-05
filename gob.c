@@ -136,7 +136,7 @@ void gobs_tick(bool spawnphase)
                 break;
             case GK_FRAGGER: fragger_tick(i); break;
             case GK_FRAG:    frag_tick(i); break;
-            case GK_POWERUP: powerup_tick(i); break;
+            case GK_PICKUP: pickup_tick(i); break;
             case GK_VULGON:  vulgon_tick(i); break;
             case GK_POOMERANG: poomerang_tick(i); break;
             case GK_HAPPYSLAPPER:  happyslapper_tick(i); break;
@@ -199,8 +199,8 @@ void gobs_render()
             case GK_FRAG:
                 plat_frag_render(gobx[d], goby[d], gobdat[d]);
                 break;
-            case GK_POWERUP:
-                plat_powerup_render(gobx[d], goby[d], gobdat[d]);
+            case GK_PICKUP:
+                plat_pickup_render(gobx[d], goby[d], gobdat[d]);
                 break;
             case GK_VULGON:
                 plat_vulgon_render(gobx[d], goby[d], gobtimer[d] > 0, gobdat[d]);
@@ -287,7 +287,7 @@ void gob_shot(uint8_t d, uint8_t s)
 bool gob_playercollide(uint8_t g, uint8_t plr)
 {
     switch (gobkind[g]) {
-        case GK_POWERUP:  return powerup_playercollide(g, plr);
+        case GK_PICKUP:  return pickup_playercollide(g, plr);
         case GK_MARINE:   return marine_playercollide(g, plr);
         default:          return true;    // Kill player.
     }
@@ -559,13 +559,13 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
     plat_sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
-    if (rnd() > 250 || gobs_certainbonus) {
-        // transform into powerup
+    if (rnd() > 253 || gobs_certainbonus) {
+        // transform into pickup
         uint8_t kind = rnd() & 0x03;
         if (kind == 3) {
-            kind = 0;
+            kind = 1;
         }
-        powerup_create(d, gobx[d], goby[d], kind);
+        pickup_create(d, gobx[d], goby[d], kind);
         gobs_certainbonus = false;
     }
 }
@@ -1003,9 +1003,9 @@ void frag_shot(uint8_t d, uint8_t shot)
  * Powerup
  */
 
-void powerup_create(uint8_t g, int16_t x, int16_t y, uint8_t kind)
+void pickup_create(uint8_t g, int16_t x, int16_t y, uint8_t kind)
 {
-    gobkind[g] = GK_POWERUP;
+    gobkind[g] = GK_PICKUP;
     gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
     gobx[g] = x;
     goby[g] = y;
@@ -1015,7 +1015,7 @@ void powerup_create(uint8_t g, int16_t x, int16_t y, uint8_t kind)
     gobtimer[g] = 20;
 }
 
-void powerup_tick(uint8_t g)
+void pickup_tick(uint8_t g)
 {
     if(((tick+g)&0x0f) == 0) {
         gob_seek_x(g, plrx[0], FX_ONE/16, FX_ONE/2);
@@ -1031,7 +1031,7 @@ void powerup_tick(uint8_t g)
     gob_move_bounce_y(g);
 }
 
-bool powerup_playercollide(uint8_t g, uint8_t plr)
+bool pickup_playercollide(uint8_t g, uint8_t plr)
 {
     switch(gobdat[g]) {
         case 0: player_extra_life(plr); break;

@@ -90,7 +90,7 @@ void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving)
     sprout16(x, y, img);
 }
 
-void plat_powerup_render(int16_t x, int16_t y, uint8_t kind)
+void plat_pickup_render(int16_t x, int16_t y, uint8_t kind)
 {
     sprout16(x, y, SPR16_EXTRALIFE + kind);
 }
