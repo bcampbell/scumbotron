@@ -1009,8 +1009,8 @@ void powerup_create(uint8_t g, int16_t x, int16_t y, uint8_t kind)
     gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_PLAYER;
     gobx[g] = x;
     goby[g] = y;
-    gobvx[g] = ((uint16_t)rnd() - 128)/2;
-    gobvy[g] = ((uint16_t)rnd() - 128)/2;
+    gobvx[g] = ((int16_t)rnd() - 128)/2;
+    gobvy[g] = ((int16_t)rnd() - 128)/2;
     gobdat[g] = kind;  // 0 = extra life
     gobtimer[g] = 20;
 }
