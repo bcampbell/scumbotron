@@ -5,6 +5,7 @@
 #include "misc.h"
 #include "plat.h"
 #include "player.h"
+#include "sfx.h"
 #include "vfx.h"
 
 uint8_t state;
@@ -40,6 +41,7 @@ static void level_baiter_check();
 void game_init()
 {
     highscore_init();
+    sfx_init();
     vfx_init();
     enter_STATE_ATTRACT();
 }
@@ -47,6 +49,7 @@ void game_init()
 void game_tick()
 {
     inp_tick();
+    sfx_tick();
 
     switch(state) {
     case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
@@ -69,6 +72,7 @@ void game_tick()
     case STATE_STORY_WHATNOW:    tick_STATE_STORY_WHATNOW(); break;
     case STATE_STORY_DONE:    tick_STATE_STORY_DONE(); break;
     }
+
 }
 
 void game_render()

@@ -79,9 +79,6 @@ static uint8_t sprremaining;
 // from previous frame
 static uint8_t sprremainingprev;
 
-static void sfx_init();
-static void sfx_tick();
-
 // set the border colour for raster-timing
 void plat_gatso(uint8_t g)
 {
@@ -272,7 +269,6 @@ void plat_init()
     // scumbotron.asm unpacker.
     uint8_t vid;
     irq_init();
-    sfx_init();
 
     // screen mode 40x30
     VERA.control = 0x00;    //DCSEL=0
@@ -692,74 +688,18 @@ static void clr_layer0()
 }
 
 /*
- * SFX
+ * psg sfx support
  */
 
-#define MAX_SFX 4
-
-uint8_t sfx_effect[MAX_SFX];
-uint8_t sfx_timer[MAX_SFX];
-uint8_t sfx_next;
-
-static void sfx_init()
+void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
 {
-    uint8_t ch;
-    sfx_next = 0;
-    for (ch = 0; ch < MAX_SFX; ++ch) {
-        sfx_effect[ch] = SFX_NONE;
-    }
-}
-
-void plat_sfx_play(uint8_t effect)
-{
-    uint8_t ch = sfx_next++;
-    if (sfx_next >= MAX_SFX) {
-        sfx_next = 0;
-    }
-
-    sfx_effect[ch] = effect;
-    sfx_timer[ch] = 0;
-}
-
-
-static inline void psg(uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
-{
+    veraaddr0(VRAM_PSG + chan*4, VERA_INC_1);
     VERA.data0 = freq & 0xff;
     VERA.data0 = freq >> 8;
     VERA.data0 = (3 << 6) | vol;  // lrvvvvvv
     VERA.data0 = (waveform << 6) | pulsewidth;         // wwpppppp
 }
 
-
-static void sfx_tick()
-{
-    uint8_t ch;
-    veraaddr0(VRAM_PSG, VERA_INC_1);
-    for (ch=0; ch < MAX_SFX; ++ch) {
-        uint8_t t = sfx_timer[ch]++;
-        switch (sfx_effect[ch]) {
-        case SFX_LASER:
-            psg(2000 - (t<<6), (63-t)/4, 0, t);
-            if (t>=63) {
-                sfx_effect[ch] = SFX_NONE;
-            }
-            break;
-        case SFX_KABOOM:
-            psg(300, 63-t, t&3, 0);
-            if (t>=63) {
-                sfx_effect[ch] = SFX_NONE;
-            }
-            break;
-        default:
-            // off.
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            VERA.data0 = 0;
-            break;
-        }
-    }
-}
 
 #include "../spr_common_inc.h"
 
@@ -1042,7 +982,6 @@ int main(void) {
         debug_gamepad();
         //debug_getin();
         plat_render_finish();
-        sfx_tick();
         //cx16_k_joystick_scan();
         update_inp_mouse();
         game_tick();

@@ -94,10 +94,10 @@ extern char plat_textentry_getchar();
 void plat_gatso(uint8_t t);
 
 // sfx
-#define SFX_NONE 0
-#define SFX_LASER 1
-#define SFX_KABOOM 2
 void plat_sfx_play(uint8_t effect);
+
+// Sound support
+void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth);
 
 #define DIR_UP 0x08
 #define DIR_DOWN 0x04

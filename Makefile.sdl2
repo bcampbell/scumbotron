@@ -2,7 +2,7 @@ BUILD_DIR=build_sdl2
 EXPORT_DIR=export_sdl2
 
 SRCS = sdl2/sys.c sdl2/vera_psg.c sdl2/audio.c sdl2/sfx.c \
-	game.c gob.c player.c highscore.c input.c misc.c bub.c story.c vfx.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))

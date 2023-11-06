@@ -1,5 +1,5 @@
-#ifndef SCUMBOTRON_EFFECTS_H
-#define SCUMBOTRON_EFFECTS_H
+#ifndef SCUMBOTRON_VFX_H
+#define SCUMBOTRON_VFX_H
 
 #include <stdint.h>
 
@@ -14,4 +14,4 @@ void vfx_play_warp();
 void vfx_play_quicktext(int16_t x, int16_t y, const char* txt);
 void vfx_play_alerttext(const char* txt);
 
-#endif // SCUMBOTRON_EFFECTS_H
+#endif // SCUMBOTRON_VFX_H

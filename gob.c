@@ -3,6 +3,7 @@
 #include "misc.h"
 #include "plat.h"
 #include "player.h"
+#include "sfx.h"
 #include "vfx.h"
 
 // gob tables
@@ -556,7 +557,7 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
     player_add_score(score_vals[score]);
     vfx_play_kaboom(gobx[d] + (8<<FX), goby[d] + (8<<FX));
     vfx_play_quicktext(gobx[d], goby[d]+(4<<FX), score_strings[score]);
-    plat_sfx_play(SFX_KABOOM);
+    sfx_play(SFX_KABOOM);
     gobkind[d] = GK_NONE;
 
     if (rnd() > 253 || gobs_certainbonus) {

@@ -273,8 +273,9 @@ void plat_gatso(uint8_t t)
 {
 }
 
-void plat_sfx_play(uint8_t effect)
+void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
 {
+    // TODO: sound!
 }
 
 static void vblank()
@@ -631,7 +632,6 @@ int main(void) {
         clr_bg1();
 
         do_colour_cycling();
-        //sfx_tick();
 		scanKeys();
         game_tick();
 

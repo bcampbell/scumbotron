@@ -3,6 +3,7 @@
 #include "input.h"
 #include "misc.h"
 #include "plat.h"
+#include "sfx.h"
 #include "vfx.h"
 
 uint8_t player_lives;
@@ -307,7 +308,7 @@ uint8_t add24(uint8_t theta, uint8_t v) {
 
 static void plr_shoot(uint8_t p, uint8_t theta) {
     // FIRE!
-    plat_sfx_play(SFX_LASER);
+    sfx_play(SFX_LASER);
 
     uint8_t weapon = plrweapon[p];
     uint8_t power = plrweaponpower[p];

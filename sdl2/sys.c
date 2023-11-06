@@ -135,7 +135,6 @@ void plat_init()
     if (!audio_init()) {
         goto bailout;
     }
-    sfx_init();
  
     return;
 
@@ -761,7 +760,6 @@ int main(int argc, char* argv[]) {
         game_tick();
         ++tick; // The 8bit byte ticker.
 
-        sfx_tick();
         audio_render();
 
         ++frame;
