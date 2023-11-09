@@ -11,6 +11,8 @@
 #define SFX_HURRYUP 5
 #define SFX_LOOKOUT 6
 #define SFX_BONUS 7
+#define SFX_ZAPPER_CHARGE 8
+#define SFX_ZAPPING 9
 
 void sfx_init();
 void sfx_tick();

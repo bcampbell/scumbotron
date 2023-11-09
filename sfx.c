@@ -109,12 +109,36 @@ void sfx_tick()
         case SFX_BONUS:
             {
                 uint8_t s = sin24(t&0x3f);
-                plat_psg(ch, 800+t*8 + ((t)&0x7)*256,  63, PLAT_PSG_TRIANGLE,0);
-                if (t>=64) {
+                plat_psg(ch, 800+t*64 + ((t*2)&0x7)*256,  63, PLAT_PSG_TRIANGLE,0);
+                if (t>=12) {
                     sfx_effect[ch] = SFX_NONE;
                 }
             }
             break;
+        case SFX_ZAPPING:
+            {
+                /* stuttered drone*/
+               // if((t&0x07)!=0) {
+                    plat_psg(ch, 100, 63, PLAT_PSG_PULSE, t & 0x3f);
+               // } else {
+                //    plat_psg(ch, 100+(t*32)+rnd(), 63, PLAT_PSG_NOISE, 0);
+               // }
+                if (t>=200) {
+                    sfx_effect[ch] = SFX_NONE;
+                }
+            }
+            break;
+        case SFX_ZAPPER_CHARGE:
+            {
+                /* cool chargeup */
+                int8_t s = sin24((t*4)&0x0f);
+                plat_psg(ch, 200+t+s, 63, PLAT_PSG_TRIANGLE, 0);
+                if (t>=128) {
+                    sfx_effect[ch] = SFX_NONE;
+                }
+            }
+            break;
+
 #if 0 /* small splosion */
             {
                 if( t&0x01) {
@@ -151,25 +175,6 @@ void sfx_tick()
                 if (t>=64) {
                     sfx_effect[ch] = SFX_NONE;
                 }
-            }
-#endif
-
-#if 0
-            /* stuttered drone*/
-            if((t&0x07)!=0) {
-                plat_psg(ch, 100, 63, PLAT_PSG_PULSE, t & 0x3f);
-            } else {
-                plat_psg(ch, 100+(t*32)+rnd(), 63, PLAT_PSG_NOISE, 0);
-            }
-            if (t>=128) {
-                sfx_effect[ch] = SFX_NONE;
-            }
-#endif
-#if 0 /* cool chargeup */
-            int8_t s = sin24((t*4)&0x0f);
-            plat_psg(ch, 200+t+s, 63, PLAT_PSG_TRIANGLE, 0);
-            if (t>=128) {
-                sfx_effect[ch] = SFX_NONE;
             }
 #endif
 

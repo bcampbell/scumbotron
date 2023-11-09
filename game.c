@@ -156,7 +156,7 @@ static void tick_STATE_TITLESCREEN()
         uint8_t cur = plat_raw_cheatkeys();
         if (~prev & cur & INP_CHEAT_POWERUP) {
         //    vfx_play_warp();
-            sfx_play(SFX_BONUS);
+            sfx_play(SFX_ZAPPING);
             statetimer = 0;
         }
         prev = cur;

@@ -886,13 +886,20 @@ void zapper_reset(uint8_t d)
 }
 
 // used for both h and v zappers
-void zapper_tick(uint8_t d)
+void zapper_tick(uint8_t g)
 {
-    gob_move_bounce_x(d);
-    gob_move_bounce_y(d);
+    gob_move_bounce_x(g);
+    gob_move_bounce_y(g);
     // Firing state governed by timer (ticks/8)
     if(tick & 0x04) {
-        gobtimer[d]++;
+        gobtimer[g]++;
+
+        if (gobtimer[g] == 150) {
+            sfx_play(SFX_ZAPPER_CHARGE);
+        }
+        if (gobtimer[g] == 180) {
+            sfx_play(SFX_ZAPPING);
+        }
     }
 }
 
