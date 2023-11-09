@@ -6,6 +6,11 @@
 #define SFX_NONE 0
 #define SFX_LASER 1
 #define SFX_KABOOM 2
+#define SFX_WARP 3
+#define SFX_OWWWW 4
+#define SFX_HURRYUP 5
+#define SFX_LOOKOUT 6
+#define SFX_BONUS 7
 
 void sfx_init();
 void sfx_tick();

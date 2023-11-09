@@ -151,10 +151,16 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
-    //if (plat_raw_cheatkeys() & INP_CHEAT_POWERUP) {
-    //    vfx_play_warp();
-    //    statetimer = 0;
-    //}
+    {
+        static uint8_t prev = 0;
+        uint8_t cur = plat_raw_cheatkeys();
+        if (~prev & cur & INP_CHEAT_POWERUP) {
+        //    vfx_play_warp();
+            sfx_play(SFX_BONUS);
+            statetimer = 0;
+        }
+        prev = cur;
+    }
     if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
         enter_STATE_ATTRACT();
     }
@@ -245,6 +251,7 @@ void enter_STATE_ENTERLEVEL()
     state = STATE_ENTERLEVEL;
     statetimer = 0;
     vfx_play_warp();
+    sfx_play(SFX_WARP);
 }
 
 static void tick_STATE_ENTERLEVEL()
@@ -731,10 +738,12 @@ static void level_baiter_check()
             if (baiter_count == 0) {
                 // just a warning...
                 vfx_play_alerttext("HURRY UP!");
+                sfx_play(SFX_HURRYUP);
             } else {
                 if (baiter_count == 1) {
                     vfx_play_alerttext("LOOK OUT!");
                 }
+                sfx_play(SFX_LOOKOUT);
                 // spawn `em!
                 for (i = 0; i < baiter_count; ++i) {
                     uint8_t b = gob_alloc();

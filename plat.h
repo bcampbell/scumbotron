@@ -94,9 +94,18 @@ extern char plat_textentry_getchar();
 void plat_gatso(uint8_t t);
 
 // sfx
-void plat_sfx_play(uint8_t effect);
 
-// Sound support
+// waveform types
+#define PLAT_PSG_PULSE 0
+#define PLAT_PSG_SAWTOOTH 1
+#define PLAT_PSG_TRIANGLE 2
+#define PLAT_PSG_NOISE 3
+
+// Set all the params for a PSG channel in one go.
+//
+// vol: 0=off, 63=max
+// freq: for frequency f, this should be f/(48828.125/(2^17))
+// waveform: one of PLAT_PSG_*
 void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth);
 
 #define DIR_UP 0x08
