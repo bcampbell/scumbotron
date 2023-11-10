@@ -10,9 +10,12 @@
 #define SFX_OWWWW 4
 #define SFX_HURRYUP 5
 #define SFX_LOOKOUT 6
-#define SFX_BONUS 7
+#define SFX_MARINE_SAVED 7
 #define SFX_ZAPPER_CHARGE 8
 #define SFX_ZAPPING 9
+#define SFX_INEFFECTIVE_THUD 10
+#define SFX_HIT 11
+#define SFX_BONUS 12
 
 void sfx_init();
 void sfx_tick();

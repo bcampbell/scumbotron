@@ -104,7 +104,7 @@ static bool gen(uint8_t ch, uint8_t effect, uint8_t t)
             }
         }
         break;
-    case SFX_BONUS:
+    case SFX_MARINE_SAVED:
         {
             plat_psg(ch, 800+t*64 + ((t*2)&0x7)*256,  63, PLAT_PSG_TRIANGLE,0);
             if (t>=12) {
@@ -125,6 +125,41 @@ static bool gen(uint8_t ch, uint8_t effect, uint8_t t)
                 plat_psg(ch, 2000+t*16, 63, PLAT_PSG_TRIANGLE, 0);
             } else {
                 plat_psg(ch, 0,0,0,0);
+            }
+        }
+        break;
+    case SFX_INEFFECTIVE_THUD:
+        {
+            if( (t&0x03) == 0) {
+                plat_psg(ch, 800+t*16/*+s*/, 64-t, PLAT_PSG_NOISE, 0);
+            } else {
+                plat_psg(ch, 100+t*32, 64-t, PLAT_PSG_PULSE, (t/8)&0x3f);
+            }
+
+            if (t>=6) {
+                return true;
+            }
+        }
+        break;
+    case SFX_HIT:
+        {
+            if( (t&0x01) == 0) {
+                plat_psg(ch, 5600-t*256, 48, PLAT_PSG_NOISE, 0);
+            } else {
+                plat_psg(ch, 600+t*64, 63, PLAT_PSG_TRIANGLE, 0);
+            }
+
+            if (t>=6) {
+                return true;
+            }
+        }
+        break;
+    case SFX_BONUS:
+        {
+            uint16_t f = 400 + (t& 0x7)*256 + t*64;
+            plat_psg(ch, f,  63, PLAT_PSG_SAWTOOTH,0);
+            if (t>=32) {
+                return true;
             }
         }
         break;

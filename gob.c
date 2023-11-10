@@ -517,6 +517,7 @@ void gob_knockback_shot(uint8_t g, uint8_t shot, uint8_t scoreenum)
         gobx[g] += shotvx[shot]/2;
         goby[g] += shotvy[shot]/2;
         gob_highlight(g,7);
+        sfx_play(SFX_HIT);
     }
 }
 
@@ -926,6 +927,7 @@ void zapper_shot(uint8_t d, uint8_t s)
     // knockback
     gobvx[d] += (shotvx[s] >> FX);
     gobvy[d] += (shotvy[s] >> FX);
+    sfx_play(SFX_INEFFECTIVE_THUD);
 }
 
 /*
@@ -1126,6 +1128,7 @@ void vulgon_shot(uint8_t d, uint8_t shot)
         gobvx[d] += (shotvx[shot] >> 4);
         gobvy[d] += (shotvy[shot] >> 4);
         gobtimer[d] = 4;
+        sfx_play(SFX_HIT);
     }
 }
 
@@ -1279,7 +1282,7 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
     // give points
     player_add_score(score_vals[SCORE_100]);
     vfx_play_quicktext(gobx[g], goby[g] + (4<<FX), score_strings[SCORE_100]);
-    sfx_play(SFX_BONUS);
+    sfx_play(SFX_MARINE_SAVED);
 
     return false;   // Don't kill player.
 }
