@@ -517,7 +517,7 @@ void gob_knockback_shot(uint8_t g, uint8_t shot, uint8_t scoreenum)
         gobx[g] += shotvx[shot]/2;
         goby[g] += shotvy[shot]/2;
         gob_highlight(g,7);
-        sfx_play(SFX_HIT);
+        sfx_play(SFX_HIT, 1);
     }
 }
 
@@ -558,7 +558,7 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
     player_add_score(score_vals[score]);
     vfx_play_kaboom(gobx[d] + (8<<FX), goby[d] + (8<<FX));
     vfx_play_quicktext(gobx[d], goby[d]+(4<<FX), score_strings[score]);
-    sfx_play(SFX_KABOOM);
+    sfx_play(SFX_KABOOM, 1);
     gobkind[d] = GK_NONE;
 
     if (rnd() > 253 || gobs_certainbonus) {
@@ -927,7 +927,7 @@ void zapper_shot(uint8_t d, uint8_t s)
     // knockback
     gobvx[d] += (shotvx[s] >> FX);
     gobvy[d] += (shotvy[s] >> FX);
-    sfx_play(SFX_INEFFECTIVE_THUD);
+    sfx_play(SFX_INEFFECTIVE_THUD, 1);
 }
 
 /*
@@ -1049,7 +1049,7 @@ void pickup_tick(uint8_t g)
 
 bool pickup_playercollide(uint8_t g, uint8_t plr)
 {
-    sfx_play(SFX_BONUS);
+    sfx_play(SFX_BONUS, 1);
     switch(gobdat[g]) {
         case 0: player_extra_life(plr); break;
         case 1: player_powerup(plr); break;
@@ -1128,7 +1128,7 @@ void vulgon_shot(uint8_t d, uint8_t shot)
         gobvx[d] += (shotvx[shot] >> 4);
         gobvy[d] += (shotvy[shot] >> 4);
         gobtimer[d] = 4;
-        sfx_play(SFX_HIT);
+        sfx_play(SFX_HIT, 1);
     }
 }
 
@@ -1282,7 +1282,7 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
     // give points
     player_add_score(score_vals[SCORE_100]);
     vfx_play_quicktext(gobx[g], goby[g] + (4<<FX), score_strings[SCORE_100]);
-    sfx_play(SFX_MARINE_SAVED);
+    sfx_play(SFX_MARINE_SAVED, 1);
 
     return false;   // Don't kill player.
 }

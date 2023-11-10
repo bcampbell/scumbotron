@@ -81,7 +81,7 @@ void player_killed(uint8_t p)
     int16_t px0 = plrx[p] + (4 << FX);
     int16_t py0 = plry[p] + (4 << FX);
     vfx_play_kaboom(px0+(8<<FX), py0+(8<<FX));
-    sfx_play(SFX_OWWWW);
+    sfx_play(SFX_OWWWW, 2);
     // reset weapon
     plrweapon[p] = WEAPON_SINGLESHOT;
     plrweaponpower[p] = 0;
@@ -309,7 +309,7 @@ uint8_t add24(uint8_t theta, uint8_t v) {
 
 static void plr_shoot(uint8_t p, uint8_t theta) {
     // FIRE!
-    sfx_play(SFX_LASER);
+    sfx_play(SFX_LASER, 1);
 
     uint8_t weapon = plrweapon[p];
     uint8_t power = plrweaponpower[p];

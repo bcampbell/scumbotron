@@ -159,7 +159,7 @@ static void tick_STATE_TITLESCREEN()
         uint8_t cur = plat_raw_cheatkeys();
         if (~prev & cur & INP_CHEAT_POWERUP) {
         //    vfx_play_warp();
-            sfx_play(SFX_BONUS);
+            sfx_play(SFX_BONUS,2);
             statetimer = 0;
         }
         prev = cur;
@@ -254,7 +254,7 @@ void enter_STATE_ENTERLEVEL()
     state = STATE_ENTERLEVEL;
     statetimer = 0;
     vfx_play_warp();
-    sfx_play(SFX_WARP);
+    sfx_play(SFX_WARP, 3);
 }
 
 static void tick_STATE_ENTERLEVEL()
@@ -741,12 +741,12 @@ static void level_baiter_check()
             if (baiter_count == 0) {
                 // just a warning...
                 vfx_play_alerttext("HURRY UP!");
-                sfx_play(SFX_HURRYUP);
+                sfx_play(SFX_HURRYUP, 3);
             } else {
                 if (baiter_count == 1) {
                     vfx_play_alerttext("LOOK OUT!");
                 }
-                sfx_play(SFX_LOOKOUT);
+                sfx_play(SFX_LOOKOUT, 3);
                 // spawn `em!
                 for (i = 0; i < baiter_count; ++i) {
                     uint8_t b = gob_alloc();

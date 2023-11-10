@@ -17,11 +17,12 @@
 #include "plat.h"
 #include "misc.h"
 
-#define MAX_SFX (8-1)   // TODO: should be plat-specific
+#define MAX_SFX (16-1)   // TODO: should be plat-specific
 #define CONTINUOUS_CHAN MAX_SFX
 
 static uint8_t sfx_effect[MAX_SFX];
 static uint8_t sfx_timer[MAX_SFX];
+static uint8_t sfx_pri[MAX_SFX];
 static uint8_t sfx_next;
 uint8_t sfx_continuous;
 
@@ -31,19 +32,46 @@ void sfx_init()
     sfx_next = 0;
     for (ch = 0; ch < MAX_SFX; ++ch) {
         sfx_effect[ch] = SFX_NONE;
+        sfx_pri[ch] = 0;
     }
     sfx_continuous = SFX_NONE;
 }
 
-void sfx_play(uint8_t effect)
+void sfx_play(uint8_t effect, uint8_t pri)
 {
-    uint8_t ch = sfx_next++;
-    if (sfx_next >= MAX_SFX) {
-        sfx_next = 0;
+    uint8_t ch = MAX_SFX;
+    for (uint8_t i = 0; i < MAX_SFX; ++i) {
+        if (sfx_effect[i] == SFX_NONE) {
+            ch = i;
+            break;
+        }
     }
 
-    sfx_effect[ch] = effect;
-    sfx_timer[ch] = 0;
+    if (ch >= MAX_SFX) {
+        // have to replace one...
+        // start looking _after_ the most recent one.
+        ch = sfx_next;
+        for (uint8_t i = 0; i < MAX_SFX; ++i) {
+            uint8_t p = sfx_pri[ch];
+            if (sfx_pri[ch] <= pri ) {
+                break;  // that'll do.
+            }
+            ++ch;
+            if (ch >= MAX_SFX) {
+                ch -= MAX_SFX;
+            }
+        }
+    }
+
+    if (ch < MAX_SFX) {
+        sfx_effect[ch] = effect;
+        sfx_timer[ch] = 0;
+        sfx_pri[ch] = pri;
+        sfx_next = ch + 1;
+        if (sfx_next > MAX_SFX) {
+            sfx_next -= MAX_SFX;
+        }
+    }
 }
 
 static bool gen(uint8_t ch, uint8_t effect, uint8_t t)

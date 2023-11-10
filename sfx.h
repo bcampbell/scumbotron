@@ -19,7 +19,7 @@
 
 void sfx_init();
 void sfx_tick();
-void sfx_play(uint8_t effect);
+void sfx_play(uint8_t effect, uint8_t pri);
 
 
 // A single effect to play continuously (or SFX_NONE).
