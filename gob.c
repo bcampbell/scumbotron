@@ -893,23 +893,29 @@ void zapper_tick(uint8_t g)
     // Firing state governed by timer (ticks/8)
     if(tick & 0x04) {
         gobtimer[g]++;
+    }
 
-        if (gobtimer[g] == 150) {
-            sfx_play(SFX_ZAPPER_CHARGE);
-        }
-        if (gobtimer[g] == 180) {
-            sfx_play(SFX_ZAPPING);
-        }
+    // Make sure appropriate sound effect is playing.
+    // TODO: zappers are all in sync, so should share state/timer. But hey.
+    switch (zapper_state(g)) {
+        case ZAPPER_WARMING_UP:
+            sfx_continuous = SFX_ZAPPER_CHARGE;
+            break;
+        case ZAPPER_ON:
+            sfx_continuous = SFX_ZAPPING;
+            break;
+        default:
+            break;
     }
 }
 
 // return zapper state based on timer
-uint8_t zapper_state(uint8_t d)
+uint8_t zapper_state(uint8_t g)
 {
-    if (gobtimer[d] < 150) {
+    if (gobtimer[g] < 150) {
         return ZAPPER_OFF;
     }
-    if (gobtimer[d] < 180) {
+    if (gobtimer[g] < 180) {
         return ZAPPER_WARMING_UP;
     }
     return ZAPPER_ON;

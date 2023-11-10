@@ -145,6 +145,9 @@ void enter_STATE_TITLESCREEN()
 
 static void tick_STATE_TITLESCREEN()
 {
+    // collect some entropy
+    rnd();
+
     uint8_t inp = inp_menukeys;
     if (inp & (INP_MENU_START|INP_MENU_A)) {
         enter_STATE_NEWGAME();
