@@ -1576,6 +1576,8 @@ void turret_create(uint8_t g)
 void turret_reset(uint8_t g)
 {
     gob_randompos(g);
+    gobvx[g] = 0;
+    gobvy[g] = 0;
     gobtimer[g] = rnd() & 0x07;     //dir
 }
 
