@@ -352,6 +352,7 @@ uint8_t plat_raw_menukeys()
         {SDL_SCANCODE_LEFT, INP_LEFT},
         {SDL_SCANCODE_RIGHT, INP_RIGHT},
         {SDL_SCANCODE_RETURN, INP_MENU_START},
+        {SDL_SCANCODE_ESCAPE, INP_MENU_ESC},
         //{SDL_SCANCODE_SPACE, INP_MENU_A},
         //{SDL_SCANCODE_RCTRL, INP_MENU_B},
     };

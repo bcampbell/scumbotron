@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 void vfx_init();
+void vfx_tick();
 void vfx_render();
 
 void vfx_play_spawn(int16_t x, int16_t y);

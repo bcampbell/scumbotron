@@ -125,6 +125,7 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 #define INP_MENU_A 0x10     // primary/action button
 #define INP_MENU_B 0x20     // secondary/cancel button
 #define INP_MENU_START 0x40
+#define INP_MENU_ESC 0x80
 
 // Returns direction + FIRE_ bits.
 uint8_t plat_raw_dualstick();

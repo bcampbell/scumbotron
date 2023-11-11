@@ -24,6 +24,7 @@ static void tick_STATE_PLAY();
 static void tick_STATE_CLEARED();
 static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
+static void tick_STATE_PAUSED();
 
 static void render_STATE_ATTRACT();
 static void render_STATE_TITLESCREEN();
@@ -34,6 +35,7 @@ static void render_STATE_PLAY();
 static void render_STATE_CLEARED();
 static void render_STATE_KILLED();
 static void render_STATE_GAMEOVER();
+static void render_STATE_PAUSED();
 
 static void level_init(uint8_t level);
 static void level_baiter_check();
@@ -50,6 +52,9 @@ void game_tick()
 {
     inp_tick();
     sfx_tick();
+    if (state != STATE_PAUSED) {
+        vfx_tick();
+    }
 
     switch(state) {
     case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
@@ -61,6 +66,7 @@ void game_tick()
     case STATE_CLEARED:     tick_STATE_CLEARED(); break;
     case STATE_KILLED:      tick_STATE_KILLED(); break;
     case STATE_GAMEOVER:    tick_STATE_GAMEOVER(); break;
+    case STATE_PAUSED:      tick_STATE_PAUSED(); break;
     case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
     case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
     case STATE_GALLERY_BADDIES:    tick_STATE_GALLERY_BADDIES(); break;
@@ -88,6 +94,7 @@ void game_render()
         case STATE_CLEARED:     render_STATE_CLEARED(); break;
         case STATE_KILLED:      render_STATE_KILLED(); break;
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
+        case STATE_PAUSED:      render_STATE_PAUSED(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
         case STATE_ENTERHIGHSCORE:  render_STATE_ENTERHIGHSCORE(); break;
         case STATE_GALLERY_BADDIES: render_STATE_GALLERY_BADDIES(); break;
@@ -99,6 +106,17 @@ void game_render()
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
+}
+
+// If player requests pause, enter STATE_PAUSED and return true.
+static bool pausemode_check()
+{
+    if( inp_menukeys & (INP_MENU_ESC|INP_MENU_START)) {
+        // Pause records current state and will resume it when unpausing.
+        enter_STATE_PAUSED();
+        return true;
+    }
+    return false;
 }
 
 /*
@@ -259,11 +277,16 @@ void enter_STATE_ENTERLEVEL()
 
 static void tick_STATE_ENTERLEVEL()
 {
+    if (pausemode_check()) {
+        return;
+    }
+
     ++statetimer;
     if (statetimer == 64) {
         // Set up all the bad dudes
         level_init(level);
         enter_STATE_GETREADY();
+        return;
     }
 }
 
@@ -304,14 +327,15 @@ void enter_STATE_GETREADY()
 
 static void tick_STATE_GETREADY()
 {
+    if (pausemode_check()) {
+        return;
+    }
+
     gobs_tick(true);    // spawnphase?
     if(gobs_spawncnt == 0) {
         enter_STATE_PLAY();
+        return;
     }
-
-    //if (++statetimer >= 48) {
-    //    enter_STATE_PLAY();
-    //}
 }
 
 static void render_STATE_GETREADY()
@@ -346,6 +370,9 @@ void enter_STATE_PLAY()
 
 static void tick_STATE_PLAY()
 {
+    if (pausemode_check()) {
+        return;
+    }
 
     gobs_tick(false);    // not spawnphase
     player_tickall();
@@ -454,13 +481,18 @@ void enter_STATE_KILLED()
 
 static void tick_STATE_KILLED()
 {
+    if (pausemode_check()) {
+        return;
+    }
     if (++statetimer > 60) {
         if (player_lives > 0 ) {
             --player_lives;
             gobs_reset();
             enter_STATE_GETREADY();
+            return;
         } else {
             enter_STATE_GAMEOVER();
+            return;
         }
     }
 }
@@ -523,6 +555,57 @@ static void render_STATE_GAMEOVER()
 {
     uint8_t ch = (SCREEN_TEXT_H/2) - 3;
     plat_text((SCREEN_TEXT_W-9)/2, ch, "GAME OVER", (tick/2) & 0x0f);
+}
+
+
+
+
+/*
+ * STATE_PAUSED
+ */
+
+static uint8_t state_paused_prevstate;
+static uint8_t state_paused_resume;
+
+void enter_STATE_PAUSED()
+{
+    state_paused_prevstate = state;
+    state_paused_resume = false;
+    state = STATE_PAUSED;
+}
+
+static void tick_STATE_PAUSED()
+{
+    if (state_paused_resume) {
+        state = state_paused_prevstate;
+        return;
+    }
+
+    if (inp_menukeys & (INP_MENU_START|INP_MENU_ESC)) {
+        // give the rendering one tick to erase the pause message
+        state_paused_resume = true;
+    }
+}
+
+static void render_STATE_PAUSED()
+{
+    // fudge!
+    state = state_paused_prevstate;
+    game_render();
+    state = STATE_PAUSED;
+
+    // if we're resuming, erase message now!
+    uint8_t colour = 0;
+    if (!state_paused_resume) {
+        colour = 1; //(tick/2)&0x0f;
+    }
+    uint8_t cy = 3;
+    uint8_t cx = (SCREEN_TEXT_W-10)/2;
+    plat_text(cx, cy,   "**********", colour);
+    plat_text(cx, cy+1, "*        *", colour);
+    plat_text(cx, cy+2, "* PAUSED *", colour);
+    plat_text(cx, cy+3, "*        *", colour);
+    plat_text(cx, cy+4, "**********", colour);
 }
 
 /*

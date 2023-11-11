@@ -14,19 +14,20 @@
 #define STATE_CLEARED 6         // level is cleared of bad dudes
 #define STATE_KILLED 7          // player just died (but has another life)
 #define STATE_GAMEOVER 8
+#define STATE_PAUSED 9          // game is paused. previous state will be resumed.
 // highscore states
-#define STATE_HIGHSCORES 9      // show high scores
-#define STATE_ENTERHIGHSCORE 10  // enter a new high score
+#define STATE_HIGHSCORES 10      // show high scores
+#define STATE_ENTERHIGHSCORE 11  // enter a new high score
 // gallery sequence
-#define STATE_GALLERY_BADDIES 11 // dude gallery screen
-#define STATE_GALLERY_GOODIES 12 // hero gallery screen
+#define STATE_GALLERY_BADDIES 12 // dude gallery screen
+#define STATE_GALLERY_GOODIES 13 // hero gallery screen
 // story sequence
-#define STATE_STORY_INTRO 13 // story part 1
-#define STATE_STORY_OHNO 14 // story part 2
-#define STATE_STORY_ATTACK 15 // story part 3
-#define STATE_STORY_RUNAWAY 16 // story part 4
-#define STATE_STORY_WHATNOW 17 // story part 5
-#define STATE_STORY_DONE 18 // story finished
+#define STATE_STORY_INTRO 14 // story part 1
+#define STATE_STORY_OHNO 15 // story part 2
+#define STATE_STORY_ATTACK 16 // story part 3
+#define STATE_STORY_RUNAWAY 17 // story part 4
+#define STATE_STORY_WHATNOW 18 // story part 5
+#define STATE_STORY_DONE 19 // story finished
  
 extern uint8_t state;
 extern uint16_t statetimer;
@@ -41,6 +42,7 @@ void enter_STATE_PLAY();
 void enter_STATE_CLEARED();
 void enter_STATE_KILLED();
 void enter_STATE_GAMEOVER();
+void enter_STATE_PAUSED();
 // In highscore.c:
 void enter_STATE_HIGHSCORES();
 void tick_STATE_HIGHSCORES();

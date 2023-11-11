@@ -13,32 +13,31 @@
 #define MAX_EFFECTS 8
 static uint8_t ekind[MAX_EFFECTS];
 static uint8_t etimer[MAX_EFFECTS];
+static uint8_t eduration[MAX_EFFECTS];
 static uint8_t ex[MAX_EFFECTS];
 static uint8_t ey[MAX_EFFECTS];
 static const char* etxt[MAX_EFFECTS];
 
+#define SPAWN_DURATION 16
 
-static void do_spawneffect(uint8_t e) {
-    uint8_t t = 16-etimer[e];
+static void render_spawn(uint8_t e) {
+    uint8_t t = SPAWN_DURATION-etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
     plat_drawbox(cx-t, cy-t, t*2, t*2, 1, t);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
 }
 
-static void do_kaboomeffect(uint8_t e) {
+#define KABOOM_DURATION 16
+
+static void render_kaboom(uint8_t e) {
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
     plat_drawbox(cx-t, cy-t, t*2, t*2, 1, t);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
 }
 
-static void do_zombifyeffect(uint8_t e) {
+#define ZOMBIFY_DURATION 16
+static void render_zombify(uint8_t e) {
     static const uint8_t greenfade[8] = {1,5,6,6,6,7,7,0};
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
@@ -46,38 +45,33 @@ static void do_zombifyeffect(uint8_t e) {
     uint8_t c = greenfade[t/2];
     plat_drawbox(cx-t, cy-1, t*2, 2, 1, c);
     plat_drawbox(cx-1, cy-t, 2, t*2, 1, c);
-    if (++etimer[e] >= 16) {
-        ekind[e] = EK_NONE;
-    }
 }
 
-static void do_quicktexteffect(uint8_t e) {
-    static const uint8_t bluefade[8] = {1,1,1,1,8,9,10,0}; 
-    uint8_t t = etimer[e]++;
+#define QUICKTEXT_DURATION 8
+static void render_quicktext(uint8_t e) {
+    static const uint8_t bluefade[QUICKTEXT_DURATION] = {1,1,1,1,8,9,10,0};
+
+    uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-
     plat_text(cx,cy,etxt[e],bluefade[t]);
-    if (bluefade[t] == 0) {
-        ekind[e] = EK_NONE;
-    }
 }
 
-static void do_alerttexteffect(uint8_t e) {
+
+#define ALERTTEXT_DURATION 64
+static void render_alerttext(uint8_t e) {
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
 
-    etimer[e]++;
     uint8_t c = 15;
-    if (etimer[e] > 64) {
-        ekind[e] = EK_NONE;
+    if (etimer[e] == (ALERTTEXT_DURATION-1)) {
         c = 0;
     }
     plat_text(cx, cy, etxt[e], c);
 }
 
-
-static void do_warpeffect(uint8_t e) {
+#define WARP_DURATION 64
+static void render_warp(uint8_t e) {
     uint8_t t = etimer[e];
 
     uint8_t cx=0;
@@ -86,10 +80,9 @@ static void do_warpeffect(uint8_t e) {
     uint8_t ch = SCREEN_TEXT_H;
 
 
-    const uint8_t DUR = 64;
     while(cw >= 2 && ch >= 2) {
         uint8_t c = 0;
-        if (t >= 16 && t < (DUR-(16+8))) {
+        if (t >= 16 && t < (WARP_DURATION-(16+8))) {
             c = (t-16)&0x0f;
         }
         ++t;
@@ -99,23 +92,9 @@ static void do_warpeffect(uint8_t e) {
         cw -= 2;
         ch -= 2;
     }
-    if (++etimer[e] >= DUR) {
-        ekind[e] = EK_NONE;
-    }
 }
 
-
-void vfx_init()
-{
-    // clear effect table
-    uint8_t i;
-    for(i=0; i<MAX_EFFECTS; ++i) {
-        ekind[i] = EK_NONE;
-    }
-}
-
-
-static void generic_add(int16_t x, int16_t y, uint8_t kind, const char* txt)
+static void generic_add(int16_t x, int16_t y, uint8_t kind, const char* txt, uint8_t duration)
 {
     // find free one
     uint8_t e = 0;
@@ -131,11 +110,12 @@ static void generic_add(int16_t x, int16_t y, uint8_t kind, const char* txt)
     ey[e] = (((y >> FX) + 4) / 8);
     etxt[e] = txt;
     etimer[e] = 0;
+    eduration[e] = duration;
 }
 
 void vfx_play_quicktext(int16_t x, int16_t y, const char* txt)
 {
-    generic_add(x, y, EK_QUICKTEXT, txt);
+    generic_add(x, y, EK_QUICKTEXT, txt, QUICKTEXT_DURATION);
 }
 
 void vfx_play_alerttext(const char* txt)
@@ -148,34 +128,51 @@ void vfx_play_alerttext(const char* txt)
 
     uint8_t cx = (SCREEN_TEXT_W - n)/2;
     uint8_t cy = (SCREEN_TEXT_H / 4);
-    generic_add((cx * 8) << FX, (cy * 8) << FX, EK_ALERTTEXT, txt);
+    generic_add((cx * 8) << FX, (cy * 8) << FX, EK_ALERTTEXT, txt, ALERTTEXT_DURATION);
 }
 
 void vfx_play_kaboom(int16_t x, int16_t y)
 {
-    generic_add(x, y, EK_KABOOM, 0);
+    generic_add(x, y, EK_KABOOM, 0, KABOOM_DURATION);
 }
 
 void vfx_play_spawn(int16_t x, int16_t y)
 {
-    generic_add(x, y, EK_SPAWN, 0);
+    generic_add(x, y, EK_SPAWN, 0, SPAWN_DURATION);
 }
 
 void vfx_play_zombify(int16_t x, int16_t y)
 {
-    generic_add(x, y, EK_ZOMBIFY, 0);
+    generic_add(x, y, EK_ZOMBIFY, 0, ZOMBIFY_DURATION);
 }
 
 void vfx_play_warp()
 {
-    generic_add(0, 0, EK_WARP, 0);
+    generic_add(0, 0, EK_WARP, 0, WARP_DURATION);
 }
 
 
-// TODO: kill
-void vfx_add(int16_t x, int16_t y, uint8_t kind)
+void vfx_init()
 {
-    generic_add(x,y, kind, 0);
+    // clear effect table
+    uint8_t i;
+    for(i=0; i<MAX_EFFECTS; ++i) {
+        ekind[i] = EK_NONE;
+    }
+}
+
+void vfx_tick()
+{
+    uint8_t e;
+    for(e = 0; e < MAX_EFFECTS; ++e) {
+        if (ekind[e] == EK_NONE) {
+            continue;
+        }
+        ++etimer[e];
+        if (etimer[e] >= eduration[e]) {
+            ekind[e] = EK_NONE;
+        }
+    }
 }
 
 
@@ -185,12 +182,12 @@ void vfx_render()
     for(e = 0; e < MAX_EFFECTS; ++e) {
         switch (ekind[e]) {
             case EK_NONE: continue;
-            case EK_SPAWN: do_spawneffect(e); break;
-            case EK_KABOOM: do_kaboomeffect(e); break;
-            case EK_ZOMBIFY: do_zombifyeffect(e); break;
-            case EK_WARP: do_warpeffect(e); break;
-            case EK_QUICKTEXT: do_quicktexteffect(e); break;
-            case EK_ALERTTEXT: do_alerttexteffect(e); break;
+            case EK_SPAWN: render_spawn(e); break;
+            case EK_KABOOM: render_kaboom(e); break;
+            case EK_ZOMBIFY: render_zombify(e); break;
+            case EK_WARP: render_warp(e); break;
+            case EK_QUICKTEXT: render_quicktext(e); break;
+            case EK_ALERTTEXT: render_alerttext(e); break;
         }
     }
 }

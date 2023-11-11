@@ -166,7 +166,7 @@ static void sprout16(int16_t x, int16_t y, uint8_t img ) {
     //    z: zdepth (0=sprite off)
     //    v: vflip
     //    h: hflip
-    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // 7: hhwwpppp
     //    h: height
     //    w: width
@@ -187,7 +187,7 @@ static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
 }
@@ -205,7 +205,7 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
 }
@@ -223,7 +223,7 @@ static void sprout32_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (2 << 6) | (2 << 4) | 1;  // 32x32, palette offset 1.
 }
@@ -242,7 +242,7 @@ static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (x >> (FX + 8)) & 0x03;  // x hi
     VERA.data1 = (y >> FX) & 0xff;  // y lo
     VERA.data1 = (y >> (FX + 8)) & 0x03;  // y hi
-    VERA.data1 = (3) << 2; // collmask(4),z(2),vflip,hflip
+    VERA.data1 = (2) << 2; // collmask(4),z(2),vflip,hflip
     // wwhhpppp
     VERA.data1 = (0 << 6) | (3 << 4);  // 64x8, 0 palette offset.
 }
@@ -837,6 +837,7 @@ uint8_t plat_raw_menukeys()
     if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
     if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
     if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_START; }
+    if (inp_keypressed(KEYCODE_ESC)) { state |= INP_MENU_ESC; }
 
     long j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
