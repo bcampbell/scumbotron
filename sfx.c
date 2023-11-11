@@ -52,7 +52,6 @@ void sfx_play(uint8_t effect, uint8_t pri)
         // start looking _after_ the most recent one.
         ch = sfx_next;
         for (uint8_t i = 0; i < MAX_SFX; ++i) {
-            uint8_t p = sfx_pri[ch];
             if (sfx_pri[ch] <= pri ) {
                 break;  // that'll do.
             }
