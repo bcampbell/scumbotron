@@ -1602,7 +1602,7 @@ void turret_tick(uint8_t g)
         uint8_t m = gob_alloc();
         if (m < MAX_GOBS) {
             uint8_t dir8 = gobtimer[g];
-            missile_spawn(m, gobx[g], goby[g], dir8);
+            missile_spawn(m, gobx[g] + (4<<FX), goby[g] + (4<<FX), dir8);
         }
     }
 

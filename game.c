@@ -654,9 +654,8 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 3);
             break;
         case 7:
-            gobs_create(GK_BLOCK, 30);
+            gobs_create(GK_BLOCK, 10);
             gobs_create(GK_RIFASHARK, 8);
-            gobs_create(GK_VULGON, 2);
             gobs_create(GK_MARINE, 3);
             break;
         case 8:
@@ -690,7 +689,7 @@ static void level_init(uint8_t level)
         case 13:
             gobs_create(GK_RIFASPAWNER, 1);
             gobs_create(GK_GRUNT, 16);
-            gobs_create(GK_MARINE, 16);
+            gobs_create(GK_MARINE, 5);
             break;
         case 14:
             gobs_create(GK_FRAGGER, 30);
@@ -705,44 +704,45 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 3);
             break;
         case 16:
-            gobs_create(GK_HAPPYSLAPPER, 40);
+            gobs_create(GK_HAPPYSLAPPER, 20);
             gobs_create(GK_MARINE, 3);
             break;
         case 17:
             gobs_create(GK_BRAIN, 2);
             gobs_create(GK_AMOEBA_BIG, 1);
-            gobs_create(GK_GRUNT, 30);
+            gobs_create(GK_GRUNT, 16);
             gobs_create(GK_VZAPPER, 2);
-            gobs_create(GK_MARINE, 8);
+            gobs_create(GK_MARINE, 10);
             break;
         case 18:
-            gobs_create(GK_VULGON, 8);
+            gobs_create(GK_FRAGGER, 8);
+            gobs_create(GK_TURRET, 2);
             gobs_create(GK_BLOCK, 8);
             gobs_create(GK_MARINE, 5);
             break;
         case 19:
-            gobs_create(GK_BLOCK, 30);
+            gobs_create(GK_BLOCK, 10);
             gobs_create(GK_VULGON, 3);
             gobs_create(GK_GRUNT, 10);
             gobs_create(GK_MARINE, 3);
             break;
         case 20:
-            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_BLOCK, 5);
             gobs_create(GK_FRAGGER, 10);
-            gobs_create(GK_AMOEBA_BIG, 5);
+            gobs_create(GK_AMOEBA_BIG, 3);
             gobs_create(GK_VZAPPER, 1);
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_MARINE, 3);
             break;
         case 21:
-            gobs_create(GK_BLOCK, 10);
-            gobs_create(GK_GRUNT, 30);
-            gobs_create(GK_HAPPYSLAPPER, 20);
+            gobs_create(GK_BLOCK, 5);
+            gobs_create(GK_TANK, 8);
+            gobs_create(GK_HAPPYSLAPPER, 16);
             gobs_create(GK_MARINE, 3);
             break;
         case 22:
-            gobs_create(GK_TURRET, 5);
-            gobs_create(GK_GRUNT, 8);
+            gobs_create(GK_TURRET, 3);
+            gobs_create(GK_GRUNT, 12);
             gobs_create(GK_MARINE, 5);
             break;
         case 23:
@@ -802,6 +802,39 @@ static void level_init(uint8_t level)
             gobs_create(GK_RIFASPAWNER, 5);
             gobs_create(GK_BLOCK, 10);
             gobs_create(GK_MARINE, 5);
+            break;
+        case 33:
+            gobs_create(GK_TURRET, 4);
+            gobs_create(GK_HAPPYSLAPPER, 20);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 34:
+            gobs_create(GK_RIFASHARK, 24);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 35:
+            gobs_create(GK_VZAPPER, 5);
+            gobs_create(GK_TANK, 10);
+            gobs_create(GK_GRUNT, 10);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 36:
+            gobs_create(GK_RIFASPAWNER, 4);
+            gobs_create(GK_FRAGGER, 16);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 37:
+            gobs_create(GK_HAPPYSLAPPER, 8);
+            gobs_create(GK_FRAGGER, 8);
+            gobs_create(GK_AMOEBA_BIG, 2);
+            gobs_create(GK_VULGON, 4);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 38:
+            gobs_create(GK_VULGON, 8);
+            gobs_create(GK_TURRET, 2);
+            gobs_create(GK_BRAIN, 2);
+            gobs_create(GK_MARINE, 14);
             break;
         default:
             gobs_create(GK_BAITER, 1);
