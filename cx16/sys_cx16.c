@@ -270,6 +270,11 @@ void plat_init()
     uint8_t vid;
     irq_init();
 
+    // Ensure uppercase+PETSCII charset.
+    // 2 = c64 style
+    // 4 = thin, pet-style?
+    cx16_k_screen_set_charset(4, 0);
+
     // screen mode 40x30
     VERA.control = 0x00;    //DCSEL=0
     vid = VERA.display.video;
