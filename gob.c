@@ -1593,8 +1593,8 @@ void turret_tick(uint8_t g)
         gobtimer[g] = turntoward8(gobtimer[g], dir8);
       
         // accelerate toward player if facing
-        gob_seek_x(g, plrx[0], (1<<FX)/16, (1<<FX)/16);
-        gob_seek_y(g, plry[0], (1<<FX)/16, (1<<FX)/16);
+        gob_seek_x(g, plrx[0], (1<<FX)/16, (1<<FX)/8);
+        gob_seek_y(g, plry[0], (1<<FX)/16, (1<<FX)/8);
     }
 
     if (((tick + g) & 0x1f) == 0) {
@@ -1602,7 +1602,7 @@ void turret_tick(uint8_t g)
         uint8_t m = gob_alloc();
         if (m < MAX_GOBS) {
             uint8_t dir8 = gobtimer[g];
-            missile_spawn(m, gobx[g] + (4<<FX), goby[g] + (4<<FX), dir8);
+            missile_spawn(m, gobx[g] + (2<<FX), goby[g] + (2<<FX), dir8);
         }
     }
 
