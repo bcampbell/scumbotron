@@ -674,7 +674,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 3);
             break;
         case 10:
-            gobs_create(GK_TURRET, 1);
+            gobs_create(GK_GOBBER, 1);
             gobs_create(GK_BLOCK, 15);
             gobs_create(GK_GRUNT, 15);
             break;
@@ -718,7 +718,7 @@ static void level_init(uint8_t level)
             break;
         case 18:
             gobs_create(GK_FRAGGER, 8);
-            gobs_create(GK_TURRET, 2);
+            gobs_create(GK_GOBBER, 2);
             gobs_create(GK_BLOCK, 8);
             gobs_create(GK_MARINE, 5);
             break;
@@ -743,7 +743,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 3);
             break;
         case 22:
-            gobs_create(GK_TURRET, 3);
+            gobs_create(GK_GOBBER, 3);
             gobs_create(GK_GRUNT, 12);
             gobs_create(GK_MARINE, 5);
             break;
@@ -764,7 +764,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 30);
             break;
         case 26:
-            gobs_create(GK_TURRET, 3);
+            gobs_create(GK_GOBBER, 3);
             gobs_create(GK_BLOCK, 5);
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_VZAPPER, 1);
@@ -806,7 +806,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_MARINE, 5);
             break;
         case 33:
-            gobs_create(GK_TURRET, 4);
+            gobs_create(GK_GOBBER, 4);
             gobs_create(GK_HAPPYSLAPPER, 20);
             gobs_create(GK_MARINE, 5);
             break;
@@ -834,7 +834,7 @@ static void level_init(uint8_t level)
             break;
         case 38:
             gobs_create(GK_VULGON, 8);
-            gobs_create(GK_TURRET, 2);
+            gobs_create(GK_GOBBER, 2);
             gobs_create(GK_BRAIN, 2);
             gobs_create(GK_MARINE, 14);
             break;

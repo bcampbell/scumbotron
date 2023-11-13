@@ -104,15 +104,15 @@ static void render_baddies(uint8_t page)
                 // row 2
                 case 3:
                     plat_rifaspawner_render(x - (8 << FX), y);
-                    plat_text(cx - (11/2), cy, "RIFASPAWNER", c);
+                    plat_text(cx - ((11/2)+1), cy, "RIFASPAWNER", c);
                     break;
                 case 4:
-                    plat_rifashark_render(x - (8 << FX), y, (tick/32) & 0x07);
-                    plat_text(cx - (9/2), cy, "RIFASHARK", c);
+                    plat_gobber_render(x - (8 << FX), y, (tick/32) & 0x07, false);
+                    plat_text(cx - (6/2), cy, "GOBBER", c);
                     break;
                 case 5:
-                    plat_turret_render(x - (8 << FX), y, (tick/32) & 0x07, false);
-                    plat_text(cx - (6/2), cy, "GOBBER", c);
+                    plat_rifashark_render(x - (8 << FX), y, (tick/32) & 0x07);
+                    plat_text(cx - (9/2), cy, "RIFASHARK", c);
                     break;
             }
         }

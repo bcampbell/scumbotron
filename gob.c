@@ -146,7 +146,7 @@ void gobs_tick(bool spawnphase)
             case GK_ZOMBIE:  zombie_tick(i); break;
             case GK_RIFASHARK:  rifashark_tick(i); break;
             case GK_RIFASPAWNER:  rifaspawner_tick(i); break;
-            case GK_TURRET:  turret_tick(i); break;
+            case GK_GOBBER:  gobber_tick(i); break;
             case GK_MISSILE:  missile_tick(i); break;
             case GK_BOSS:  boss_tick(i); break;
             case GK_BOSSSEG:  bossseg_tick(i); break;
@@ -227,8 +227,8 @@ void gobs_render()
             case GK_RIFASPAWNER:
                 plat_rifaspawner_render(gobx[d], goby[d]);
                 break;
-            case GK_TURRET:
-                plat_turret_render(gobx[d], goby[d], gobtimer[d], gobflags[d] & GF_HIGHLIGHT_MASK);
+            case GK_GOBBER:
+                plat_gobber_render(gobx[d], goby[d], gobtimer[d], gobflags[d] & GF_HIGHLIGHT_MASK);
                 break;
             case GK_MISSILE:
                 plat_missile_render(gobx[d], goby[d], gobdat[d]);
@@ -273,7 +273,7 @@ void gob_shot(uint8_t d, uint8_t s)
         case GK_ZOMBIE:       zombie_shot(d, s); break;
         case GK_RIFASHARK:    rifashark_shot(d, s); break;
         case GK_RIFASPAWNER:  rifaspawner_shot(d, s); break;
-        case GK_TURRET:       turret_shot(d, s); break;
+        case GK_GOBBER:       gobber_shot(d, s); break;
         case GK_MISSILE:      missile_shot(d, s); break;
         case GK_BOSS:         boss_shot(d, s); break;
         case GK_BOSSSEG:      bossseg_shot(d, s); break;
@@ -322,7 +322,7 @@ void gobs_create(uint8_t kind, uint8_t n)
             case GK_ZOMBIE: zombie_create(d); break;
             case GK_RIFASHARK: rifashark_create(d); break;
             case GK_RIFASPAWNER: rifaspawner_create(d); break;
-            case GK_TURRET: turret_create(d); break;
+            case GK_GOBBER: gobber_create(d); break;
             case GK_MISSILE: missile_create(d); break;
             case GK_BOSS: boss_create(d); break;
             // Not all kinds can be created. Some are spawned by others.
@@ -366,7 +366,7 @@ void gobs_reset() {
             case GK_ZOMBIE:       zombie_reset(g); break;
             case GK_RIFASHARK:    rifashark_reset(g); break;
             case GK_RIFASPAWNER:  rifaspawner_reset(g); break;
-            case GK_TURRET:       turret_reset(g); break;
+            case GK_GOBBER:       gobber_reset(g); break;
             case GK_MISSILE:      missile_reset(g); break;
             case GK_BOSS:         boss_reset(g); break;
             case GK_BOSSSEG:      bossseg_reset(g); break;
@@ -1559,21 +1559,21 @@ void rifaspawner_shot(uint8_t g, uint8_t shot)
 }
 
 /*
- * Turret
+ * Gobber
  * gobtimer: dir (0..7)
  * gobdat: life
  *
  */
 
-void turret_create(uint8_t g)
+void gobber_create(uint8_t g)
 {
-    gobkind[g] = GK_TURRET;
+    gobkind[g] = GK_GOBBER;
     gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobdat[g] = 12;   // life
-    turret_reset(g);
+    gobber_reset(g);
 }
 
-void turret_reset(uint8_t g)
+void gobber_reset(uint8_t g)
 {
     gob_randompos(g);
     gobvx[g] = 0;
@@ -1582,7 +1582,7 @@ void turret_reset(uint8_t g)
 }
 
 
-void turret_tick(uint8_t g)
+void gobber_tick(uint8_t g)
 {
     if (((tick + g) & 0x0f) == 0) {
         // turn to player
@@ -1610,7 +1610,7 @@ void turret_tick(uint8_t g)
     gob_move_bounce_y(g);
 }
 
-void turret_shot(uint8_t g, uint8_t shot)
+void gobber_shot(uint8_t g, uint8_t shot)
 {
     gob_knockback_shot(g, shot, SCORE_150);
 }

@@ -44,7 +44,7 @@
 #define SPR16_SHOT_HEAVY 72
 #define SPR16_BRAIN 76
 #define SPR16_ZOMBIE 78
-#define SPR16_TURRET 80
+#define SPR16_GOBBER 80
 #define SPR16_MISSILE 88
 #define SPR16_RIFASHARK 96
 #define SPR16_RIFASPAWNER 92+16
@@ -270,9 +270,9 @@ void plat_rifaspawner_render(int16_t x, int16_t y)
     sprout16(x, y, SPR16_RIFASPAWNER + f);
 }
 
-void plat_turret_render(int16_t x, int16_t y, uint8_t dir8, bool highlight)
+void plat_gobber_render(int16_t x, int16_t y, uint8_t dir8, bool highlight)
 {
-    uint8_t f = SPR16_TURRET + dir8;
+    uint8_t f = SPR16_GOBBER + dir8;
     if (highlight) {
         sprout16_highlight(x, y, f);
     } else {
