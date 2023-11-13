@@ -69,7 +69,8 @@ void game_tick()
     case STATE_PAUSED:      tick_STATE_PAUSED(); break;
     case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
     case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
-    case STATE_GALLERY_BADDIES:    tick_STATE_GALLERY_BADDIES(); break;
+    case STATE_GALLERY_BADDIES_1:    tick_STATE_GALLERY_BADDIES_1(); break;
+    case STATE_GALLERY_BADDIES_2:    tick_STATE_GALLERY_BADDIES_2(); break;
     case STATE_GALLERY_GOODIES:    tick_STATE_GALLERY_GOODIES(); break;
     case STATE_STORY_INTRO:    tick_STATE_STORY_INTRO(); break;
     case STATE_STORY_OHNO:    tick_STATE_STORY_OHNO(); break;
@@ -97,7 +98,8 @@ void game_render()
         case STATE_PAUSED:      render_STATE_PAUSED(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
         case STATE_ENTERHIGHSCORE:  render_STATE_ENTERHIGHSCORE(); break;
-        case STATE_GALLERY_BADDIES: render_STATE_GALLERY_BADDIES(); break;
+        case STATE_GALLERY_BADDIES_1: render_STATE_GALLERY_BADDIES_1(); break;
+        case STATE_GALLERY_BADDIES_2: render_STATE_GALLERY_BADDIES_2(); break;
         case STATE_GALLERY_GOODIES: render_STATE_GALLERY_GOODIES(); break;
         case STATE_STORY_INTRO:      render_STATE_STORY_INTRO(); break;
         case STATE_STORY_OHNO:      render_STATE_STORY_OHNO(); break;
@@ -141,7 +143,7 @@ static void tick_STATE_ATTRACT()
     switch (attract_phase) {
         case 1: enter_STATE_TITLESCREEN(); return;
         case 2: enter_STATE_HIGHSCORES(); return;
-        case 3: enter_STATE_GALLERY_BADDIES(); return;
+        case 3: enter_STATE_GALLERY_BADDIES_1(); return;
         case 0: enter_STATE_STORY_INTRO(); return;
     }
 }

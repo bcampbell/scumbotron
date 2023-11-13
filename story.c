@@ -4,33 +4,11 @@
 #include "plat.h"
 #include "vfx.h"
 
-/*
- * STATE_GALLERY_BADDIES
- */
-void enter_STATE_GALLERY_BADDIES()
+
+// We've got two pages of dudes to render, but the layout is the
+// same so we'll unify it.
+static void render_baddies(uint8_t page)
 {
-    state = STATE_GALLERY_BADDIES;
-    statetimer=0;
-    plat_clr();
-}
-
-
-void tick_STATE_GALLERY_BADDIES()
-{
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_NEWGAME();
-        return;
-    }
-
-    if (++statetimer > 250 || inp) {
-        enter_STATE_GALLERY_GOODIES();
-    }
-}
-
-void render_STATE_GALLERY_BADDIES()
-{
-
     // Aim to fit within a 256x192 (NDS) size
 
     // columns
@@ -50,7 +28,8 @@ void render_STATE_GALLERY_BADDIES()
 
     plat_text(cx2 - 4, 1 ,"THE CAST", 1);
 
-    for (uint8_t i = 0; i < 9; ++i) {
+    uint8_t cnt = (page == 0) ? 9 : 6;
+    for (uint8_t i = 0; i < cnt; ++i) {
         const uint8_t cx = cxtable[i];
         const uint8_t cy = cytable[i];
         const int16_t x = (cx * 8) << FX;
@@ -65,48 +44,137 @@ void render_STATE_GALLERY_BADDIES()
             continue;
         }
 
-        switch(i) {
-            // row 1
-            case 0:
-                plat_grunt_render(x - (8 << FX), y);
-                plat_text(cx - 2, cy, "GRUNT", c);
-                break;
-            case 1:
-                plat_block_render(x - (8 << FX), y);
-                plat_text(cx - 3, cy1,  "BLOCK", c);
-                break;
-            case 2:
-                plat_fragger_render(x - (8 << FX), y);
-                plat_text(cx - 3, cy, "FRAGGER", c);
-                break;
-            // row 2
-            case 3:
-                plat_amoeba_big_render(x - (16 << FX), y - (8 << FX));
-                plat_text(cx - 3, cy, "AMOEBA", c);
-                break;
-            case 4:
-                plat_tank_render(x - (8 << FX), y, false);
-                plat_text(cx - 2, cy, "TANK", c);
-                break;
-            case 5:
-                plat_happyslapper_render(x - (8 << FX), y, false);
-                plat_text(cx - 6, cy, "HAPPYSLAPPER", c);
-                break;
-            // row 3
-            case 6:
-                plat_vulgon_render(x - (8 << FX), y, false, 0);
-                plat_text(cx - 3, cy, "VULGON", c);
-                break;
-            case 7:
-                plat_poomerang_render(x - (8 << FX), y);
-                plat_text(cx - 4, cy, "POOMERANG", c);
-                break;
-            case 8:
-                plat_hzapper_render(x - (8 << FX), y, 0);
-                plat_text(cx - 3, cy, "ZAPPER", c);
-                break;
+        if (page == 0) {
+            switch(i) {
+                // row 1
+                case 0:
+                    plat_grunt_render(x - (8 << FX), y);
+                    plat_text(cx - 2, cy, "GRUNT", c);
+                    break;
+                case 1:
+                    plat_block_render(x - (8 << FX), y);
+                    plat_text(cx - 3, cy,  "BLOCK", c);
+                    break;
+                case 2:
+                    plat_fragger_render(x - (8 << FX), y);
+                    plat_text(cx - 3, cy, "FRAGGER", c);
+                    break;
+                // row 2
+                case 3:
+                    plat_amoeba_big_render(x - (16 << FX), y - (8 << FX));
+                    plat_text(cx - 3, cy, "AMOEBA", c);
+                    break;
+                case 4:
+                    plat_tank_render(x - (8 << FX), y, false);
+                    plat_text(cx - 2, cy, "TANK", c);
+                    break;
+                case 5:
+                    plat_happyslapper_render(x - (8 << FX), y, false);
+                    plat_text(cx - 6, cy, "HAPPYSLAPPER", c);
+                    break;
+                // row 3
+                case 6:
+                    plat_vulgon_render(x - (8 << FX), y, false, 0);
+                    plat_text(cx - 3, cy, "VULGON", c);
+                    break;
+                case 7:
+                    plat_poomerang_render(x - (8 << FX), y);
+                    plat_text(cx - 4, cy, "POOMERANG", c);
+                    break;
+                case 8:
+                    plat_hzapper_render(x - (8 << FX), y, 0);
+                    plat_text(cx - 3, cy, "ZAPPER", c);
+                    break;
+            }
+        } else if (page == 1) {
+            switch(i) {
+                // row 1
+                case 0:
+                    plat_brain_render(x - (8 << FX), y, false);
+                    plat_text(cx - (5/2), cy, "BRAIN", c);
+                    break;
+                case 1:
+                    plat_zombie_render(x - (8 << FX), y);
+                    plat_text(cx - (6/2), cy, "ZOMBIE", c);
+                    break;
+                case 2:
+                    plat_baiter_render(x - (8 << FX), y);
+                    plat_text(cx - (6/2), cy, "BAITER", c);
+                    break;
+                // row 2
+                case 3:
+                    plat_rifaspawner_render(x - (8 << FX), y);
+                    plat_text(cx - (11/2), cy, "RIFASPAWNER", c);
+                    break;
+                case 4:
+                    plat_rifashark_render(x - (8 << FX), y, (tick/32) & 0x07);
+                    plat_text(cx - (9/2), cy, "RIFASHARK", c);
+                    break;
+                case 5:
+                    plat_turret_render(x - (8 << FX), y, (tick/32) & 0x07, false);
+                    plat_text(cx - (6/2), cy, "GOBBER", c);
+                    break;
+            }
         }
     }
+}
+
+/*
+ * STATE_GALLERY_BADDIES_1
+ */
+void enter_STATE_GALLERY_BADDIES_1()
+{
+    state = STATE_GALLERY_BADDIES_1;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_GALLERY_BADDIES_1()
+{
+    uint8_t inp = inp_menukeys;
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+
+    if (++statetimer > 400 || inp) {
+        enter_STATE_GALLERY_BADDIES_2();
+    }
+}
+
+void render_STATE_GALLERY_BADDIES_1()
+{
+    render_baddies(0);
+}
+
+/*
+ * STATE_GALLERY_BADDIES_2
+ */
+void enter_STATE_GALLERY_BADDIES_2()
+{
+    state = STATE_GALLERY_BADDIES_2;
+    statetimer=0;
+    plat_clr();
+}
+
+
+void tick_STATE_GALLERY_BADDIES_2()
+{
+    uint8_t inp = inp_menukeys;
+    if (inp & (INP_MENU_START|INP_MENU_A)) {
+        enter_STATE_NEWGAME();
+        return;
+    }
+
+    if (++statetimer > 400 || inp) {
+        enter_STATE_GALLERY_GOODIES();
+    }
+}
+
+void render_STATE_GALLERY_BADDIES_2()
+{
+    render_baddies(1);
 }
 
 /*
@@ -127,7 +195,7 @@ void tick_STATE_GALLERY_GOODIES()
         enter_STATE_NEWGAME();
         return;
     }
-    if (++statetimer > 250 || inp) {
+    if (++statetimer > 400 || inp) {
         enter_STATE_ATTRACT();  // Back to attract mode.
     }
 }
@@ -155,7 +223,6 @@ void render_STATE_GALLERY_GOODIES()
         const uint8_t cy = cytable[i];
         const int16_t x = ((cx * 8) - 8)  << FX;    // -8 for 16x16 spr
         const int16_t y = ((cy * 8) - 24) << FX;
-
 
         const uint8_t c = 15;
         const uint8_t appear = 20 + i*30;

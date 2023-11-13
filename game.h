@@ -19,15 +19,16 @@
 #define STATE_HIGHSCORES 10      // show high scores
 #define STATE_ENTERHIGHSCORE 11  // enter a new high score
 // gallery sequence
-#define STATE_GALLERY_BADDIES 12 // dude gallery screen
-#define STATE_GALLERY_GOODIES 13 // hero gallery screen
+#define STATE_GALLERY_BADDIES_1 12 // dude gallery screen
+#define STATE_GALLERY_BADDIES_2 13 // dude gallery screen
+#define STATE_GALLERY_GOODIES 14 // hero gallery screen
 // story sequence
-#define STATE_STORY_INTRO 14 // story part 1
-#define STATE_STORY_OHNO 15 // story part 2
-#define STATE_STORY_ATTACK 16 // story part 3
-#define STATE_STORY_RUNAWAY 17 // story part 4
-#define STATE_STORY_WHATNOW 18 // story part 5
-#define STATE_STORY_DONE 19 // story finished
+#define STATE_STORY_INTRO 15 // story part 1
+#define STATE_STORY_OHNO 16 // story part 2
+#define STATE_STORY_ATTACK 17 // story part 3
+#define STATE_STORY_RUNAWAY 18 // story part 4
+#define STATE_STORY_WHATNOW 19 // story part 5
+#define STATE_STORY_DONE 20 // story finished
  
 extern uint8_t state;
 extern uint16_t statetimer;
@@ -51,9 +52,12 @@ void enter_STATE_ENTERHIGHSCORE(uint32_t score);
 void tick_STATE_ENTERHIGHSCORE();
 void render_STATE_ENTERHIGHSCORE();
 // In story.c
-void enter_STATE_GALLERY_BADDIES();
-void tick_STATE_GALLERY_BADDIES();
-void render_STATE_GALLERY_BADDIES();
+void enter_STATE_GALLERY_BADDIES_1();
+void tick_STATE_GALLERY_BADDIES_1();
+void render_STATE_GALLERY_BADDIES_1();
+void enter_STATE_GALLERY_BADDIES_2();
+void tick_STATE_GALLERY_BADDIES_2();
+void render_STATE_GALLERY_BADDIES_2();
 void enter_STATE_GALLERY_GOODIES();
 void tick_STATE_GALLERY_GOODIES();
 void render_STATE_GALLERY_GOODIES();
