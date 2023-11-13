@@ -174,6 +174,7 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
+#if 0
     {
         static uint8_t prev = 0;
         uint8_t cur = plat_raw_cheatkeys();
@@ -184,6 +185,8 @@ static void tick_STATE_TITLESCREEN()
         }
         prev = cur;
     }
+#endif
+
     if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
         enter_STATE_ATTRACT();
     }
@@ -212,7 +215,7 @@ static void render_STATE_TITLESCREEN()
     const uint8_t cx = (SCREEN_TEXT_W-32)/2;
     const uint8_t cy = 4;
     plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
-    plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1981 SCUMWAYS INC.", 1);
+    plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1982 SCUMWAYS INC.", 1);
 
 
     uint8_t col1 = (SCREEN_TEXT_W/2) - 5 - 8;
@@ -418,6 +421,7 @@ static void tick_STATE_PLAY()
     }
     state_play_cleartime = 0;
     level_baiter_check();
+#if ENABLE_CHEATS
     // CHEAT
     {
         uint8_t cheat = inp_cheatkeys;
@@ -439,7 +443,7 @@ static void tick_STATE_PLAY()
             player_extra_life(0);
         }
     }
-    // ENDCHEAT
+#endif  // ENABLE_CHEATS
 }
 
 static void render_STATE_PLAY()
