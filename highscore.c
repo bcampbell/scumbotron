@@ -12,16 +12,22 @@ static uint8_t entry_cursor;
 
 void highscore_init()
 {
-    uint32_t score = 10000;
-    for (uint8_t i = 0; i < HIGHSCORE_COUNT; ++i) {
-        highscore* h = &highscore_table[i];
-        h->score = score;
-        score -= 1000;
-        h->name[0] = 'A';
-        h->name[1] = 'C';
-        h->name[2] = 'E';
-        for (uint8_t j = 3; j<HIGHSCORE_NAME_SIZE; ++j) {
-            h->name[j] = ' ';
+    // try and load in the scores...
+    bool loaded = plat_loadscores(highscore_table, sizeof(highscore_table));
+
+    if (!loaded) {
+        // fill out default score table.
+        uint32_t score = 10000;
+        for (uint8_t i = 0; i < HIGHSCORE_COUNT; ++i) {
+            highscore* h = &highscore_table[i];
+            h->score = score;
+            score -= 1000;
+            h->name[0] = 'A';
+            h->name[1] = 'C';
+            h->name[2] = 'E';
+            for (uint8_t j = 3; j<HIGHSCORE_NAME_SIZE; ++j) {
+                h->name[j] = ' ';
+            }
         }
     }
 }
@@ -252,6 +258,8 @@ void tick_STATE_ENTERHIGHSCORE()
 #ifdef PLAT_HAS_TEXTENTRY
         plat_textentry_stop();
 #endif
+        // no error handling
+        plat_savescores(highscore_table, sizeof(highscore_table));
         enter_STATE_HIGHSCORES();
     }
 }

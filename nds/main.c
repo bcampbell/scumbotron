@@ -618,6 +618,16 @@ void plat_drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_
     }
 }
 
+bool plat_savescores(const void* begin, int nbytes)
+{
+    return false;
+}
+
+bool plat_loadscores(void* begin, int nbytes)
+{
+    return false;
+}
+
 
 /*
  * main

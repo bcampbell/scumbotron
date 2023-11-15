@@ -973,6 +973,48 @@ char plat_textentry_getchar()
 
 #endif // PLAT_HAS_TEXTENTRY
  
+bool plat_savescores(const void* begin, int nbytes)
+{
+    cbm_k_setnam("@:SCUMBOSCORES");
+    cbm_k_setlfs(1,8,1);
+    // TODO: use bsave/savehl when available!
+    // https://github.com/llvm-mos/llvm-mos-sdk/issues/242
+    // cbm_k_save prepends the 2byte address header :-(
+    char result = cbm_k_save((void*)begin, (void*)(begin + nbytes));
+    if (result != 0) {
+        return false;
+    }
+    return true;
+}
+
+bool plat_loadscores(void* begin, int nbytes)
+{
+    cbm_k_setnam("SCUMBOSCORES");
+    cbm_k_setlfs(1,8,0);    // 0=ignore header, 2= headerless load
+    // TODO: use headerless load when we switch to bsave/savehl.
+    // load into banked RAM for safety.
+    void* tmp = (void*)0xA000;
+    void* result = cbm_k_load(0, tmp);
+
+    // if return is < 256 then it's an error code, not the end address
+    if ((uint16_t)result <= 255) {
+
+        // 4 = file not found, that's ok. might be first run.
+        if ((uint16_t)result == 4) {
+            // Clear the flashing drive light
+            // https://commanderx16.com/forum/viewtopic.php?p=27600#p27600
+            cbm_k_listen(8);
+            cbm_k_second(15);
+            cbm_k_ciout('I');
+            cbm_k_unlsn();
+        }
+        return false;   // didn't load.
+    }
+    cx16_k_memory_copy(tmp, begin, nbytes);
+    return true;
+}
+
+
 int main(void) {
 
     plat_init();

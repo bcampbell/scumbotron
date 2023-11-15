@@ -1684,6 +1684,22 @@ void missile_shot(uint8_t g, uint8_t shot)
  * gobtimer: time until next target
  */
 
+// NOTE: Boss is incomplete and stubbed out.
+// We ran out of memory - hit the cx16 38KB BASIC RAM limit.
+// Maybe revisit having a proper boss if later versions of llvm-mos
+// produce smaller code...
+
+void boss_create(uint8_t g) {}
+void boss_reset(uint8_t g) {}
+void boss_tick(uint8_t g) {}
+void boss_shot(uint8_t g, uint8_t shot) {}
+
+void bossseg_spawn(uint8_t g, uint8_t slot) {}
+void bossseg_reset(uint8_t g) {}
+void bossseg_tick(uint8_t g) {}
+void bossseg_shot(uint8_t g, uint8_t shot) {}
+
+#if 0
 #define NUM_BOSSSEGS 12
 #define NUM_BOSS_FORMATIONS 3
 
@@ -1933,4 +1949,5 @@ void bossseg_tick(uint8_t g)
     gobx[g] = gobx[boss] + gobvx[g];
     goby[g] = goby[boss] + gobvy[g];
 }
+#endif
 

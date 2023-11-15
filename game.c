@@ -42,6 +42,7 @@ static void level_baiter_check();
 
 void game_init()
 {
+
     highscore_init();
     sfx_init();
     vfx_init();
@@ -623,6 +624,8 @@ static void level_init(uint8_t level)
 
     switch (level) {
         case 1:
+            gobs_create(GK_BOSS, 1);
+        case 111:
             gobs_create(GK_GRUNT, 8);
             gobs_create(GK_MARINE, 5);
             break;

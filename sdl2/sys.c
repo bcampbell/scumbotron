@@ -741,6 +741,15 @@ char plat_textentry_getchar()
 
 #endif // PLAT_HAS_TEXTENTRY
 
+bool plat_savescores(const void* begin, int nbytes)
+{
+    return false;
+}
+
+bool plat_loadscores(void* begin, int nbytes)
+{
+    return false;
+}
 
 int main(int argc, char* argv[]) {
     plat_init();

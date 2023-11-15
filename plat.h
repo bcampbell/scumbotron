@@ -144,4 +144,7 @@ uint8_t plat_raw_cheatkeys();
 void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
 
 
+bool plat_savescores(const void* begin, int nbytes);
+bool plat_loadscores(void* begin, int nbytes);
+
 #endif // SYS_H
