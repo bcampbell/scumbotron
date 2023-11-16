@@ -16,7 +16,8 @@ int16_t gobvy[MAX_GOBS];
 uint8_t gobdat[MAX_GOBS];
 uint8_t gobtimer[MAX_GOBS];
 
-bool gobs_certainbonus;
+bool gobs_certainbonus; // next dude shot will yield a bonus
+bool gobs_noextralivesforyou; // no more extra lives (after level 42)
 
 // these are set by gobs_tick()
 uint8_t gobs_lockcnt;   // num gobs holding level open.
@@ -563,9 +564,15 @@ void gob_standard_kaboom(uint8_t d, uint8_t shot, uint8_t score)
 
     if (rnd() > 253 || gobs_certainbonus) {
         // transform into pickup
+        // 0 = extra life
+        // 1 = powerup
+        // 2 = weapon upgrade
         uint8_t kind = rnd() & 0x03;
-        if (kind == 3) {
+        if (kind == 3) {    // 3 is invalid
             kind = 1;
+        }
+        if (gobs_noextralivesforyou && kind==0) {
+            kind = 2;
         }
         pickup_create(d, gobx[d], goby[d], kind);
         gobs_certainbonus = false;

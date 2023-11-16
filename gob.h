@@ -60,6 +60,8 @@ extern uint8_t gobtimer[MAX_GOBS];
 
 // set when level is completely cleared
 extern bool gobs_certainbonus;
+// set after last level completed
+extern bool gobs_noextralivesforyou;
 
 // these are set by gobs_tick()
 extern uint8_t gobs_lockcnt;   // num gobs holding level open.

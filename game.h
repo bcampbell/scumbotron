@@ -30,6 +30,11 @@
 #define STATE_STORY_WHATNOW 19 // story part 5
 #define STATE_STORY_DONE 20 // story finished
  
+#define STATE_COMPLETE 21
+
+
+#define NUM_LEVELS 42
+
 extern uint8_t state;
 extern uint16_t statetimer;
 
@@ -43,6 +48,7 @@ void enter_STATE_PLAY();
 void enter_STATE_CLEARED();
 void enter_STATE_KILLED();
 void enter_STATE_GAMEOVER();
+void enter_STATE_COMPLETE();
 void enter_STATE_PAUSED();
 // In highscore.c:
 void enter_STATE_HIGHSCORES();
@@ -79,5 +85,4 @@ void render_STATE_STORY_WHATNOW();
 void enter_STATE_STORY_DONE();
 void tick_STATE_STORY_DONE();
 void render_STATE_STORY_DONE();
-
 #endif // GAME_H

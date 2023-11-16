@@ -24,6 +24,7 @@ static void tick_STATE_PLAY();
 static void tick_STATE_CLEARED();
 static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
+static void tick_STATE_COMPLETE();
 static void tick_STATE_PAUSED();
 
 static void render_STATE_ATTRACT();
@@ -35,6 +36,7 @@ static void render_STATE_PLAY();
 static void render_STATE_CLEARED();
 static void render_STATE_KILLED();
 static void render_STATE_GAMEOVER();
+static void render_STATE_COMPLETE();
 static void render_STATE_PAUSED();
 
 static void level_init(uint8_t level);
@@ -46,6 +48,7 @@ void game_init()
     highscore_init();
     sfx_init();
     vfx_init();
+    //enter_STATE_COMPLETE();
     enter_STATE_ATTRACT();
 }
 
@@ -67,6 +70,7 @@ void game_tick()
     case STATE_CLEARED:     tick_STATE_CLEARED(); break;
     case STATE_KILLED:      tick_STATE_KILLED(); break;
     case STATE_GAMEOVER:    tick_STATE_GAMEOVER(); break;
+    case STATE_COMPLETE:    tick_STATE_COMPLETE(); break;
     case STATE_PAUSED:      tick_STATE_PAUSED(); break;
     case STATE_HIGHSCORES:    tick_STATE_HIGHSCORES(); break;
     case STATE_ENTERHIGHSCORE:    tick_STATE_ENTERHIGHSCORE(); break;
@@ -96,6 +100,7 @@ void game_render()
         case STATE_CLEARED:     render_STATE_CLEARED(); break;
         case STATE_KILLED:      render_STATE_KILLED(); break;
         case STATE_GAMEOVER:    render_STATE_GAMEOVER(); break;
+        case STATE_COMPLETE:    render_STATE_COMPLETE(); break;
         case STATE_PAUSED:      render_STATE_PAUSED(); break;
         case STATE_HIGHSCORES:    render_STATE_HIGHSCORES(); break;
         case STATE_ENTERHIGHSCORE:  render_STATE_ENTERHIGHSCORE(); break;
@@ -250,6 +255,7 @@ void enter_STATE_NEWGAME()
     player_score = 0;
 
     gobs_certainbonus = false;
+    gobs_noextralivesforyou = true; //false;
 
     player_create(0);
     //state = STATE_NEWGAME;
@@ -525,10 +531,21 @@ void enter_STATE_CLEARED()
     //state = STATE_CLEARED;
     //statetimer = 0;
 
+    uint8_t l = level;
+    while (l>NUM_LEVELS) {
+        l -= NUM_LEVELS;
+    }
+
     // next level
     ++level;
     level_bcd = bin2bcd8(level);
-    enter_STATE_ENTERLEVEL();
+
+    if (l == 1) {
+        // Divert to congratulate player
+        enter_STATE_COMPLETE();
+    } else {
+        enter_STATE_ENTERLEVEL();
+    }
 }
 
 static void tick_STATE_CLEARED()
@@ -563,6 +580,53 @@ static void render_STATE_GAMEOVER()
     uint8_t ch = (SCREEN_TEXT_H/2) - 3;
     plat_text((SCREEN_TEXT_W-9)/2, ch, "GAME OVER", (tick/2) & 0x0f);
 }
+
+
+/*
+ * STATE_COMPLETE
+ */
+void enter_STATE_COMPLETE()
+{
+    state = STATE_COMPLETE;
+    statetimer = 0;
+    plat_clr();
+}
+
+
+static void tick_STATE_COMPLETE()
+{
+    ++statetimer;
+    if ((tick & 0x3f) == 0) {
+        //int16_t x = ((SCREEN_W/2) + (int8_t)rnd())<<FX;
+        //int16_t y = ((SCREEN_H/2) + (int8_t)rnd())<<FX;
+        vfx_play_warp();    //kaboom(x, y);
+    }
+
+
+
+    if (statetimer > 120) {
+        if ((inp_menukeys & INP_MENU_START) ||
+            (inp_dualstick & (INP_FIRE_UP|INP_FIRE_RIGHT|INP_FIRE_DOWN|INP_FIRE_LEFT))) {
+        enter_STATE_ENTERLEVEL();
+        }
+    }
+//    if (++statetimer > 60) {
+//        // enter_STATE_TITLESCREEN();
+//        enter_STATE_ENTERHIGHSCORE(player_score);
+//    }
+
+}
+
+static void render_STATE_COMPLETE()
+{
+    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
+    plat_text((SCREEN_TEXT_W-5)/2, ch, "W00T.", (tick/2) & 0x0f);
+
+    if (statetimer > 120) {
+        plat_text((SCREEN_TEXT_W-25)/2, 23, "FIRE OR ENTER TO CONTINUE", 1);
+    }
+}
+
 
 
 
@@ -621,11 +685,12 @@ static void render_STATE_PAUSED()
 
 static void level_init(uint8_t level)
 {
-
+    // handle wrapping 
+    while (level > NUM_LEVELS) {
+        level -= NUM_LEVELS;
+    }
     switch (level) {
         case 1:
-            gobs_create(GK_BOSS, 1);
-        case 111:
             gobs_create(GK_GRUNT, 8);
             gobs_create(GK_MARINE, 5);
             break;
