@@ -255,7 +255,7 @@ void enter_STATE_NEWGAME()
     player_score = 0;
 
     gobs_certainbonus = false;
-    gobs_noextralivesforyou = true; //false;
+    gobs_noextralivesforyou = false;
 
     player_create(0);
     //state = STATE_NEWGAME;
