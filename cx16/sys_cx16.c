@@ -41,20 +41,24 @@ extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
 
 // Our VERA memory map
+// This needs to be in sync with the loader stub (scumbotron.asm),
+// as that decompresses all the graphics data into VRAM before we
+// even start running the main game.
 #define VRAM_SPRITES16 0x10000
 #define VRAM_SPRITES32 (VRAM_SPRITES16 + (SPR16_NUM * SPR16_SIZE))
 #define VRAM_SPRITES64x8 (VRAM_SPRITES32 + (SPR32_NUM * SPR32_SIZE))
-#define VRAM_LAYER1_MAP 0x1b000
-#define VRAM_LAYER1_TILES 0x1F000
-// layer0 is double-buffered
+// layer1 used for text
+#define VRAM_LAYER1_MAP 0x1b000         // default textmode location
+#define VRAM_LAYER1_TILES 0x1F000       // default charset location
+// layer0 for vfx, double-buffered
 #define VRAM_LAYER0_MAP_BUF0  0x00000    //64*64*2 = 0x2000
 #define VRAM_LAYER0_MAP_BUF1  0x02000    //64*64*2 = 0x2000
 #define VRAM_LAYER0_TILES  0x08000
 
 // hardwired:
+#define VRAM_PSG 0x1F9C0
 #define VRAM_PALETTE 0x1FA00
 #define VRAM_SPRITE_ATTRS 0x1FC00
-#define VRAM_PSG 0x1F9C0
 
 static void sprout16(int16_t x, int16_t y, uint8_t img);
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
