@@ -968,8 +968,12 @@ char plat_textentry_getchar()
     if (c==0x0D) {
         return '\n';
     }
+
+    // Strip out shifted petscii graphics.
+    c = c & ~0x80;
+
     // suppress other control codes.
-    if (c < 32 || (c >= 0x80 && c < 0xa0)) {
+    if (c < 32) {   // || (c >= 0x80 && c < 0xa0)) {
         return 0;
     }
     return c;
@@ -1031,7 +1035,7 @@ int main(void) {
             sprout16(plat_mouse_x, plat_mouse_y, 0);
         }
 
-        debug_gamepad();
+        //debug_gamepad();
         //debug_getin();
         plat_render_finish();
         //cx16_k_joystick_scan();
