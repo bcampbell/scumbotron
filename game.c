@@ -531,21 +531,21 @@ void enter_STATE_CLEARED()
     //state = STATE_CLEARED;
     //statetimer = 0;
 
-    uint8_t l = level;
-    while (l>NUM_LEVELS) {
-        l -= NUM_LEVELS;
+
+    if (level == NUM_LEVELS) {
+        // Go back to first level
+        level = 1;
+        level_bcd = 0x01;
+        gobs_noextralivesforyou = true;
+        // Divert to congratulate player
+        enter_STATE_COMPLETE();
+        return;
     }
 
     // next level
     ++level;
     level_bcd = bin2bcd8(level);
-
-    if (l == 1) {
-        // Divert to congratulate player
-        enter_STATE_COMPLETE();
-    } else {
-        enter_STATE_ENTERLEVEL();
-    }
+    enter_STATE_ENTERLEVEL();
 }
 
 static void tick_STATE_CLEARED()
