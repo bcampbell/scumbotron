@@ -70,9 +70,6 @@ extern uint8_t gobs_clearablecnt;  // num gobs remaining which are clearable.
 extern uint8_t gobs_num_marines;  // num of unrescued marines
 extern uint8_t gobs_num_marines_trailing;  // num of marines currently trailing player
 
-// table to convert DIR_ bits to angle 0..23
-extern const uint8_t dir_to_angle24[16];
-
 // gob functions
 void gobs_clear();
 void gobs_tick(bool spawnphase);
