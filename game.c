@@ -89,7 +89,6 @@ void game_tick()
 
 void game_render()
 {
-    vfx_render();
     switch(state) {
         case STATE_ATTRACT:     render_STATE_ATTRACT(); break;
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
@@ -114,6 +113,7 @@ void game_render()
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
         case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
+    vfx_render();
 }
 
 // If player requests pause, enter STATE_PAUSED and return true.
