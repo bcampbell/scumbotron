@@ -290,7 +290,8 @@ void plat_init()
     VERA.display.hscale = (uint8_t)(((int32_t)SCREEN_W*128)/640);       // 64 = 2x scale
     VERA.display.vscale = (uint8_t)(((int32_t)SCREEN_H*128)/480);       // 64 = 2x scale
     VERA.control = 0x02;    //DCSEL=1
-    VERA.display.hstart = 2;    // 2 to allow some border for rastertiming
+    VERA.display.hstart = 0;
+//    VERA.display.hstart = 2;    // 2 to allow some border for gatso rastertiming
     VERA.display.hstop = 640>>2;
     VERA.display.vstart = 0;
     VERA.display.vstop = 480>>1;
