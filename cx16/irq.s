@@ -16,7 +16,6 @@ VERA_IEN=$9f26
 VERA_ISR=$9F27
 VERA_VIDEO=$9f29
 
-
 tick: .byte 0
 
 old_handler: .byte 0,0
@@ -35,6 +34,12 @@ irq_init:
     lda #>irq_handler
     sta $0315
 
+	; Enable vsync interrupt
+    ; NOTE: I think this happens at the top of the screen (line 0).
+    ; Would be better to use the line interrupt and trigger
+	; at the bottom of the screen (line 480), so we get the whole
+    ; vblank interval to render sprites without tearing.
+    ; But I couldn't get it working. Something to revisit.
 	lda #$01
 	sta VERA_ISR
 	sta VERA_IEN
@@ -42,7 +47,7 @@ irq_init:
     rts
 
 irq_handler:
-    ;Verify vblank interrupt
+    ;Verify vsync interrupt
     lda VERA_ISR
     and #$01
     beq done
