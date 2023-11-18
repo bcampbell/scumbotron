@@ -985,10 +985,13 @@ bool plat_savescores(const void* begin, int nbytes)
 {
     cbm_k_setnam("@:SCUMBOSCORES");
     cbm_k_setlfs(1,8,1);
-    // TODO: use bsave/savehl when available!
-    // https://github.com/llvm-mos/llvm-mos-sdk/issues/242
+    // copy into banked ram before saving, just so 2-byte header will be 0xa000.
+    // (at time of writing bsave isn't in llvm-mos-sdk, so we'll just pretend
+    // the 0xa000 is a magic cookie instead ;-)
+    void* tmp = (void*)0xA000;
+    cx16_k_memory_copy(begin, tmp, nbytes);
     // cbm_k_save prepends the 2byte address header :-(
-    char result = cbm_k_save((void*)begin, (void*)(begin + nbytes));
+    char result = cbm_k_save((void*)tmp, (void*)(tmp + nbytes));
     if (result != 0) {
         return false;
     }
@@ -999,7 +1002,6 @@ bool plat_loadscores(void* begin, int nbytes)
 {
     cbm_k_setnam("SCUMBOSCORES");
     cbm_k_setlfs(1,8,0);    // 0=ignore header, 2= headerless load
-    // TODO: use headerless load when we switch to bsave/savehl.
     // load into banked RAM for safety.
     void* tmp = (void*)0xA000;
     void* result = cbm_k_load(0, tmp);
