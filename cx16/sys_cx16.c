@@ -983,13 +983,13 @@ char plat_textentry_getchar()
  
 bool plat_savescores(const void* begin, int nbytes)
 {
-    cbm_k_setnam("@:SCUMBOSCORES");
+    cbm_k_setnam("@:SCUMBOSCORES"); // "@:" to allow overwriting
     cbm_k_setlfs(1,8,1);
     // copy into banked ram before saving, just so 2-byte header will be 0xa000.
     // (at time of writing bsave isn't in llvm-mos-sdk, so we'll just pretend
     // the 0xa000 is a magic cookie instead ;-)
     void* tmp = (void*)0xA000;
-    cx16_k_memory_copy(begin, tmp, nbytes);
+    cx16_k_memory_copy((void*)begin, tmp, nbytes);
     // cbm_k_save prepends the 2byte address header :-(
     char result = cbm_k_save((void*)tmp, (void*)(tmp + nbytes));
     if (result != 0) {
