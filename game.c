@@ -15,7 +15,6 @@ static uint8_t level_bcd;   // level number as BCD.
 static uint8_t baiter_timer;
 static uint8_t baiter_count;
 
-static void tick_STATE_ATTRACT();
 static void tick_STATE_TITLESCREEN();
 static void tick_STATE_NEWGAME();
 static void tick_STATE_ENTERLEVEL();
@@ -27,7 +26,6 @@ static void tick_STATE_GAMEOVER();
 static void tick_STATE_COMPLETE();
 static void tick_STATE_PAUSED();
 
-static void render_STATE_ATTRACT();
 static void render_STATE_TITLESCREEN();
 static void render_STATE_NEWGAME();
 static void render_STATE_ENTERLEVEL();
@@ -49,7 +47,7 @@ void game_init()
     sfx_init();
     vfx_init();
     //enter_STATE_COMPLETE();
-    enter_STATE_ATTRACT();
+    enter_STATE_TITLESCREEN();
 }
 
 void game_tick()
@@ -61,7 +59,6 @@ void game_tick()
     }
 
     switch(state) {
-    case STATE_ATTRACT: tick_STATE_ATTRACT(); break;
     case STATE_TITLESCREEN: tick_STATE_TITLESCREEN(); break;
     case STATE_NEWGAME:     tick_STATE_NEWGAME(); break;
     case STATE_ENTERLEVEL:     tick_STATE_ENTERLEVEL(); break;
@@ -82,7 +79,6 @@ void game_tick()
     case STATE_STORY_ATTACK:    tick_STATE_STORY_ATTACK(); break;
     case STATE_STORY_RUNAWAY:    tick_STATE_STORY_RUNAWAY(); break;
     case STATE_STORY_WHATNOW:    tick_STATE_STORY_WHATNOW(); break;
-    case STATE_STORY_DONE:    tick_STATE_STORY_DONE(); break;
     }
 
 }
@@ -90,7 +86,6 @@ void game_tick()
 void game_render()
 {
     switch(state) {
-        case STATE_ATTRACT:     render_STATE_ATTRACT(); break;
         case STATE_TITLESCREEN: render_STATE_TITLESCREEN(); break;
         case STATE_NEWGAME:     render_STATE_NEWGAME(); break;
         case STATE_ENTERLEVEL:  render_STATE_ENTERLEVEL(); break;
@@ -111,7 +106,6 @@ void game_render()
         case STATE_STORY_ATTACK:    render_STATE_STORY_ATTACK(); break;
         case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
-        case STATE_STORY_DONE:   render_STATE_STORY_DONE(); break;
     }
     vfx_render();
 }
@@ -119,43 +113,13 @@ void game_render()
 // If player requests pause, enter STATE_PAUSED and return true.
 static bool pausemode_check()
 {
-    if( inp_menukeys & (INP_MENU_ESC|INP_MENU_START)) {
+    // TODO: also check gamepad START
+    if( inp_menukeys & (INP_MENU_ESC)) {
         // Pause records current state and will resume it when unpausing.
         enter_STATE_PAUSED();
         return true;
     }
     return false;
-}
-
-/*
- * STATE_ATTRACT
- * dummy state which just hands off immediately to another state
- */
-static uint8_t attract_phase = 0;
-
-void enter_STATE_ATTRACT()
-{
-    state = STATE_ATTRACT;
-    statetimer=0;
-}
-
-
-static void tick_STATE_ATTRACT()
-{
-    ++attract_phase;
-    if (attract_phase > 3) {
-        attract_phase = 0;
-    }
-    switch (attract_phase) {
-        case 1: enter_STATE_TITLESCREEN(); return;
-        case 2: enter_STATE_HIGHSCORES(); return;
-        case 3: enter_STATE_GALLERY_BADDIES_1(); return;
-        case 0: enter_STATE_STORY_INTRO(); return;
-    }
-}
-
-static void render_STATE_ATTRACT()
-{
 }
 
 /*
@@ -171,6 +135,7 @@ void enter_STATE_TITLESCREEN()
 
 static void tick_STATE_TITLESCREEN()
 {
+    ++statetimer;
     // collect some entropy
     rnd();
 
@@ -193,8 +158,8 @@ static void tick_STATE_TITLESCREEN()
     }
 #endif
 
-    if (++statetimer > 400 || inp & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT)) {
-        enter_STATE_ATTRACT();
+    if (statetimer > 400 || nav_fwd()) {
+        enter_STATE_HIGHSCORES();
     }
 }
 
@@ -214,30 +179,33 @@ static const unsigned char logo_img[] = {
 
 static void render_STATE_TITLESCREEN()
 {
-//    uint8_t i;
-//    for (i=0; i<20; ++i) {
-//        plat_text(i,i,"*** TITLE SCREEN ***", ((tick/2)-i) & 0x0f);
-//    }
-    const uint8_t cx = (SCREEN_TEXT_W-32)/2;
-    const uint8_t cy = 4;
-    plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
-    plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1982 SCUMWAYS INC.", 1);
+    // title
+    {
+        const uint8_t cx = (SCREEN_TEXT_W-32)/2;
+        const uint8_t cy = 4;
+        plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
+        plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1982 SCUMWAYS INC.", 1);
+    }
+    // controls
+    {
+        const uint8_t col1 = (SCREEN_TEXT_W/2) - 5 - 8;
+        const uint8_t col2 = (SCREEN_TEXT_W/2) - 5 + 8;
+        const uint8_t cy = 15;
+        plat_text(col1, cy, "  MOVE: ", 1);
+        plat_text(col1, cy+2, "    W   ", 1);
+        plat_text(col1, cy+3, "  A S D ", 1);
 
+        plat_text(col2, cy, "  FIRE: ", 1);
+        plat_text(col2, cy+2, "   UP   ", 1);
+        plat_text(col2, cy+3, "LF DN RT", 1);
 
-    uint8_t col1 = (SCREEN_TEXT_W/2) - 5 - 8;
-    uint8_t col2 = (SCREEN_TEXT_W/2) - 5 + 8;
+        plat_text((SCREEN_TEXT_W-26)/2, cy+6, "...OR GAMEPAD, OR MOUSE...", 1);
+    }
 
-    plat_text(col1, 14, "  MOVE: ", 1);
-    plat_text(col1, 16, "    W   ", 1);
-    plat_text(col1, 17, "  A S D ", 1);
-
-    plat_text(col2, 14, "  FIRE: ", 1);
-    plat_text(col2, 16, "   UP   ", 1);
-    plat_text(col2, 17, "LF DN RT", 1);
-
-    if ((tick/32) & 0x01) {
-        plat_text((SCREEN_TEXT_W-20)/2, 23, "PRESS ENTER TO PLAY", 1);
-        //plat_text((SCREEN_TEXT_W-20)/2 + 6, 23, "ENTER", 15);
+    // start
+    {
+        uint8_t c = ((tick/32) & 0x01) ? 1:0;
+        plat_text((SCREEN_TEXT_W-20)/2, 28, "START/ENTER TO PLAY", c);
     }
 }
 

@@ -1,5 +1,4 @@
 #include "input.h"
-#include "plat.h"
 
 uint8_t inp_dualstick = 0;
 uint8_t inp_menukeys = 0;

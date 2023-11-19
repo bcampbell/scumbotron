@@ -110,14 +110,15 @@ void enter_STATE_HIGHSCORES()
 
 void tick_STATE_HIGHSCORES()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START | INP_MENU_A)) {
-        enter_STATE_NEWGAME();
+    ++statetimer;
+    if (nav_prev() || nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
 
-    if (++statetimer > 300 || inp) {
-        enter_STATE_ATTRACT();  // back to attract state
+    if (statetimer > 300 || nav_fwd()) {
+        enter_STATE_GALLERY_BADDIES_1();
+        return;
     }
 }
 

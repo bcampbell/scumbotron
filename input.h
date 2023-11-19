@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "plat.h"
+
 // The current state of the dual-stick input
 // 4 bits of INP_DIR_* and 4 bits of INP_DIR_FIRE_*
 extern uint8_t inp_dualstick;

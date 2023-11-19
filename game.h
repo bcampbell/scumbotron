@@ -4,7 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define STATE_ATTRACT 0
+#include "input.h"
+
 #define STATE_TITLESCREEN 1
 // gameplay states
 #define STATE_NEWGAME 2
@@ -28,7 +29,6 @@
 #define STATE_STORY_ATTACK 17 // story part 3
 #define STATE_STORY_RUNAWAY 18 // story part 4
 #define STATE_STORY_WHATNOW 19 // story part 5
-#define STATE_STORY_DONE 20 // story finished
  
 #define STATE_COMPLETE 21
 
@@ -37,6 +37,21 @@
 
 extern uint8_t state;
 extern uint16_t statetimer;
+
+
+// helper functions for navigating title/highscore/story screens
+static inline bool nav_fwd() {
+    // or mousebutton?
+    return (inp_menukeys & INP_RIGHT);
+}
+
+static inline bool nav_prev() {
+    return (inp_menukeys & INP_LEFT);
+}
+
+static inline bool nav_backtotitle() {
+    return (inp_menukeys & (INP_MENU_ESC|INP_MENU_START));
+}
 
 // In game.c:
 void enter_STATE_ATTRACT();

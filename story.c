@@ -5,6 +5,7 @@
 #include "vfx.h"
 
 
+
 // We've got two pages of dudes to render, but the layout is the
 // same so we'll unify it.
 static void render_baddies(uint8_t page)
@@ -132,14 +133,20 @@ void enter_STATE_GALLERY_BADDIES_1()
 
 void tick_STATE_GALLERY_BADDIES_1()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_NEWGAME();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
 
-    if (++statetimer > 400 || inp) {
+    if (nav_prev()) {
+        enter_STATE_HIGHSCORES();
+        return;
+    }
+
+    if (statetimer > 400 || nav_fwd()) {
         enter_STATE_GALLERY_BADDIES_2();
+        return;
     }
 }
 
@@ -161,14 +168,20 @@ void enter_STATE_GALLERY_BADDIES_2()
 
 void tick_STATE_GALLERY_BADDIES_2()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_NEWGAME();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
 
-    if (++statetimer > 400 || inp) {
+    if (nav_prev()) {
+        enter_STATE_GALLERY_BADDIES_1();
+        return;
+    }
+
+    if (statetimer > 400 || nav_fwd()) {
         enter_STATE_GALLERY_GOODIES();
+        return;
     }
 }
 
@@ -190,13 +203,20 @@ void enter_STATE_GALLERY_GOODIES()
 
 void tick_STATE_GALLERY_GOODIES()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
+    ++statetimer;
+    if (nav_backtotitle()) {
         enter_STATE_NEWGAME();
         return;
     }
-    if (++statetimer > 400 || inp) {
-        enter_STATE_ATTRACT();  // Back to attract mode.
+
+    if (nav_prev()) {
+        enter_STATE_GALLERY_BADDIES_2();
+        return;
+    }
+
+    if (statetimer > 400 || nav_fwd()) {
+        enter_STATE_STORY_INTRO();  // onward to story.
+        return;
     }
 }
 
@@ -402,13 +422,18 @@ void enter_STATE_STORY_INTRO()
 
 void tick_STATE_STORY_INTRO()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_STORY_DONE();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
-    if (++statetimer > 550 || inp) {
+    if (nav_prev()) {
+        enter_STATE_GALLERY_GOODIES();
+        return;
+    }
+    if (statetimer > 550 || nav_fwd()) {
         enter_STATE_STORY_OHNO();
+        return;
     }
 }
 
@@ -443,12 +468,18 @@ void enter_STATE_STORY_OHNO()
 
 void tick_STATE_STORY_OHNO()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_STORY_DONE();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
-    if (++statetimer > 250 || inp) {
+
+    if (nav_prev()) {
+        enter_STATE_STORY_INTRO();
+        return;
+    }
+
+    if (statetimer > 250 || nav_fwd()) {
         enter_STATE_STORY_ATTACK();
     }
 }
@@ -475,13 +506,18 @@ void enter_STATE_STORY_ATTACK()
 
 void tick_STATE_STORY_ATTACK()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_STORY_DONE();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
-    if (++statetimer > 340 || inp) {
+    if (nav_prev()) {
+        enter_STATE_STORY_OHNO();
+        return;
+    }
+    if (statetimer > 340 || nav_fwd()) {
         enter_STATE_STORY_RUNAWAY();
+        return;
     }
 }
 void render_STATE_STORY_ATTACK()
@@ -511,13 +547,19 @@ void enter_STATE_STORY_RUNAWAY()
 
 void tick_STATE_STORY_RUNAWAY()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_STORY_DONE();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
-    if (++statetimer > 170 || inp) {
+
+    if (nav_prev()) {
+        enter_STATE_STORY_ATTACK();
+        return;
+    }
+    if (statetimer > 170 || nav_fwd()) {
         enter_STATE_STORY_WHATNOW();
+        return;
     }
 }
 
@@ -539,13 +581,18 @@ void enter_STATE_STORY_WHATNOW()
 
 void tick_STATE_STORY_WHATNOW()
 {
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
-        enter_STATE_NEWGAME();
+    ++statetimer;
+    if (nav_backtotitle()) {
+        enter_STATE_TITLESCREEN();
         return;
     }
-    if (++statetimer > 250 || inp) {
-        enter_STATE_STORY_DONE();  // Back to attract mode.
+    if (nav_prev()) {
+        enter_STATE_STORY_RUNAWAY();
+        return;
+    }
+    if (statetimer > 250 || nav_fwd()) {
+        enter_STATE_TITLESCREEN();  // Back to attract mode.
+        return;
     }
 }
 
@@ -558,28 +605,6 @@ void render_STATE_STORY_WHATNOW()
         plat_text(cx-13, 12, "WHO WILL SAVE HUMANITY NOW?", 1);
     }
 }
-
-/*
- * STATE_STORY_DONE - nop mode, go back to attract sequence
- */
-void enter_STATE_STORY_DONE()
-{
-    state = STATE_STORY_DONE;
-    statetimer = 0;
-}
-
-
-void tick_STATE_STORY_DONE()
-{
-    enter_STATE_ATTRACT();  // Back to attract mode.
-}
-
-
-void render_STATE_STORY_DONE()
-{
-}
-
-
 
 
 

@@ -16,7 +16,7 @@ OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_EXPORTED:.c=.o))
 OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
 
 CC := mos-cx16-clang
-CFLAGS = -Icx16 -g -Os
+CFLAGS = -Icx16 -Os
 LDFLAGS =
 LDLIBS = 
 DEPFLAGS = -MMD -MP -MF $@.d
