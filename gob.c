@@ -642,7 +642,7 @@ void grunt_shot(uint8_t g, uint8_t shot)
 void baiter_create(uint8_t g)
 {
     gobkind[g] = GK_BAITER;
-    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
+    gobflags[g] = GF_PERSIST | GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
     gobvx[g] = 0;
     gobvy[g] = 0;
     baiter_reset(g);
@@ -651,16 +651,6 @@ void baiter_create(uint8_t g)
 void baiter_reset(uint8_t g)
 { 
     gob_randompos(g);
-    gobvx[g] = 0;
-    gobvy[g] = 0;
-}
-
-void baiter_spawn(uint8_t g, int16_t x, int16_t y)
-{
-    gobkind[g] = GK_BAITER;
-    gobflags[g] = GF_LOCKS_LEVEL | GF_COLLIDES_SHOT | GF_COLLIDES_PLAYER;
-    gobx[g] = x;
-    goby[g] = y;
     gobvx[g] = 0;
     gobvy[g] = 0;
 }

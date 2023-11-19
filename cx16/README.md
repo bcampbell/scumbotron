@@ -3,6 +3,12 @@ The aim is to fit the whole game into a single .prg file.
 These load into BASIC RAM, a space of about 38KB, from
 $0800 to $9EFF.
 
+NOTE: the code runs right up to the BASIC RAM limit...
+It's possible a different version of llvm-mos will overrun if it generates
+less compact code!
+The linker is pretty good about warning if this happens.
+
+
 ## cx16 build requirements
 
 - llvm-mos-sdk

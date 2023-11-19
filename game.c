@@ -184,7 +184,7 @@ static void render_STATE_TITLESCREEN()
         const uint8_t cx = (SCREEN_TEXT_W-32)/2;
         const uint8_t cy = 4;
         plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
-        plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1982 SCUMWAYS INC.", 1);
+        plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1983 SCUMWAYS INC.", 1);
     }
     // controls
     {
@@ -439,13 +439,13 @@ static void render_STATE_PLAY()
         ++cy;
         if (very_clear_bonus) {
             cy += 2;
-            uint8_t cx = (SCREEN_TEXT_W-32)/2;
-            plat_text(cx, cy, "      500  VERY-CLEAR BONUS     ", 1);
+            uint8_t cx = (SCREEN_TEXT_W-31)/2;
+            plat_text(cx, cy, "      500 VERY-CLEAR BONUS     ", 1);
         }
         if (save_em_all_bonus) {
             cy += 2;
-            uint8_t cx = (SCREEN_TEXT_W-32)/2;
-            plat_text(cx, cy, "500  COLLECT-THE-WHOLE-SET BONUS", 1);
+            uint8_t cx = (SCREEN_TEXT_W-31)/2;
+            plat_text(cx, cy, "500 COLLECT-THE-WHOLE-SET BONUS", 1);
         }
     }
 }
@@ -552,47 +552,62 @@ static void render_STATE_GAMEOVER()
 
 /*
  * STATE_COMPLETE
+ *
+ * NOTE: GAAAAAH! Overran the cx16 38KB BASIC RAM limit just at the last
+ * moment. So stubbing out STATE_COMPLETE screen and going straight back
+ * into game. Re-evaluate if we can squeeze out a few more bytes...
+ * (eg maybe fiddle linker to have BSS section at $0400 or banked ram?)
  */
 void enter_STATE_COMPLETE()
 {
+#if 0
     state = STATE_COMPLETE;
     statetimer = 0;
     plat_clr();
+#endif
+     enter_STATE_ENTERLEVEL();
 }
 
 
 static void tick_STATE_COMPLETE()
 {
+#if 0
     ++statetimer;
-    if ((tick & 0x3f) == 0) {
-        //int16_t x = ((SCREEN_W/2) + (int8_t)rnd())<<FX;
-        //int16_t y = ((SCREEN_H/2) + (int8_t)rnd())<<FX;
-        vfx_play_warp();    //kaboom(x, y);
+    if ((tick & 0x7) == 0) {
+        int16_t x = ((SCREEN_W/2) + (int8_t)rnd())<<FX;
+        int16_t y = ((SCREEN_H/2) + (int8_t)rnd())<<FX;
+        if (tick & 0x08) {
+            vfx_play_zombify(x,y);
+        } else {
+            vfx_play_kaboom(x,y);
+        }
     }
 
-
-
-    if (statetimer > 120) {
+    if (statetimer > 180) {
         if ((inp_menukeys & INP_MENU_START) ||
             (inp_dualstick & (INP_FIRE_UP|INP_FIRE_RIGHT|INP_FIRE_DOWN|INP_FIRE_LEFT))) {
         enter_STATE_ENTERLEVEL();
         }
     }
-//    if (++statetimer > 60) {
-//        // enter_STATE_TITLESCREEN();
-//        enter_STATE_ENTERHIGHSCORE(player_score);
-//    }
-
+#endif
 }
 
 static void render_STATE_COMPLETE()
 {
-    uint8_t ch = (SCREEN_TEXT_H/2) - 3;
-    plat_text((SCREEN_TEXT_W-5)/2, ch, "W00T.", (tick/2) & 0x0f);
-
-    if (statetimer > 120) {
-        plat_text((SCREEN_TEXT_W-25)/2, 23, "FIRE OR ENTER TO CONTINUE", 1);
+#if 0
+    uint8_t cy = 8;
+    plat_text((SCREEN_TEXT_W-5)/2, cy, "NICE!", (tick/2) & 0x0f);
+    if (statetimer > 60) {
+        plat_text((SCREEN_TEXT_W-16)/2, cy + 5, "NOW TRY AGAIN...", 1);
     }
+    if (statetimer > 120) {
+        plat_text((SCREEN_TEXT_W-27)/2, cy + 7, "...WITHOUT ANY EXTRA LIVES.", 1);
+    }
+
+    if (statetimer > 180) {
+        plat_text((SCREEN_TEXT_W-20)/2, 23, "START/ENTER TO PLAY", 1);
+    }
+#endif
 }
 
 
@@ -882,9 +897,20 @@ static void level_init(uint8_t level)
             gobs_create(GK_BRAIN, 2);
             gobs_create(GK_MARINE, 14);
             break;
+        case 41:
+            gobs_create(GK_RIFASHARK, 20);
+            gobs_create(GK_RIFASPAWNER, 4);
+            gobs_create(GK_VZAPPER, 2);
+            gobs_create(GK_HZAPPER, 2);
+            gobs_create(GK_MARINE, 5);
+            break;
+        case 42:
+            gobs_create(GK_BLOCK, 10);
+            gobs_create(GK_BAITER, 20);
+            gobs_create(GK_MARINE, 5);
+            break;
         default:
-            gobs_create(GK_BAITER, 1);
-            gobs_create(GK_MARINE, 3);
+            gobs_create(GK_BAITER, 30);
             break;
     }
 }
@@ -893,9 +919,9 @@ static void level_baiter_check()
 {
     // update baiters
     if ((tick & 0x0f) == 0x0f) {
-        // 16*100 = 1600 (about 25 secs)
+        // 16*60 = 960 (about 16 secs)
         // 16*33 = about 9 secs
-        uint8_t threshold = baiter_count == 0 ? 75 : 33;
+        uint8_t threshold = (baiter_count == 0) ? 60 : 33;
         ++baiter_timer;
         if (baiter_timer > threshold) {
             uint8_t i;
@@ -916,7 +942,8 @@ static void level_baiter_check()
                         return;
                     }
                     baiter_create(b);
-                    gob_randompos(b);
+                    // make these baiters disappear if player dies
+                    gobflags[b] &= ~GF_PERSIST;
                     gobflags[b] |= GF_SPAWNING;
                     gobtimer[b] = 8 + (i*8);
                 }
