@@ -428,7 +428,7 @@ func (d *SrcDumper) Close() error {
 	err := d.flush()
 	if err == nil {
 		// The footer.
-		_, err = fmt.Fprintf(d.Out, "};\nunsigned int %s_len = %d;\n", d.VarName, d.bytesWritten)
+		_, err = fmt.Fprintf(d.Out, "};\nconst unsigned int %s_len = %d;\n", d.VarName, d.bytesWritten)
 	}
 	err2 := d.Out.Close()
 	if err != nil {
@@ -441,7 +441,7 @@ func (d *SrcDumper) flush() error {
 	var err error
 	if !d.headerWritten {
 		d.headerWritten = true
-		_, err = fmt.Fprintf(d.Out, "unsigned char %s[] = {\n", d.VarName)
+		_, err = fmt.Fprintf(d.Out, "const unsigned char %s[] = {\n", d.VarName)
 		if err != nil {
 			return err
 		}
