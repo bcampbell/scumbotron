@@ -39,7 +39,7 @@ Flags:
 	flag.IntVar(&opts.width, "w", 8, "Sprite width")
 	flag.IntVar(&opts.height, "h", 8, "Sprite height")
 	flag.IntVar(&opts.numFrames, "num", 1, "Number of sprites to export")
-	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format (8bpp, 4bpp, 1bpp, nds4bpp, mono4x2)")
+	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format (8bpp, 4bpp, 1bpp, nds4bpp, mono4x2, pcetile, pcesprite)")
 	flag.BoolVar(&opts.csource, "c", false, "Output C src instead of raw binary")
 	flag.StringVar(&opts.varName, "var", "", "Set variable name used for C source output (-c) (defaults to munged filename)")
 	flag.Parse()
@@ -251,8 +251,10 @@ func cook(img *image.Paletted) ([]uint8, error) {
 		return cook1bpp(img)
 	case "mono4x2":
 		return cookMono4x2(img)
-	case "pce":
-		return cookPCE(img)
+	case "pcetile":
+		return cookPCETile(img)
+	case "pcesprite":
+		return cookPCESprite(img)
 	}
 	return []uint8{}, errors.New("unsupported -fmt")
 }
@@ -334,14 +336,22 @@ func cook4bppNDS(img *image.Paletted) ([]uint8, error) {
 	return out, nil
 }
 
-// PC Engine 4bpp
-// 8x8 tiles
-func cookPCE(img *image.Paletted) ([]uint8, error) {
+// PC Engine. 4bpp, but planar
+//
+// https://github.com/langel/pce-dev-kit/blob/main/documents/pcetech.txt
+//
+// 8x8 tiles:
+// The pattern data used by the characters is stored in a planar format.
+// Because the VDC always accesses VRAM in word units, the organization
+// of bitplanes reflect this. It takes 32 bytes of VRAM to define one tile;
+// the first eight words are bitplanes 0 and 1 for lines 0-7, and the next
+// eight words are bitplanes 0 and 1 for lines 0-7.
+func cookPCETile(img *image.Paletted) ([]uint8, error) {
 	out := []uint8{}
 	r := img.Bounds()
 	// Fail if not tile sized!
 	if r.Dx() != 8 && r.Dy() != 8 {
-		return nil, fmt.Errorf("expecting 8x8 tiles for pce")
+		return nil, fmt.Errorf("PCE tiles must be 8x8")
 	}
 	// convert data into bitplanes
 	planes := [8][4]uint8{} // 8 lines, 4 bitplanes
@@ -357,7 +367,6 @@ func cookPCE(img *image.Paletted) ([]uint8, error) {
 	}
 
 	// now write it out in pce format
-
 	for y := 0; y < 8; y++ {
 		out = append(out, planes[y][0])
 		out = append(out, planes[y][1])
@@ -365,6 +374,48 @@ func cookPCE(img *image.Paletted) ([]uint8, error) {
 	for y := 0; y < 8; y++ {
 		out = append(out, planes[y][2])
 		out = append(out, planes[y][3])
+	}
+	return out, nil
+}
+
+// PCE sprites
+//
+// https://github.com/langel/pce-dev-kit/blob/main/documents/pcetech.txt
+//
+// 16x16 sprites:
+// Each sprite pattern takes 128 bytes, and is arranged in four groups of
+// 16 words. Each word corresponds to one 16-pixel line, and each group
+// corresponds to one bitplane. For example, words 0-15 define bitplane 0,
+// words 16-31 define bitplane 1, etc.
+func cookPCESprite(img *image.Paletted) ([]uint8, error) {
+	out := []uint8{}
+	r := img.Bounds()
+	// Fail if not sprite sized!
+	if r.Dx() != 16 && r.Dy() != 16 {
+		return nil, fmt.Errorf("PCE sprites must be 16x16")
+	}
+	// convert data into bitplanes
+	planes := [16][4]uint16{} // 16 lines, 4 bitplanes
+	for y := 0; y < 16; y++ {
+		for x := 0; x < 16; x++ {
+			c := img.ColorIndexAt(r.Min.X+x, r.Min.Y+y)
+			for bp := 0; bp < 4; bp++ {
+				if c&(1<<bp) != 0 {
+					planes[y][bp] |= (1 << x)
+				}
+			}
+		}
+	}
+
+	// now write it out in pce format
+	for bp := 0; bp < 4; bp++ {
+		for y := 0; y < 16; y++ {
+			word := planes[y][bp]
+			lo := uint8(word & 0xff)
+			hi := uint8(word >> 8)
+			out = append(out, lo)
+			out = append(out, hi)
+		}
 	}
 	return out, nil
 }
