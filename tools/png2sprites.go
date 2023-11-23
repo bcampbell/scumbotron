@@ -360,7 +360,7 @@ func cookPCETile(img *image.Paletted) ([]uint8, error) {
 			c := img.ColorIndexAt(r.Min.X+x, r.Min.Y+y)
 			for bp := 0; bp < 4; bp++ {
 				if c&(1<<bp) != 0 {
-					planes[y][bp] |= (1 << x)
+					planes[y][bp] |= (1 << (7 - x))
 				}
 			}
 		}
