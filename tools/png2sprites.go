@@ -251,6 +251,8 @@ func cook(img *image.Paletted) ([]uint8, error) {
 		return cook1bpp(img)
 	case "mono4x2":
 		return cookMono4x2(img)
+	case "pce":
+		return cookPCE(img)
 	}
 	return []uint8{}, errors.New("unsupported -fmt")
 }
@@ -328,6 +330,41 @@ func cook4bppNDS(img *image.Paletted) ([]uint8, error) {
 				}
 			}
 		}
+	}
+	return out, nil
+}
+
+// PC Engine 4bpp
+// 8x8 tiles
+func cookPCE(img *image.Paletted) ([]uint8, error) {
+	out := []uint8{}
+	r := img.Bounds()
+	// Fail if not tile sized!
+	if r.Dx() != 8 && r.Dy() != 8 {
+		return nil, fmt.Errorf("expecting 8x8 tiles for pce")
+	}
+	// convert data into bitplanes
+	planes := [8][4]uint8{} // 8 lines, 4 bitplanes
+	for y := 0; y < 8; y++ {
+		for x := 0; x < 8; x++ {
+			c := img.ColorIndexAt(r.Min.X+x, r.Min.Y+y)
+			for bp := 0; bp < 4; bp++ {
+				if c&(1<<bp) != 0 {
+					planes[y][bp] |= (1 << x)
+				}
+			}
+		}
+	}
+
+	// now write it out in pce format
+
+	for y := 0; y < 8; y++ {
+		out = append(out, planes[y][0])
+		out = append(out, planes[y][1])
+	}
+	for y := 0; y < 8; y++ {
+		out = append(out, planes[y][2])
+		out = append(out, planes[y][3])
 	}
 	return out, nil
 }

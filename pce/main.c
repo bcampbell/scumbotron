@@ -3,7 +3,7 @@
 // Try and map the whole game ROM in at once.
 // TODO: don't think this works as expected...
 // first rom bank always appears at top?
-PCE_ROM_FIXED_BANK_SIZE(5);
+PCE_ROM_FIXED_BANK_SIZE(6);
 
 #include "../plat.h"
 #include "../misc.h"
@@ -51,8 +51,6 @@ int main(void) {
     pce_irq_enable(IRQ_VDC);
     pce_cpu_irq_enable();
 
-
-
     game_init();
     while(1) {
         waitvbl();
@@ -68,6 +66,7 @@ int main(void) {
         //cx16_k_joystick_scan();
         //update_inp_mouse();
         game_tick();
+
     }
 }
 
@@ -82,8 +81,8 @@ int main(void) {
 #define TILE_BYTESIZE (8*4)   // 8x8 4bpp
 
 
-#define VRAM_TILES 0xE000   // top 8KB of VRAM
-#define TILE_BASEIDX (VRAM_TILES/32)
+#define VRAM_TILES (0xE000/2)   // top 8KB of VRAM
+#define TILE_BASEIDX (VRAM_TILES/16)
 
 static void init_bg()
 {
@@ -91,18 +90,18 @@ static void init_bg()
     pce_vdc_bg_set_size(VDC_BG_SIZE_32_32);
 
     // bg palette in first block
-    *IO_VCE_COLOR_INDEX = 0x000;
-    uint8_t* src = export_palette_bin;
+    uint16_t idx = 0x200;
+    const uint8_t* src = export_palette_bin;
     for(uint8_t i=0; i<16; ++i) {
         for(uint8_t j=0; j<16; ++j) {
+            *IO_VCE_COLOR_INDEX = idx++;
             *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>2, src[1]>>2, src[2]>>2);
         }
         src += 4;
     }
 
     // Load chars into vram as bg tiles
-    pce_vdc_copy_to_vram(VRAM_TILES, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len);
-
+    pce_vdc_copy_to_vram(VRAM_TILES, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len/2);
 }
 
 static void render_start()
@@ -126,7 +125,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
         ++txt;
     }
     pce_vdc_set_copy_word();
-    pce_vdc_copy_to_vram(vdest, (const void *)buf, len*2);
+    pce_vdc_copy_to_vram(vdest/2, (const void *)buf, len*2);
 }
 
 void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
