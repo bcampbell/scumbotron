@@ -1,8 +1,6 @@
 #define PCE_CONFIG_IMPLEMENTATION
 #include <pce.h>
 // Try and map the whole game ROM in at once.
-// TODO: don't think this works as expected...
-// first rom bank always appears at top?
 PCE_ROM_FIXED_BANK_SIZE(6);
 
 #include "../plat.h"
@@ -22,14 +20,20 @@ static void init_bg();
 static void render_start();
 static void render_finish();
 
+// sprites.c
+void sprites_init();
+void sprites_start();
+void sprites_finish();
+void sprout16(int16_t x, int16_t y, uint8_t img);
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout32(int16_t x, int16_t y, uint8_t img);
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout64x8(int16_t x, int16_t y, uint8_t img);
+
+
+
 extern const unsigned char export_palette_bin[];
 extern const unsigned int export_palette_bin_len;
-extern const unsigned char export_spr16_bin[];
-extern const unsigned int export_spr16_bin_len;
-extern const unsigned char export_spr32_bin[];
-extern const unsigned int export_spr32_bin_len;
-//extern const unsigned char export_spr64x8_bin[];
-//extern const unsigned int export_spr64x8_bin_len;
 extern const unsigned char export_chars_bin[];
 extern const unsigned int export_chars_bin_len;
 
@@ -45,6 +49,7 @@ int main(void) {
     pce_vdc_set_resolution(SCREEN_W, SCREEN_H, 0);  //256x240
 
     init_bg();
+    sprites_init();
 
     // Set up vblank interrupt
     pce_vdc_irq_vblank_enable();
@@ -106,14 +111,28 @@ static void init_bg()
 
 static void render_start()
 {
+    sprites_start();
 }
 
 static void render_finish()
 {
+    sprites_finish();
 }
 
 void plat_clr()
 {
+    const uint8_t colour = 5;
+    uint16_t buf[32];
+        for (uint8_t cx=0; cx<32; ++cx) {
+            buf[cx] = (colour<<12) | (TILE_BASEIDX + cx);
+        }
+        /*
+    for(uint8_t cy=0; cy<32; ++cy) {
+        uint16_t vdest = (cy*2*32);
+        pce_vdc_set_copy_word();
+        pce_vdc_copy_to_vram(vdest/2, (const void *)buf, 32*2);
+    }
+    */
 }
 
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
@@ -160,11 +179,7 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 {
 }
 
-static void sprout16(int16_t x, int16_t y, uint8_t img) {}
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img) {}
-static void sprout32(int16_t x, int16_t y, uint8_t img) {}
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img) {}
-static void sprout64x8(int16_t x, int16_t y, uint8_t img) {}
+// render fns
 
 #include "../spr_common_inc.h"
 
@@ -186,12 +201,32 @@ extern char plat_textentry_getchar() {return 0;}
  
 uint8_t plat_raw_dualstick()
 {
-    return 0;
+    uint8_t out = 0;
+    uint8_t b = pce_joypad_read();
+
+    if (b & KEY_LEFT) { out |= INP_LEFT; }
+    if (b & KEY_RIGHT) { out |= INP_RIGHT; }
+    if (b & KEY_UP) { out |= INP_UP; }
+    if (b & KEY_DOWN) { out |= INP_DOWN; }
+   
+    out |= (out<<4);    /// fudge fire dirs for now
+    return out;
 }
 
 uint8_t plat_raw_menukeys()
 {
-    return 0;
+    uint8_t out = 0;
+    uint8_t b = pce_joypad_read();
+
+    if (b & KEY_LEFT) { out |= INP_LEFT; }
+    if (b & KEY_RIGHT) { out |= INP_RIGHT; }
+    if (b & KEY_UP) { out |= INP_UP; }
+    if (b & KEY_DOWN) { out |= INP_DOWN; }
+    if (b & KEY_1) { out |= INP_MENU_A; }
+    if (b & KEY_2) { out |= INP_MENU_B; }
+    if (b & KEY_RUN) { out |= INP_MENU_START; }
+    if (b & KEY_SELECT) { out |= INP_MENU_ESC; }
+    return out;    
 }
 
 uint8_t plat_raw_cheatkeys()
