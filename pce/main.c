@@ -44,12 +44,22 @@ void waitvbl()
     while (tmp == tick) {}
 }
 
+
+void debug_gamepad()
+{
+    char buf[2] = {'H','I'};
+    //uint8_t b = 0x69;   //plat_raw_dualstick();
+    buf[0] = 'H';   //hexdigits[b >> 4];
+    buf[1] = '0';   //hexdigits[b & 0x0f];
+    plat_textn(0,0,buf,2,tick&15);
+}
+
 int main(void) {
     // Configure the VDC screen resolution.
     pce_vdc_set_resolution(SCREEN_W, SCREEN_H, 0);  //256x240
 
     init_bg();
-    sprites_init();
+    //sprites_init();
 
     // Set up vblank interrupt
     pce_vdc_irq_vblank_enable();
@@ -60,12 +70,14 @@ int main(void) {
     while(1) {
         waitvbl();
         render_start();
+//        *IO_VCE_COLOR_INDEX = 0x200;
+//        *IO_VCE_COLOR_DATA = (rnd()<<4) | rnd();
         game_render();
    //     if (mouse_watchdog > 0) {
     //        sprout16(plat_mouse_x, plat_mouse_y, 0);
     //    }
 
-        //debug_gamepad();
+        debug_gamepad();
         //debug_getin();
         render_finish();
         //cx16_k_joystick_scan();
@@ -86,8 +98,8 @@ int main(void) {
 #define TILE_BYTESIZE (8*4)   // 8x8 4bpp
 
 
-#define VRAM_TILES (0xE000/2)   // top 8KB of VRAM
-#define TILE_BASEIDX (VRAM_TILES/16)
+#define VRAM_CG 0x4000
+#define TILE_BASEIDX (VRAM_CG/32)
 
 static void init_bg()
 {
@@ -95,18 +107,19 @@ static void init_bg()
     pce_vdc_bg_set_size(VDC_BG_SIZE_32_32);
 
     // bg palette in first block
-    uint16_t idx = 0x200;
+    uint16_t idx = 0x0000;
     const uint8_t* src = export_palette_bin;
     for(uint8_t i=0; i<16; ++i) {
         for(uint8_t j=0; j<16; ++j) {
             *IO_VCE_COLOR_INDEX = idx++;
-            *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>2, src[1]>>2, src[2]>>2);
+            *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>5, src[1]>>5, src[2]>>5);
         }
         src += 4;
     }
 
     // Load chars into vram as bg tiles
-    pce_vdc_copy_to_vram(VRAM_TILES, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len/2);
+    pce_vdc_set_copy_word();
+    pce_vdc_copy_to_vram(VRAM_CG/2, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len/2);
 }
 
 static void render_start()
@@ -210,7 +223,7 @@ uint8_t plat_raw_dualstick()
     if (b & KEY_DOWN) { out |= INP_DOWN; }
    
     out |= (out<<4);    /// fudge fire dirs for now
-    return out;
+    return 0;
 }
 
 uint8_t plat_raw_menukeys()
@@ -226,7 +239,7 @@ uint8_t plat_raw_menukeys()
     if (b & KEY_2) { out |= INP_MENU_B; }
     if (b & KEY_RUN) { out |= INP_MENU_START; }
     if (b & KEY_SELECT) { out |= INP_MENU_ESC; }
-    return out;    
+    return 0;    
 }
 
 uint8_t plat_raw_cheatkeys()
