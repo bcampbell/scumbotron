@@ -243,6 +243,8 @@ func cook(img *image.Paletted) ([]uint8, error) {
 		return cook8bpp(img)
 	case "4bpp":
 		return cook4bpp(img)
+	case "mdspr": // megadrive sprite
+		return cookMDSpr(img)
 	case "nds4bpp":
 		return cook4bppNDS(img)
 	case "1bpp":
@@ -272,6 +274,36 @@ func cook4bpp(img *image.Paletted) ([]uint8, error) {
 			b := (img.Pix[idx]&0x0f)<<4 | (img.Pix[idx+1] & 0x0f)
 			idx += 2
 			out = append(out, b)
+		}
+	}
+	return out, nil
+}
+
+// Megadrive sprites
+func cookMDSpr(img *image.Paletted) ([]uint8, error) {
+	out := []uint8{}
+	r := img.Bounds()
+	validSizes := map[int]bool{8: true, 16: true, 24: true, 32: true}
+
+	_, ok1 := validSizes[r.Dx()]
+	_, ok2 := validSizes[r.Dy()]
+	if !ok1 || !ok2 {
+		return nil, fmt.Errorf("bad dimensions (should be 8,16,24 or ,32)")
+	}
+
+	// break down into 8x8 blocks, column first
+	for x := r.Min.X; x < r.Max.X; x += 8 {
+		for y := r.Min.Y; y < r.Max.Y; y += 8 {
+			patRect := image.Rect(x, y, x+8, y+8)
+			pattern, ok := img.SubImage(patRect).(*image.Paletted)
+			if !ok {
+				return nil, fmt.Errorf("SHITE")
+			}
+			cooked, err := cook4bpp(pattern)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, cooked...)
 		}
 	}
 	return out, nil

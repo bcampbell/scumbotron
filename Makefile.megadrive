@@ -1,0 +1,107 @@
+BUILD_DIR=build_megadrive
+EXPORT_DIR=export_megadrive
+
+SRCS = megadrive/main.c megadrive/joy.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
+
+SRCS_ASM = megadrive/boot.s
+
+OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
+
+# Default paths, can be overridden by setting MARSDEV before calling make
+MARSDEV ?= /opt/toolchains/mars
+MARSBIN  = $(MARSDEV)/m68k-elf/bin
+
+# GCC and Binutils
+CC   = $(MARSBIN)/m68k-elf-gcc
+CXX  = $(MARSBIN)/m68k-elf-g++
+AS   = $(MARSBIN)/m68k-elf-as
+LD   = $(MARSBIN)/m68k-elf-ld
+NM   = $(MARSBIN)/m68k-elf-nm
+OBJC = $(MARSBIN)/m68k-elf-objcopy
+
+# Some files needed are in a versioned directory
+GCC_VER := $(shell $(CC) -dumpversion)
+
+# Need the LTO plugin path so NM can dump our symbol table
+PLUGIN   = $(MARSDEV)/m68k-elf/libexec/gcc/m68k-elf/$(GCC_VER)
+LTO_SO   = liblto_plugin.so
+ifeq ($(OS),Windows_NT)
+	LTO_SO = liblto_plugin-0.dll
+endif
+
+# Any C or C++ standard should be fine here as long as GCC supports it
+# GCC 10+ by default fails to link if you don't declare header variables extern,
+# and -fcommon reverts to the old behavior (needed to compile SGDK)
+CFLAGS  = -m68000 -Wall -Wextra -std=c99 -ffreestanding
+CFLAGS += -I$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include
+CFLAGS += -Imegadrive
+CFLAGS += -Ofast
+
+# Another useful GAS flag is --bitwise-or, but it breaks SGDK
+ASFLAGS  = -m68000 --register-prefix-optional
+
+# -nostartfiles disables the c runtime startup code
+# -nostdlib unsets -lc, so when using Newlib don't set that option
+
+LDFLAGS = -T megadrive/megadrive.ld -nostdlib
+LDFLAGS += -L$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)
+LDLIBS = -lgcc
+DEPFLAGS = -MMD -MP -MF $@.d
+
+DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
+
+$(BUILD_DIR)/scumbotron.bin: $(BUILD_DIR)/scumbotron.elf
+	@echo "Stripping ELF header..."
+	$(OBJC) -O binary $< $(BUILD_DIR)/temp.bin
+	dd if=$(BUILD_DIR)/temp.bin of=$@ bs=8K conv=sync
+	rm -f $(BUILD_DIR)/temp.bin
+
+$(BUILD_DIR)/scumbotron.elf: $(OBJ_FILES)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: %.s 
+	@mkdir -p $(dir $@)
+	@$(AS) $(ASFLAGS) $< -o $@
+
+# Generates a symbol table that is very helpful in debugging crashes
+# Cross reference symbol.txt with the addresses displayed in the crash handler
+$(BUILD_DIR)/symbol.txt: $(BUILD_DIR)/out.bin
+	@echo "Creating symbol.txt"
+	@$(NM) --plugin=$(PLUGIN)/$(LTO_SO) -n $< > $@
+
+
+-include $(DEP_FILES)
+
+# graphics exporting
+$(EXPORT_DIR)/palette.c: sprites16.png
+	tools/png2sprites -palette rgba -c -var export_palette_bin $< $@
+
+$(EXPORT_DIR)/spr16.c: sprites16.png
+	tools/png2sprites -w 16 -h 16 -fmt mdspr -num 128 -c -var export_spr16_bin $< $@
+
+$(EXPORT_DIR)/spr32.c: sprites32.png
+	tools/png2sprites -w 32 -h 32 -num 3 -fmt 4bpp -c -var export_spr32_bin $< $@
+
+# speech bubble sprites
+$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
+	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp -c -var export_spr64x8_bin $< $@
+
+$(EXPORT_DIR)/chars.c: chars.png
+	tools/png2sprites -w 8 -h 8 -num 256 -fmt 4bpp -c -var export_chars_bin $< $@
+
+
+.PHONY: run
+run: $(BUILD_DIR)/scumbotron.bin
+	blastem $<
+
+.PHONY: clean
+clean:
+	- rm -rf $(BUILD_DIR)
+

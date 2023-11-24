@@ -1,7 +1,4 @@
 #include "misc.h"
-#include <stdio.h>
-
-
 
 // by darsie,
 // https://www.avrfreaks.net/forum/tiny-fast-prng
