@@ -6,20 +6,57 @@
 #include "../misc.h"
 #include "joy.h"
 
+
 extern const unsigned char export_palette_bin[];
 extern const unsigned int export_palette_bin_len;
 extern const unsigned char export_chars_bin[];
 extern const unsigned int export_chars_bin_len;
 extern const unsigned char export_spr16_bin[];
 extern const unsigned int export_spr16_bin_len;
+extern const unsigned char export_spr32_bin[];
+extern const unsigned int export_spr32_bin_len;
+extern const unsigned char export_spr64x8_bin[];
+extern const unsigned int export_spr64x8_bin_len;
 
-const uint16_t blank[128] = {0};
+// Counts for exported sprite images
+// each 64x8 is really a pair of 32x8 sprites
+#define SPR16_NUM 128
+#define SPR32_NUM 3
+#define SPR64x8_NUM 4
+
+// bytesize of sprite data
+#define SPR16_SIZE (8*16)
+#define SPR32_SIZE (16*32)
+#define SPR64x8_SIZE (32*8)
+
+// start of sprite data, in tile indexes
+#define SPR16_TILEBASE (VRAM_SPR16/32)
+#define SPR32_TILEBASE (VRAM_SPR32/32)
+#define SPR64x8_TILEBASE (VRAM_SPR64x8/32)
+
+
 
 //
 volatile uint8_t tick;
-uint8_t screen_h;
+uint16_t screen_h;  // varies according to pal/ntsc
 bool pal_mode;
-int nsprites;
+static uint16_t sprites[80*4];  // sprite attribute table
+int nsprites;   // number of sprites in use
+
+// DMA queue
+#define DMAQ_NWORDS 1024
+static uint16_t queue[DMAQ_NWORDS];
+static uint16_t* qp;
+void dmaq_reset();
+void dmaq_copy_ptr(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr);
+void dmaq_copy(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr);
+void dmaq_run();
+
+
+// drawing source data
+uint16_t blankscreen[64*32];
+uint16_t effectline[64];
+
 
 // VDP defs
 static volatile uint16_t* const vdp_data_port = (uint16_t*) 0xC00000;
@@ -30,7 +67,9 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 
 // Our vram memory map
 #define VRAM_CHARSET    0x0000      // 256 tiles for charset
-#define VRAM_SPR16      0x2000      // 128 16x16 sprites
+#define VRAM_SPR16      0x4000      // 128 16x16 sprites
+#define VRAM_SPR32      (VRAM_SPR16 + (SPR16_NUM * SPR16_SIZE))
+#define VRAM_SPR64x8    (VRAM_SPR32 + (SPR32_NUM * SPR32_SIZE))
 #define VRAM_WINDOW     0xB000      // tilemap for window
 #define VRAM_SCROLL_A   0xC000      // tilemap for plane A
 #define VRAM_SCROLL_B   0xE000      // tilemap for plane B
@@ -42,8 +81,6 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 #define SCROLL_A_W 64
 #define SCROLL_A_H 32
 
-#define SPR16BASE (VRAM_SPR16/32)
-// end VDP defs
 
 static void megadrive_init();
 static void megadrive_render_finish();
@@ -51,7 +88,14 @@ static void megadrive_render_finish();
 // DMA stuff
 
 
-static inline uint32_t vdpcmd(uint8_t code, uint16_t addr) {
+#define ADDR_VRAM_WRITE 0b000001
+#define ADDR_CRAM_WRITE 0b000011
+#define ADDR_VSRAM_WRITE 0b000101
+
+#define VDP_DMA_VRAM_ADDR(adr)      (((0x4000 + ((adr) & 0x3FFF)) << 16) + (((adr) >> 14) | 0x80))
+
+// calculate longword used for setting vdp addresses
+static inline uint32_t vdpaddr(uint8_t code, uint16_t addr) {
     // CD1 CD0 A13 A12 A11 A10 A09 A08     (D31-D24)
     // A07 A06 A05 A04 A03 A02 A01 A00     (D23-D16)
     //  ?   ?   ?   ?   ?   ?   ?   ?      (D15-D8)
@@ -62,7 +106,7 @@ static inline uint32_t vdpcmd(uint8_t code, uint16_t addr) {
     uint32_t l = (code & 0x03) << 30;
     l |= (addr & 0x3FFF) << 16;
     l |= (code & 0x3c) << 2;
-    l |= addr >> 14;
+    l |= (addr >> 14);
     return l;
 }
 
@@ -99,7 +143,6 @@ void vdp_dma_vsram(uint32_t from, uint16_t to, uint16_t len) {
 	dma_do(from, len, ((0x4000 + (((uint32_t)to) & 0x3FFF)) << 16) + ((((uint32_t)to) >> 14) | 0x90));
 }
 
-// end DMA stuff
 // error handler, called from boot.s
 void _error()
 {
@@ -116,8 +159,8 @@ void waitvbl() {
 // palette format:
 //----bbb-ggg-rrr-
 static void vdp_color(uint16_t index, uint16_t color) {
-    index <<= 1;
-    *vdp_ctrl_wide = ((0xC000 + (((uint32_t)index) & 0x3FFF)) << 16) + ((((uint32_t)index) >> 14) | 0x00);
+    *vdp_ctrl_wide = vdpaddr(ADDR_CRAM_WRITE, index << 1);
+//    *vdp_ctrl_wide = ((0xC000 + (((uint32_t)index) & 0x3FFF)) << 16) + ((((uint32_t)index) >> 14) | 0x00);
     *vdp_data_port = color;
 }
 
@@ -125,19 +168,6 @@ static void vdp_color(uint16_t index, uint16_t color) {
 	((((uint16_t)flipH) << 11) | (((uint16_t)flipV) << 12) |                    \
 	(((uint16_t)pal) << 13) | (((uint16_t)prio) << 15) | ((uint16_t)index))
 
-void vdp_puts(uint16_t plan, const char *str, uint16_t x, uint16_t y) {
-	uint32_t addr = plan + ((x + (y << 6)) << 1);
-	*vdp_ctrl_wide = ((0x4000 + ((addr) & 0x3FFF)) << 16) + (((addr) >> 14) | 0x00);
-	for(uint16_t i = 0; i < 64 && *str; ++i) {
-		// Wrap around the plane, don't fall to next line
-		if(i + x == 64) {
-			addr -= x << 1;
-			*vdp_ctrl_wide = ((0x4000 + ((addr) & 0x3FFF)) << 16) + (((addr) >> 14) | 0x00);
-		}
-		uint16_t attr = TILE_ATTR(0,1,0,0,CHARBASE + *str++ - 0x20);
-		*vdp_data_port = attr;
-	}
-}
 
 void dbug()
 {
@@ -151,25 +181,40 @@ void dbug()
 void main()
 {
     megadrive_init();
+    dmaq_reset();
 
     game_init();
     while(1) {
-        waitvbl();
-        //vdp_color(0,0x0002);
-        // start render
-        nsprites = 0;
-        //plat_clr();
-        //vdp_color(0,0x0e00);
-        game_render();
-        //vdp_color(0,0x00e0);
-        // finish render
-        megadrive_render_finish();
         //vdp_color(0,0x0000);
         dbug();
         //vdp_color(0,0x000e);
         game_tick();
         joy_update();
-        //vdp_color(0,0x0000);
+
+        // start render
+        vdp_color(0,0x0002);
+        nsprites = 0;
+        //plat_clr();
+        //vdp_color(0,0x0e00);
+        dmaq_copy_ptr(blankscreen, VRAM_SCROLL_A, 64*32, 2);
+        uint16_t buf[3] = {
+           TILE_ATTR(0,1,0,0,CHARBASE+'a'),
+           TILE_ATTR(0,1,0,0,CHARBASE+'b'),
+           TILE_ATTR(0,1,0,0,CHARBASE+'c'),
+        };
+        buf[1] = (tick<<8)|tick;
+        dmaq_copy(buf, VRAM_SCROLL_A+(64*2), 3, 64*2);
+
+        game_render();
+        vdp_color(0,0x0000);
+        //vdp_color(0,0x00e0);
+        // finish render
+
+        waitvbl();
+        vdp_color(0,0x00e0);
+        megadrive_render_finish();  // draw to vram
+        vdp_color(0,0x0002);
+
     }
 }
 
@@ -257,15 +302,17 @@ static void megadrive_init()
     // $15,$16,$17 - DMA 68000 src addr
 
     // load charset into vram
-    vdp_dma_vram(export_chars_bin, VRAM_CHARSET, export_chars_bin_len/2);
+    vdp_dma_vram((uint32_t)export_chars_bin, VRAM_CHARSET, export_chars_bin_len/2);
 
-    // load 16x16 sprites into vram
-    vdp_dma_vram(export_spr16_bin, VRAM_SPR16, export_spr16_bin_len/2);
+    // load sprites into vram
+    vdp_dma_vram((uint32_t)export_spr16_bin, VRAM_SPR16, export_spr16_bin_len/2);
+    vdp_dma_vram((uint32_t)export_spr32_bin, VRAM_SPR32, export_spr32_bin_len/2);
+    vdp_dma_vram((uint32_t)export_spr64x8_bin, VRAM_SPR64x8, export_spr64x8_bin_len/2);
 
-    // set up palette
+    // palette 0 - normal, no fancy stuff
     {
         const uint8_t *src = export_palette_bin;
-        for (uint8_t i=0; i<16; ++i) {
+        for (int i=0; i<16; ++i) {
             uint8_t r = src[0];
             uint8_t g = src[1];
             uint8_t b = src[2];
@@ -274,39 +321,31 @@ static void megadrive_init()
             vdp_color(i,c);
         }
     }
+    // palette 3, for highlighting sprites
+    // color 0 black (even if never seen!), all others white
+    {
+        vdp_color(48 + 0, 0x0000);
+        for (int i=1; i<16; ++i) {
+            vdp_color(48+i, 0b0000111011101110);
+        }
+    }
+
+    // set up a blank screen in RAM
+    {
+        for (int i=0; i<64*32; ++i) {
+            blankscreen[i] = TILE_ATTR(0,1,0,0,CHARBASE+0);
+        }
+    }
+    {
+        for (int i=0; i<64; ++i) {
+            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+'a'+i);
+        }
+    }
 
     // Clear Scroll B (won't be using it)
     {
-        uint32_t dest = VRAM_SCROLL_B;
-        for (int cy = 0; cy < (SCREEN_H / 8); ++cy) {
-            vdp_dma_vram(blank, dest, (SCREEN_W / 8) / 2);
-            dest += 64 * 2;
-        }
+        vdp_dma_vram((uint32_t)blankscreen, VRAM_SCROLL_B, 64*32);
     }
-#if 0
-	// Reset the tilemaps
-	vdp_map_clear(VDP_PLAN_A);
-	vdp_hscroll(VDP_PLAN_A, 0);
-	vdp_vscroll(VDP_PLAN_A, 0);
-	vdp_map_clear(VDP_PLAN_B);
-	vdp_hscroll(VDP_PLAN_B, 0);
-	vdp_vscroll(VDP_PLAN_B, 0);
-	// Reset sprites
-	vdp_sprites_clear();
-	vdp_sprites_update();
-	// (Re)load the font
-	vdp_font_load(FONT_TILES);
-	vdp_color(1, 0x000);
-	vdp_color(15, 0xEEE);
-	// Put blank tile in index 0
-	vdp_tiles_load(TILE_BLANK, 0, 1);
-//    vdp_init();
-//    enable_ints;
-    
-//	vdp_color(0, 0x080);
-//	vdp_puts(VDP_PLAN_A, "Hello World!", 4, 4);
-	
-#endif
 }
 
 
@@ -315,6 +354,7 @@ static void megadrive_init()
 // overwritten, or plat_clr() is called.
 void plat_clr()
 {
+    return;
     uint32_t dest = VRAM_SCROLL_A;
     for (int cy = 0; cy < SCROLL_A_H; ++cy) {
         plat_textn(0,cy, "                    ", 20,0);
@@ -326,15 +366,15 @@ void plat_clr()
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
 	uint32_t dest = VRAM_SCROLL_A + ((cx + (cy * SCROLL_A_W)) << 1);
-	*vdp_ctrl_wide = ((0x4000 + ((dest) & 0x3FFF)) << 16) + (((dest) >> 14) | 0x00);
+    uint16_t buf[64];
     colour = 0;
-    while (len > 0) {
+    for (int i=0; i<len; ++i) {
         uint8_t chr = *txt++;
         // pal, pri, flipv, fliph, index
 		uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + chr);
-		*vdp_data_port = attr;
-        --len;
+		buf[i] = attr;
 	}
+    dmaq_copy(buf, dest, len, 2);
 }
 
 // draw null-terminated string
@@ -382,9 +422,12 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
  x = Horizontal coordinate of sprite
 */
 
-static uint16_t sprites[80*4];
 
-static void sprout16(int16_t x, int16_t y, uint8_t img)
+// size hhvv:
+// 0b0101 = 16x16
+// 0b1111 = 32x32   
+// 0b1100 = 32x8   
+static void internal_sprout(int16_t x, int16_t y, uint16_t tile, uint8_t size, uint8_t palette)
 {
     if (nsprites>=80) {
         return;
@@ -395,25 +438,39 @@ static void sprout16(int16_t x, int16_t y, uint8_t img)
     uint16_t *spr = &sprites[nsprites*4];
     *spr++ = y & 0x3FF;
     uint8_t link = nsprites+1;
-    *spr++ = (0b00000101<<8) | link;
-    *spr++ = 0x8000 | (SPR16BASE + img*4);
+    *spr++ = (size<<8) | link;
+    *spr++ = 0x8000 | (palette<<13) | tile;
     *spr++ = x & 0x3FF;
     ++nsprites;
 }
 
+
+static void sprout16(int16_t x, int16_t y, uint8_t img)
+{
+    internal_sprout(x, y, (SPR16_TILEBASE + img*4), 0b0101, 0);
+}
+
 static void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
-    sprout16(x,y,img);
+    // palette 3 is all-white
+    internal_sprout(x, y, (SPR16_TILEBASE + img*4), 0b0101, 3);
 }
 
 static void sprout32(int16_t x, int16_t y, uint8_t img)
 {
+    internal_sprout(x, y, (SPR32_TILEBASE + img*16), 0b1111, 0);
 }
+
 static void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    // palette 3 is all-white
+    internal_sprout(x, y, (SPR32_TILEBASE + img*16), 0b1111, 3);
 }
+
 static void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
+    internal_sprout(x, y, (SPR64x8_TILEBASE + (img*2) * 4), 0b1100, 0);
+    internal_sprout(x + (32 << FX), y, (SPR64x8_TILEBASE + ((img*2) + 1) * 4), 0b1100, 0);
 }
 
 static void megadrive_render_finish()
@@ -422,7 +479,10 @@ static void megadrive_render_finish()
         sprout16(-128<<FX,-128<<FX,0);
     }
     sprites[4*(nsprites-1) + 1] &= 0xff80;    // link = 0
-    vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
+    dmaq_copy_ptr(sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2, 2);
+    
+    dmaq_run();
+    //vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
 }
 
 
@@ -501,6 +561,7 @@ uint8_t plat_raw_cheatkeys()
 // Draw a box in chars (effects layer)
 void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
 {
+//   dmaq_copy_ptr(effectline, VRAM_SCROLL_A + 0, w, 2);
 }
 
 bool plat_savescores(const void* begin, int nbytes)
@@ -512,4 +573,78 @@ bool plat_loadscores(void* begin, int nbytes)
 {
     return false;
 }
+
+
+
+// DMA queue
+//
+// DMA runs 10x faster during vblank, so we'll queue up our dma operations
+// and run them then.
+//
+// Don't bother with DMA fill operations. Too fiddly. The first write is a
+// word, then bytes after that, so an arse for doing tiles. especially an
+// arse for doing vertical tiles (it'll be offset by 1 tile).
+// Besides, we've got RAM to burn, and RAM->VRAM isn't any slower than a
+// VRAM fill. So wherever we want to fill, we'll set up RAM buffers for
+// source data.
+
+void dmaq_reset()
+{
+    qp = queue;
+}
+
+// queue up a dma copy to VRAM, from a const src ptr
+void dmaq_copy_ptr(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr)
+{
+    if (qp >= &(queue[DMAQ_NWORDS - 5])) {
+        return; // uhoh - out of space!
+    }
+    *qp++ = incr;   // high bit clear
+    *qp++ = dest;
+    *qp++ = nwords;
+    *qp++ = (uint16_t)(((uint32_t)src) >> 16);
+    *qp++ = (uint16_t)(((uint32_t)src) & 0x0000FFFF);
+}
+
+void dmaq_copy(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr)
+{
+    if (qp >= &(queue[DMAQ_NWORDS - (3 + nwords)])) {
+        return; // uhoh - out of space!
+    }
+
+    *qp++ = 0x8000 | incr;
+    *qp++ = dest;
+    *qp++ = nwords;
+    while (nwords) {
+        *qp++ = *src++;
+        --nwords;
+    }
+}
+
+
+extern void vdp_dma_vram(uint32_t from, uint16_t to, uint16_t len);
+
+void dmaq_run()
+{
+    uint16_t* p = queue;
+
+    while (p < qp) {
+        uint16_t incr = *p++;
+        uint16_t dest = *p++;
+        uint16_t nwords = *p++;
+        uint32_t src;
+        if (incr & 0x8000) {
+            src = (uint32_t)p;
+            p += nwords;
+        } else {
+            src = ((uint32_t)(*p++))<<16;
+            src |= (*p++);
+        }
+        // set auto-increment
+	    *vdp_ctrl_port = 0x8F00 | (incr&0x0ff);
+        vdp_dma_vram(src, dest, nwords);
+    }
+    qp = queue;
+}
+
 
