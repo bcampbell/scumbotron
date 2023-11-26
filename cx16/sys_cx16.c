@@ -648,8 +648,6 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 }
 
 
-#include "../spr_common_inc.h"
-
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
     switch(state) {
