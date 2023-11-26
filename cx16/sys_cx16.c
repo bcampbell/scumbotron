@@ -60,14 +60,6 @@ extern unsigned int export_palette_bin_len;
 #define VRAM_PALETTE 0x1FA00
 #define VRAM_SPRITE_ATTRS 0x1FC00
 
-static void sprout16(int16_t x, int16_t y, uint8_t img);
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-static void sprout32(int16_t x, int16_t y, uint8_t img);
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
-
-void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
-void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
-
 static void clr_layer0();
 
 static void plat_init();
@@ -141,7 +133,8 @@ void plat_render_finish()
     //testum();
 }
 
-static void sprout16(int16_t x, int16_t y, uint8_t img ) {
+void sprout16(int16_t x, int16_t y, uint8_t img )
+{
     if (sprremaining == 0) {
         return;
     }
@@ -178,7 +171,8 @@ static void sprout16(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (1 << 6) | (1 << 4);  // 16x16, 0 palette offset.
 }
 
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img )
+{
     if (sprremaining == 0) {
         return;
     }
@@ -196,7 +190,8 @@ static void sprout16_highlight(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (1 << 6) | (1 << 4) | 1;  // 16x16, palette offset 1.
 }
 
-static void sprout32(int16_t x, int16_t y, uint8_t img ) {
+void sprout32(int16_t x, int16_t y, uint8_t img )
+{
     if (sprremaining == 0) {
         return;
     }
@@ -214,7 +209,8 @@ static void sprout32(int16_t x, int16_t y, uint8_t img ) {
     VERA.data1 = (2 << 6) | (2 << 4);  // 32x32, 0 palette offset.
 }
 
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img ) {
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img )
+{
     if (sprremaining == 0) {
         return;
     }
@@ -233,7 +229,8 @@ static void sprout32_highlight(int16_t x, int16_t y, uint8_t img ) {
 }
 
 
-static void sprout64x8(int16_t x, int16_t y, uint8_t img ) {
+void sprout64x8(int16_t x, int16_t y, uint8_t img )
+{
     if (sprremaining == 0) {
         return;
     }

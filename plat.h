@@ -54,6 +54,60 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch,
 void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
 
 
+// sprite image defs
+#define SPR16_RETICULE 0
+#define SPR16_CURSOR 1  // 2 frames
+#define SPR16_BLOCK 3
+#define SPR16_EXTRALIFE 8
+#define SPR16_POWERUP 9
+#define SPR16_BAITER 16
+#define SPR16_AMOEBA_MED 20
+#define SPR16_AMOEBA_SMALL 24
+#define SPR16_TANK 28
+#define SPR16_GRUNT 30
+#define SPR16_HZAPPER 12
+#define SPR16_HZAPPER_ON 13
+#define SPR16_VZAPPER 14
+#define SPR16_VZAPPER_ON 15
+#define SPR16_FRAGGER 32
+#define SPR16_FRAG_NW 33
+#define SPR16_FRAG_NE 34
+#define SPR16_FRAG_SW 35
+#define SPR16_FRAG_SE 36
+#define SPR16_VULGON 37
+#define SPR16_VULGON_ANGRY 39
+#define SPR16_POOMERANG 41
+#define SPR16_HAPPYSLAPPER 45
+#define SPR16_HAPPYSLAPPER_SLEEP 47
+#define SPR16_PLR_U 48
+#define SPR16_PLR_D 50
+#define SPR16_PLR_L 52
+#define SPR16_PLR_R 54
+#define SPR16_MARINE 56
+#define SPR16_BOSS_SEG 58
+#define SPR16_SHOT 64
+#define SPR16_SHOT_MED 68
+#define SPR16_SHOT_HEAVY 72
+#define SPR16_BRAIN 76
+#define SPR16_ZOMBIE 78
+#define SPR16_GOBBER 80
+#define SPR16_MISSILE 88
+#define SPR16_RIFASHARK 96
+#define SPR16_RIFASPAWNER 92+16
+
+#define SPR32_AMOEBA_BIG 0
+#define SPR32_BOSS_HEAD 2
+#define SPR32_BLOB 3
+
+#define SPR64x8_BUB 0   // Start of speech bubble sprites.
+
+void sprout16(int16_t x, int16_t y, uint8_t img);
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout32(int16_t x, int16_t y, uint8_t img);
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout64x8(int16_t x, int16_t y, uint8_t img );
+
+
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
 void plat_shot_render(int16_t x, int16_t y, uint8_t direction, uint8_t power);
 void plat_pickup_render(int16_t x, int16_t y, uint8_t kind);

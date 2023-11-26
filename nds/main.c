@@ -43,11 +43,6 @@ volatile uint8_t tick = 0;
 int sprMain;
 int sprSub;
 
-static void sprout16(int16_t x, int16_t y, uint8_t img);
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-static void sprout32(int16_t x, int16_t y, uint8_t img);
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
-static void sprout64x8(int16_t x, int16_t y, uint8_t img);
 static void sprout32x8(int16_t x, int16_t y, uint8_t img);
 static void sprout8x32(int16_t x, int16_t y, uint8_t img);
 
@@ -201,7 +196,6 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 #define SPR32x8_BASETILE (SPR64x8_BASETILE + (SPR64x8_NUM * SPR64x8_NTILES))
 #define SPR8x32_BASETILE (SPR32x8_BASETILE + (SPR32x8_NUM * SPR32x8_NTILES))
 
-#include "../spr_common_inc.h"
 
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state) {
     switch(state) {
@@ -400,32 +394,32 @@ static void internal_sprout( int16_t x, int16_t y, int tile, int w, int h, int s
 }
 
 
-static void sprout16(int16_t x, int16_t y, uint8_t img)
+void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     int tile = SPR16_BASETILE + (img * SPR16_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 0);
 }
 
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     int tile = SPR16_BASETILE + (img * SPR16_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 16,16, SpriteSize_16x16, 1);
 }
 
-static void sprout32(int16_t x, int16_t y, uint8_t img)
+void sprout32(int16_t x, int16_t y, uint8_t img)
 {
     int tile = SPR32_BASETILE + (img * SPR32_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 32,32, SpriteSize_32x32, 0);
 }
 
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
     int tile = SPR32_BASETILE + (img * SPR32_NTILES);
     internal_sprout(x>>FX, y>>FX, tile, 32,32, SpriteSize_32x32, 1);
 }
 
 // NDS doesn't support 64x8, so we use a 32x8 pair instead.
-static void sprout64x8(int16_t x, int16_t y, uint8_t img)
+void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
     int tile = SPR64x8_BASETILE + (img * SPR64x8_NTILES);
     internal_sprout(x >> FX, y >> FX, tile, 32, 8, SpriteSize_32x8, 0);

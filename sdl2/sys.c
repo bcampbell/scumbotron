@@ -69,12 +69,6 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch,
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
 
-static inline void sprout16(int16_t x, int16_t y, uint8_t img);
-static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-static inline void sprout32(int16_t x, int16_t y, uint8_t img);
-static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
-static inline void sprout64x8(int16_t x, int16_t y, uint8_t img);
-
 void plat_gatso(uint8_t t)
 {
 }
@@ -565,7 +559,7 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *des
 
 
 
-static inline void sprout16(int16_t x, int16_t y, uint8_t img)
+void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
@@ -573,7 +567,7 @@ static inline void sprout16(int16_t x, int16_t y, uint8_t img)
     blit8(pix, 16, 16, screen, x, y);
 }
 
-static inline void sprout32(int16_t x, int16_t y, uint8_t img)
+void sprout32(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
     x = x >> FX;
@@ -581,7 +575,7 @@ static inline void sprout32(int16_t x, int16_t y, uint8_t img)
     blit8(pix, 32, 32, screen, x, y);
 }
 
-static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
@@ -589,7 +583,7 @@ static inline void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
     blit8_matte(pix, 16, 16, screen, x, y, 1);
 }
 
-static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
     x = x >> FX;
@@ -598,7 +592,7 @@ static inline void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 }
 
 
-static inline void sprout64x8(int16_t x, int16_t y, uint8_t img)
+void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
     const uint8_t *pix = export_spr64x8_bin + (img * BYTESIZE_SPR64x8);
     x = x >> FX;
@@ -607,7 +601,6 @@ static inline void sprout64x8(int16_t x, int16_t y, uint8_t img)
 }
 
 
-#include "../spr_common_inc.h"
 
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state) {
     switch(state) {
