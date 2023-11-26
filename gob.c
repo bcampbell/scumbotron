@@ -1431,21 +1431,6 @@ void rifashark_tick(uint8_t g)
         uint8_t theta = arctan8(dx, dy);
         uint8_t newdir = turntoward8(gobdat[g], theta);
         rifashark_setdir(g, newdir );
-        /* OLD
-        int8_t delta = theta - gobdat[g];
-        // find shortest route
-        if (delta < -4) {
-            delta += 8;
-        } else if (delta > 4){
-            delta -= 8;
-        }
-        // turn toward target
-        if (delta > 0) {
-            rifashark_setdir(g, (gobdat[g] + 1) & 7);
-        } else if (delta < 0) {
-            rifashark_setdir(g, (gobdat[g] - 1) & 7);
-        }
-        */
     }
 
     gobx[g] += gobvx[g];
@@ -1454,7 +1439,7 @@ void rifashark_tick(uint8_t g)
 
 void rifashark_shot(uint8_t g, uint8_t shot)
 {
-    gob_standard_kaboom(g, shot, SCORE_20);
+    gob_standard_kaboom(g, shot, SCORE_100);
 }
 
 
