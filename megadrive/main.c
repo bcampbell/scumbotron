@@ -197,13 +197,6 @@ void main()
         //plat_clr();
         //vdp_color(0,0x0e00);
         dmaq_copy_ptr(blankscreen, VRAM_SCROLL_A, 64*32, 2);
-        uint16_t buf[3] = {
-           TILE_ATTR(0,1,0,0,CHARBASE+'a'),
-           TILE_ATTR(0,1,0,0,CHARBASE+'b'),
-           TILE_ATTR(0,1,0,0,CHARBASE+'c'),
-        };
-        buf[1] = (tick<<8)|tick;
-        dmaq_copy(buf, VRAM_SCROLL_A+(64*2), 3, 64*2);
 
         game_render();
         vdp_color(0,0x0000);
@@ -338,7 +331,8 @@ static void megadrive_init()
     }
     {
         for (int i=0; i<64; ++i) {
-            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+'a'+i);
+//            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+'a'+i);
+            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+1);
         }
     }
 
@@ -377,20 +371,25 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
     dmaq_copy(buf, dest, len, 2);
 }
 
-// draw null-terminated string
-void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
-{
-    uint8_t len = 0;
-    while(txt[len] != '\0') {
-        ++len;
-    }
-    plat_textn(cx, cy, txt, len, colour);
-}
-
-
 // TODO: should just pass in level and score as bcd
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
+    // TODO!
+}
+
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+{
+//    uint16_t w = cx_end-cx_begin;
+//    uint16_t dest = VRAM_SCROLL_A + (((64 * cy) + cx_begin) * 2);
+    //dmaq_copy_ptr(effectline, dest, w, 2); 
+}
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+{
+//    uint16_t dest = VRAM_SCROLL_A + (((64 * cy_begin) + cx) * 2);
+//    dmaq_copy_ptr(effectline, dest, cy_end - cy_begin, 64); 
 }
 
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
@@ -445,29 +444,29 @@ static void internal_sprout(int16_t x, int16_t y, uint16_t tile, uint8_t size, u
 }
 
 
-static void sprout16(int16_t x, int16_t y, uint8_t img)
+void sprout16(int16_t x, int16_t y, uint8_t img)
 {
     internal_sprout(x, y, (SPR16_TILEBASE + img*4), 0b0101, 0);
 }
 
-static void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
     // palette 3 is all-white
     internal_sprout(x, y, (SPR16_TILEBASE + img*4), 0b0101, 3);
 }
 
-static void sprout32(int16_t x, int16_t y, uint8_t img)
+void sprout32(int16_t x, int16_t y, uint8_t img)
 {
     internal_sprout(x, y, (SPR32_TILEBASE + img*16), 0b1111, 0);
 }
 
-static void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
     // palette 3 is all-white
     internal_sprout(x, y, (SPR32_TILEBASE + img*16), 0b1111, 3);
 }
 
-static void sprout64x8(int16_t x, int16_t y, uint8_t img)
+void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
     internal_sprout(x, y, (SPR64x8_TILEBASE + (img*2) * 4), 0b1100, 0);
     internal_sprout(x + (32 << FX), y, (SPR64x8_TILEBASE + ((img*2) + 1) * 4), 0b1100, 0);
@@ -486,13 +485,14 @@ static void megadrive_render_finish()
 }
 
 
-#include "../spr_common_inc.h"
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+    // TODO!
 }
 
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+    // TODO!
 }
 
 // start PLAT_HAS_TEXTENTRY (fns should be no-ops if not supported)
@@ -558,11 +558,6 @@ uint8_t plat_raw_cheatkeys()
     return 0;
 }
 
-// Draw a box in chars (effects layer)
-void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
-{
-//   dmaq_copy_ptr(effectline, VRAM_SCROLL_A + 0, w, 2);
-}
 
 bool plat_savescores(const void* begin, int nbytes)
 {

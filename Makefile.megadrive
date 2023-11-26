@@ -2,7 +2,7 @@ BUILD_DIR=build_megadrive
 EXPORT_DIR=export_megadrive
 
 SRCS = megadrive/main.c megadrive/joy.c \
-	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
 SRCS_ASM = megadrive/boot.s
