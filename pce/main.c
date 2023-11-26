@@ -24,12 +24,6 @@ static void render_finish();
 void sprites_init();
 void sprites_start();
 void sprites_finish();
-void sprout16(int16_t x, int16_t y, uint8_t img);
-void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-void sprout32(int16_t x, int16_t y, uint8_t img);
-void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
-void sprout64x8(int16_t x, int16_t y, uint8_t img);
-
 
 
 extern const unsigned char export_palette_bin[];
@@ -160,15 +154,6 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
     pce_vdc_copy_to_vram(vdest/2, (const void *)buf, len*2);
 }
 
-void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
-{
-    uint8_t len = 0;
-    while(txt[len] != '\0') {
-        ++len;
-    }
-    plat_textn(cx, cy, txt, len, colour);
-}
-
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
 }
@@ -178,9 +163,16 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
 {
 }
 
-void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
 {
 }
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+{
+}
+
 
 void plat_gatso(uint8_t t)
 {
@@ -194,14 +186,14 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 
 // render fns
 
-#include "../spr_common_inc.h"
-
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+    // TODO!
 }
 
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+    // TODO!
 }
 
 // input
