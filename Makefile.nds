@@ -10,7 +10,7 @@ export PATH	:=	$(DEVKITPATH)/tools/bin:$(DEVKITPATH)/devkitARM/bin:$(PATH)
 BUILD_DIR=build_nds
 EXPORT_DIR=export_nds
 
-SRCS = nds/main.c game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c \
+SRCS = nds/main.c game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c spr32x8.c spr8x32.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))

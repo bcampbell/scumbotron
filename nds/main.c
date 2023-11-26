@@ -58,8 +58,6 @@ static void clr_bg1();
 static void do_colour_cycling();
 static uint8_t glyph(char ascii);
 
-static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
-static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
 
 uint8_t plat_raw_dualstick()
 {
@@ -136,15 +134,6 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
     }
 }
 
-void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
-{
-    uint8_t len = 0;
-    while(txt[len] != '\0') {
-        ++len;
-    }
-    plat_textn(cx, cy, txt, len, colour);
-}
-
 // cw must be even!
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
 {
@@ -212,14 +201,6 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 #define SPR32x8_BASETILE (SPR64x8_BASETILE + (SPR64x8_NUM * SPR64x8_NTILES))
 #define SPR8x32_BASETILE (SPR32x8_BASETILE + (SPR32x8_NUM * SPR32x8_NTILES))
 
-static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour)
-{
-}
-
-static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour)
-{
-}
-
 #include "../spr_common_inc.h"
 
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state) {
@@ -257,7 +238,6 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state) {
             //}
             break;
         case ZAPPER_ON:
-            vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
             {
                 int py;
                 sprout16(x, y, SPR16_VZAPPER_ON);
@@ -509,7 +489,7 @@ static void clr_bg1()
 }
 
 /*
- * effects
+ * drawing
  */
 
 
@@ -532,7 +512,7 @@ static uint16_t* bg1_mapaddr_sub(int cx, int cy)
     { return BG_MAP_RAM_SUB(9) + ((cy - TOP_SUB / 8) * 32) + cx; }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
     uint8_t cy;
     uint16_t *dest;
@@ -557,7 +537,7 @@ static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uin
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
 {
     uint8_t cx;
     uint16_t *dest;
@@ -575,46 +555,6 @@ static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uin
         for (cx = cx_begin; cx < cx_end; ++cx) {
             *dest++ = out;
         }
-    }
-}
-
-// draw box in char coords, with clipping
-// (note cx,cy can be negative)
-void plat_drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
-{
-    int x0,y0,x1,y1;
-    x0 = cclip(cx, 0, SCREEN_W / 8);
-    x1 = cclip(cx + w, 0, SCREEN_W / 8);
-    y0 = cclip(cy, 0, SCREEN_H / 8);
-    y1 = cclip(cy + h, 0, SCREEN_H / 8);
-
-    // top
-    if (y0 == cy) {
-        hline_chars_noclip(x0, x1, y0, ch, colour);
-    }
-    if (h<=1) {
-        return;
-    }
-
-    // bottom
-    if (y1 - 1 == cy + h-1) {
-        hline_chars_noclip(x0, x1, y1 - 1, ch, colour);
-    }
-    if (h<=2) {
-        return;
-    }
-
-    // left (excluding top and bottom)
-    if (x0 == cx) {
-        vline_chars_noclip(x0, y0, y1, ch, colour);
-    }
-    if (w <= 1) {
-        return;
-    }
-
-    // right (excluding top and bottom)
-    if (x1 - 1 == cx + w - 1) {
-        vline_chars_noclip(x1 - 1, y0, y1, ch, colour);
     }
 }
 

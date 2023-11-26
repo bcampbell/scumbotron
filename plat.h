@@ -1,11 +1,16 @@
-#ifndef SYS_H
-#define SYS_H
+#ifndef PLAT_H
+#define PLAT_H
 
+/*
+ * Common interface for all platforms
+ */
 
 // platform capabilities:
 // PLAT_HAS_MOUSE
 // PLAT_HAS_TEXTENTRY
 
+#include <stdint.h>
+#include <stdbool.h>
 #include "plat_details.h"    // platform-specific details (screen size etc...)
 
 #define SCREEN_TEXT_W (SCREEN_W/8)
@@ -16,12 +21,9 @@ void game_init();
 void game_tick();
 void game_render();
 
-/*
- * Common interface for all platforms
- */
 
-#include <stdint.h>
-#include <stdbool.h>
+// Incremented every frame.
+extern volatile uint8_t tick;
 
 // fixed-point: 6 fractional bits.
 #define FX 6
@@ -42,8 +44,15 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score);
 // to be rendered via charset.
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol);
 
-// Incremented every frame.
-extern volatile uint8_t tick;
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
+
+// Draw a box in chars (effects layer)
+void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
+
 
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
 void plat_shot_render(int16_t x, int16_t y, uint8_t direction, uint8_t power);
@@ -140,11 +149,8 @@ uint8_t plat_raw_menukeys();
 uint8_t plat_raw_cheatkeys();
 
 
-// Draw a box in chars (effects layer)
-void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
-
 
 bool plat_savescores(const void* begin, int nbytes);
 bool plat_loadscores(void* begin, int nbytes);
 
-#endif // SYS_H
+#endif // PLAT_H

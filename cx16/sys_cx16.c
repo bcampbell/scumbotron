@@ -65,8 +65,8 @@ static void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
 static void sprout32(int16_t x, int16_t y, uint8_t img);
 static void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
 
-static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
-static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
+void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
+void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
 
 static void clr_layer0();
 
@@ -467,15 +467,6 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
     }
 }
 
-void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour)
-{
-    uint8_t len = 0;
-    while(txt[len] != '\0') {
-        ++len;
-    }
-    plat_textn(cx, cy, txt, len, colour);
-}
-
 
 // cw must be even!
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
@@ -602,7 +593,7 @@ static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
     uint8_t n;
     // char
@@ -618,7 +609,7 @@ static void vline_chars_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uin
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
 {
     uint8_t n;
     // char
@@ -630,57 +621,6 @@ static void hline_chars_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uin
     veraaddr0(layer0addr(cx_begin,cy)+1, VERA_INC_2);
     for (n = cx_end - cx_begin; n; --n) {
         VERA.data0 = colour;
-    }
-}
-
-static inline int8_t cclip(int8_t v, int8_t low, int8_t high)
-{
-    if (v < low) {
-        return low;
-    } else if (v > high) {
-        return high;
-    } else {
-        return v;
-    }
-}
-
-// draw box in char coords, with clipping
-// (note cx,cy can be negative)
-void plat_drawbox(int8_t cx, int8_t cy, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour)
-{
-    int8_t x0,y0,x1,y1;
-    x0 = cclip(cx, 0, SCREEN_W / 8);
-    x1 = cclip(cx + w, 0, SCREEN_W / 8);
-    y0 = cclip(cy, 0, SCREEN_H / 8);
-    y1 = cclip(cy + h, 0, SCREEN_H / 8);
-
-    // top
-    if (y0 == cy) {
-        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y0, ch, colour);
-    }
-    if (h<=1) {
-        return;
-    }
-
-    // bottom
-    if (y1 - 1 == cy + h-1) {
-        hline_chars_noclip((uint8_t)x0, (uint8_t)x1, (uint8_t)y1 - 1, ch, colour);
-    }
-    if (h<=2) {
-        return;
-    }
-
-    // left (excluding top and bottom)
-    if (x0 == cx) {
-        vline_chars_noclip((uint8_t)x0, (uint8_t)y0, (uint8_t)y1, ch, colour);
-    }
-    if (w <= 1) {
-        return;
-    }
-
-    // right (excluding top and bottom)
-    if (x1 - 1 == cx + w - 1) {
-        vline_chars_noclip((uint8_t)x1 - 1, (uint8_t)y0, (uint8_t)y1, ch, colour);
     }
 }
 
@@ -729,7 +669,7 @@ void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
             //hline_noclip(0, SCREEN_W, (y >> FX) + 8, 15);
             {
                 int16_t cy = (( y >> FX) + 8) / 8;
-                hline_chars_noclip(0, SCREEN_W / 8, cy,
+                plat_hline_noclip(0, SCREEN_W / 8, cy,
                     2 + ((y >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_HZAPPER_ON);
             }
@@ -753,7 +693,7 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
             //vline_noclip((x>>FX)+8, 0, SCREEN_H, 15);
             {
                 int16_t cx = ((x >> FX) + 8 ) / 8;
-                vline_chars_noclip(cx, 0, SCREEN_H / 8,
+                plat_vline_noclip(cx, 0, SCREEN_H / 8,
                     10 + ((x >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_VZAPPER_ON);
             }
