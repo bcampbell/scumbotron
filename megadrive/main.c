@@ -418,10 +418,10 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
         int x;
         for (x=0; x < cw; x += 2) {
             // left char
-            c = 128 + (*src >> 4);
+            c = DRAWCHR_2x2 + (*src >> 4);
             *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
             // right char
-            c = 128 + (*src & 0x0f);
+            c = DRAWCHR_2x2 + (*src & 0x0f);
             *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
             ++src;
         }
@@ -514,8 +514,11 @@ void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
             sprout16(x,y, SPR16_HZAPPER);
             break;
         case ZAPPER_ON:
-            // TODO: proper laser!
-            plat_hline_noclip(0, SCREEN_W/8, ((y>>FX)+8)/8, 1, 15);
+            {
+                int16_t cy = (( y >> FX) + 8) / 8;
+                plat_hline_noclip(0, SCREEN_W / 8, cy,
+                    DRAWCHR_HLINE + ((y >> FX) & 0x07), 15);
+            }
             // fall through
         case ZAPPER_WARMING_UP:
             sprout16(x,y, SPR16_HZAPPER_ON);
@@ -530,8 +533,11 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
             sprout16(x,y, SPR16_VZAPPER);
             break;
         case ZAPPER_ON:
-            // TODO: proper laser!
-            plat_vline_noclip(((x>>FX)+8)/8, 0, SCREEN_H/8, 1, 15);
+            {
+                int16_t cx = ((x >> FX) + 8 ) / 8;
+                plat_vline_noclip(cx, 0, SCREEN_H / 8,
+                    DRAWCHR_VLINE + ((x >> FX) & 0x07), 15);
+            }
             // fall through
         case ZAPPER_WARMING_UP:
             sprout16(x,y, SPR16_VZAPPER_ON);
