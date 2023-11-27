@@ -55,7 +55,12 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 
 
 // Our vram memory map
-#define VRAM_CHARSET    0x0000      // 256 tiles for charset
+// using multiple charsets in order to get 16 colours (combined with 3 palettes)
+#define VRAM_CHARSET0    0x0000      // 128 tiles for charset
+#define VRAM_CHARSET1    0x1000      // 128 tiles for charset
+#define VRAM_CHARSET2    0x2000      // 128 tiles for charset
+#define VRAM_CHARSET3    0x3000      // 128 tiles for charset
+#define VRAM_CHARSET4    0x4000      // 128 tiles for charset
 #define VRAM_SPR16      0x8000      // 128 16x16 sprites
 #define VRAM_SPR32      (VRAM_SPR16 + (SPR16_NUM * SPR16_SIZE))
 #define VRAM_SPR64x8    (VRAM_SPR32 + (SPR32_NUM * SPR32_SIZE))
@@ -69,13 +74,13 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 #define VRAM_SPRITE_ATTRS    0xF800 // 64 * ???
 #define VRAM_HSCROLL_TABLE   0xFC00
 
-#define CHARBASE (VRAM_CHARSET/32)
+#define CHARBASE (VRAM_CHARSET0/32)
 #define SCROLL_A_W 64
 #define SCROLL_A_H 32
 
 
+static void load_charset(uint16_t dest, uint8_t colour);
 static void megadrive_init();
-static void megadrive_render_finish();
 
 // DMA stuff
 
@@ -315,13 +320,17 @@ static void megadrive_init()
     // $13,$14 - DMA Length
     // $15,$16,$17 - DMA 68000 src addr
 
-    // load charset into vram
-    vdp_dma_vram((uint32_t)export_chars_bin, VRAM_CHARSET, export_chars_bin_len/2);
-
     // load sprites into vram
     vdp_dma_vram((uint32_t)export_spr16_bin, VRAM_SPR16, export_spr16_bin_len/2);
     vdp_dma_vram((uint32_t)export_spr32_bin, VRAM_SPR32, export_spr32_bin_len/2);
     vdp_dma_vram((uint32_t)export_spr64x8_bin, VRAM_SPR64x8, export_spr64x8_bin_len/2);
+
+    // load charsets into vram in various colours
+    load_charset(VRAM_CHARSET0, 1);
+    load_charset(VRAM_CHARSET1, 2);
+    load_charset(VRAM_CHARSET2, 3);
+    load_charset(VRAM_CHARSET3, 4);
+    load_charset(VRAM_CHARSET4, 5);
 
     // palette 0 - normal, no fancy stuff
     {
@@ -357,9 +366,33 @@ static void megadrive_init()
 }
 
 
+// render the 1-bit charset in the given colour, loading it to vram
+// starting at dest.
+static void load_charset(uint16_t dest, uint8_t colour)
+{
+    uint8_t buf[4*8*128];
+    const uint8_t* src = export_chars_bin; 
+    uint8_t * p = buf;
+    for (int i=0; i<128; ++i) {
+        for (int y = 0; y < 8; ++y) {
+            uint8_t row = *src++;
+            for (int x = 0; x < 8; x += 2) {
+                uint8_t b = 0;
+                if (row & (1 << (7-x))) {
+                    b |= (colour<<4);
+                }
+                if (row & (1 << ((7-(x+1))))) {
+                    b |= (colour &0x0f);
+                }
+                *p++ = b;
+            }
+        }
+    }
+    vdp_dma_vram(buf, dest, (4*8*128)/2);
+}
 
-// text layer. This is persistent - if you draw text it'll stay onscreen until
-// overwritten, or plat_clr() is called.
+
+
 void plat_clr()
 {
     // Not used. We clear everything every frame anyway.
