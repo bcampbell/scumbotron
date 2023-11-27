@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "../plat.h"
 #include "../misc.h"
+#include "../gob.h" // for ZAPPER_*
 #include "joy.h"
 
 
@@ -43,20 +44,8 @@ bool pal_mode;
 static uint16_t sprites[80*4];  // sprite attribute table
 int nsprites;   // number of sprites in use
 
-// DMA queue
-#define DMAQ_NWORDS 1024
-static uint16_t queue[DMAQ_NWORDS];
-static uint16_t* qp;
-void dmaq_reset();
-void dmaq_copy_ptr(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr);
-void dmaq_copy(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr);
-void dmaq_run();
-
-
-// drawing source data
-uint16_t blankscreen[64*32];
-uint16_t effectline[64];
-
+// Offscreen buffer in main ram, DMAed into vram each vblank.
+static uint16_t screen[64*32];
 
 // VDP defs
 static volatile uint16_t* const vdp_data_port = (uint16_t*) 0xC00000;
@@ -67,11 +56,14 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 
 // Our vram memory map
 #define VRAM_CHARSET    0x0000      // 256 tiles for charset
-#define VRAM_SPR16      0x4000      // 128 16x16 sprites
+#define VRAM_SPR16      0x8000      // 128 16x16 sprites
 #define VRAM_SPR32      (VRAM_SPR16 + (SPR16_NUM * SPR16_SIZE))
 #define VRAM_SPR64x8    (VRAM_SPR32 + (SPR32_NUM * SPR32_SIZE))
-#define VRAM_WINDOW     0xB000      // tilemap for window
-#define VRAM_SCROLL_A   0xC000      // tilemap for plane A
+
+// Not sure you can turn off the planes, so for now they can all point
+// to the same memory :-)
+#define VRAM_WINDOW     0xE000      // tilemap for window
+#define VRAM_SCROLL_A   0xE000      // tilemap for plane A
 #define VRAM_SCROLL_B   0xE000      // tilemap for plane B
 
 #define VRAM_SPRITE_ATTRS    0xF800 // 64 * ???
@@ -178,11 +170,31 @@ void dbug()
     plat_textn(0,0,buf,2,1);
 }
 
+
+// clear our offscreen buffer
+static void clearscreen()
+{
+    uint16_t attr = TILE_ATTR(0,1,0,0,CHARBASE+0);
+    // two chars per uint32_t
+    uint32_t aa = (attr<<16)|attr;
+    for (int y=0; y<(SCREEN_H/8); ++y) {
+        // 8 chars at a time
+        uint32_t *p = (uint32_t*)(screen + y*SCROLL_A_W);
+        for (int x=0; x<((SCREEN_W/8)/(2*4)); ++x) {
+            *p++ = aa;
+            *p++ = aa;
+            *p++ = aa;
+            *p++ = aa;
+        }
+
+    }
+
+}
+
+
 void main()
 {
     megadrive_init();
-    dmaq_reset();
-
     game_init();
     while(1) {
         //vdp_color(0,0x0000);
@@ -192,21 +204,30 @@ void main()
         joy_update();
 
         // start render
-        vdp_color(0,0x0002);
+        //vdp_color(0,0x0002);
         nsprites = 0;
-        //plat_clr();
-        //vdp_color(0,0x0e00);
-        dmaq_copy_ptr(blankscreen, VRAM_SCROLL_A, 64*32, 2);
-
+        clearscreen();
+        // Copy the screen to VRAM
+        //vdp_color(0,0x0ee0);
         game_render();
-        vdp_color(0,0x0000);
-        //vdp_color(0,0x00e0);
-        // finish render
+        //vdp_color(0,0x0000);
 
         waitvbl();
-        vdp_color(0,0x00e0);
-        megadrive_render_finish();  // draw to vram
-        vdp_color(0,0x0002);
+
+        // end of rendering - do any dma while we're in the vblank!
+        {
+            //vdp_color(0,0x00e0);
+            // terminate the sprite chain
+            if (nsprites == 0 ) {
+                sprout16(-128<<FX,-128<<FX,0);
+            }
+            sprites[4*(nsprites-1) + 1] &= 0xff80;    // link = 0
+            // copy sprite table into vram
+            vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
+            // copy screen to vram
+            vdp_dma_vram((uint32_t)screen, VRAM_SCROLL_A, SCROLL_A_W * SCROLL_A_H);
+        }
+        //vdp_color(0,0x0002);
 
     }
 }
@@ -323,22 +344,15 @@ static void megadrive_init()
         }
     }
 
-    // set up a blank screen in RAM
+    // clear our offscreen buffer in main ram
     {
-        for (int i=0; i<64*32; ++i) {
-            blankscreen[i] = TILE_ATTR(0,1,0,0,CHARBASE+0);
+        for (int i = 0; i < SCROLL_A_W * SCROLL_A_H; ++i) {
+            screen[i] = TILE_ATTR(0,1,0,0,CHARBASE+0);
         }
-    }
-    {
-        for (int i=0; i<64; ++i) {
-//            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+'a'+i);
-            effectline[i] = TILE_ATTR(0,1,0,0,CHARBASE+1);
-        }
-    }
-
-    // Clear Scroll B (won't be using it)
-    {
-        vdp_dma_vram((uint32_t)blankscreen, VRAM_SCROLL_B, 64*32);
+        // Clear scroll A plane.
+        vdp_dma_vram((uint32_t)screen, VRAM_SCROLL_A, SCROLL_A_W * SCROLL_A_H);
+        // Won't be using scroll B.
+        vdp_dma_vram((uint32_t)screen, VRAM_SCROLL_B, SCROLL_A_W * SCROLL_A_H);
     }
 }
 
@@ -348,27 +362,22 @@ static void megadrive_init()
 // overwritten, or plat_clr() is called.
 void plat_clr()
 {
+    // Not used. We clear everything every frame anyway.
     return;
-    uint32_t dest = VRAM_SCROLL_A;
-    for (int cy = 0; cy < SCROLL_A_H; ++cy) {
-        plat_textn(0,cy, "                    ", 20,0);
-        //plat_textn(20,cy, "                    ", 20,0);
-    }
 }
 
 // draw len number of chars
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
-	uint32_t dest = VRAM_SCROLL_A + ((cx + (cy * SCROLL_A_W)) << 1);
-    uint16_t buf[64];
+    // draw into our offscreen array in main ram
+    uint16_t *dest = &screen[cy*SCROLL_A_W + cx];
     colour = 0;
     for (int i=0; i<len; ++i) {
         uint8_t chr = *txt++;
         // pal, pri, flipv, fliph, index
 		uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + chr);
-		buf[i] = attr;
+		*dest++ = attr;
 	}
-    dmaq_copy(buf, dest, len, 2);
 }
 
 // TODO: should just pass in level and score as bcd
@@ -380,16 +389,22 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 // Draw horizontal line of chars, range [cx_begin, cx_end).
 void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
 {
-//    uint16_t w = cx_end-cx_begin;
-//    uint16_t dest = VRAM_SCROLL_A + (((64 * cy) + cx_begin) * 2);
-    //dmaq_copy_ptr(effectline, dest, w, 2); 
+    uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + ch);
+    uint16_t *p = &screen[cy*SCROLL_A_W + cx_begin];
+    for (int x=0; x<cx_end-cx_begin; ++x) {
+        *p++ = attr;
+    }
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
 void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
 {
-//    uint16_t dest = VRAM_SCROLL_A + (((64 * cy_begin) + cx) * 2);
-//    dmaq_copy_ptr(effectline, dest, cy_end - cy_begin, 64); 
+    uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + ch);
+    uint16_t *p = &screen[cy_begin*SCROLL_A_W + cx];
+    for (int y=0; y<cy_end-cy_begin; ++y) {
+        *p = attr;
+        p += SCROLL_A_W;
+    }
 }
 
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
@@ -472,27 +487,38 @@ void sprout64x8(int16_t x, int16_t y, uint8_t img)
     internal_sprout(x + (32 << FX), y, (SPR64x8_TILEBASE + ((img*2) + 1) * 4), 0b1100, 0);
 }
 
-static void megadrive_render_finish()
-{
-    if (nsprites == 0 ) {
-        sprout16(-128<<FX,-128<<FX,0);
-    }
-    sprites[4*(nsprites-1) + 1] &= 0xff80;    // link = 0
-    dmaq_copy_ptr(sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2, 2);
-    
-    dmaq_run();
-    //vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
-}
 
 
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
-    // TODO!
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x,y, SPR16_HZAPPER);
+            break;
+        case ZAPPER_ON:
+            // TODO: proper laser!
+            plat_hline_noclip(0, SCREEN_W/8, ((y>>FX)+8)/8, 1, 15);
+            // fall through
+        case ZAPPER_WARMING_UP:
+            sprout16(x,y, SPR16_HZAPPER_ON);
+            break;
+    }
 }
 
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
-    // TODO!
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x,y, SPR16_VZAPPER);
+            break;
+        case ZAPPER_ON:
+            // TODO: proper laser!
+            plat_vline_noclip(((x>>FX)+8)/8, 0, SCREEN_H/8, 1, 15);
+            // fall through
+        case ZAPPER_WARMING_UP:
+            sprout16(x,y, SPR16_VZAPPER_ON);
+            break;
+    }
 }
 
 // start PLAT_HAS_TEXTENTRY (fns should be no-ops if not supported)
@@ -507,6 +533,7 @@ void plat_textentry_stop()
 // Returns printable ascii or DEL (0x7f) or LF (0x0A), or 0 for no input.
 char plat_textentry_getchar()
 {
+    return 0;
 }
 // end PLAT_HAS_TEXTENTRY
  
@@ -567,79 +594,6 @@ bool plat_savescores(const void* begin, int nbytes)
 bool plat_loadscores(void* begin, int nbytes)
 {
     return false;
-}
-
-
-
-// DMA queue
-//
-// DMA runs 10x faster during vblank, so we'll queue up our dma operations
-// and run them then.
-//
-// Don't bother with DMA fill operations. Too fiddly. The first write is a
-// word, then bytes after that, so an arse for doing tiles. especially an
-// arse for doing vertical tiles (it'll be offset by 1 tile).
-// Besides, we've got RAM to burn, and RAM->VRAM isn't any slower than a
-// VRAM fill. So wherever we want to fill, we'll set up RAM buffers for
-// source data.
-
-void dmaq_reset()
-{
-    qp = queue;
-}
-
-// queue up a dma copy to VRAM, from a const src ptr
-void dmaq_copy_ptr(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr)
-{
-    if (qp >= &(queue[DMAQ_NWORDS - 5])) {
-        return; // uhoh - out of space!
-    }
-    *qp++ = incr;   // high bit clear
-    *qp++ = dest;
-    *qp++ = nwords;
-    *qp++ = (uint16_t)(((uint32_t)src) >> 16);
-    *qp++ = (uint16_t)(((uint32_t)src) & 0x0000FFFF);
-}
-
-void dmaq_copy(const uint16_t* src, uint16_t dest, uint16_t nwords, uint16_t incr)
-{
-    if (qp >= &(queue[DMAQ_NWORDS - (3 + nwords)])) {
-        return; // uhoh - out of space!
-    }
-
-    *qp++ = 0x8000 | incr;
-    *qp++ = dest;
-    *qp++ = nwords;
-    while (nwords) {
-        *qp++ = *src++;
-        --nwords;
-    }
-}
-
-
-extern void vdp_dma_vram(uint32_t from, uint16_t to, uint16_t len);
-
-void dmaq_run()
-{
-    uint16_t* p = queue;
-
-    while (p < qp) {
-        uint16_t incr = *p++;
-        uint16_t dest = *p++;
-        uint16_t nwords = *p++;
-        uint32_t src;
-        if (incr & 0x8000) {
-            src = (uint32_t)p;
-            p += nwords;
-        } else {
-            src = ((uint32_t)(*p++))<<16;
-            src |= (*p++);
-        }
-        // set auto-increment
-	    *vdp_ctrl_port = 0x8F00 | (incr&0x0ff);
-        vdp_dma_vram(src, dest, nwords);
-    }
-    qp = queue;
 }
 
 
