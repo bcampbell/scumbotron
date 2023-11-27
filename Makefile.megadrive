@@ -38,7 +38,12 @@ endif
 CFLAGS  = -m68000 -Wall -Wextra -std=c99 -ffreestanding
 CFLAGS += -I$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include
 CFLAGS += -Imegadrive
-CFLAGS += -Ofast
+#CFLAGS += -Ofast
+CFLAGS += -O3
+# alternate function-calling convention - maybe faster?
+#CFLAGS += -mrtd
+# screws debugging, but hey
+CFLAGS += -fomit-frame-pointer
 
 # Another useful GAS flag is --bitwise-or, but it breaks SGDK
 ASFLAGS  = -m68000 --register-prefix-optional
