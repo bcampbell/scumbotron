@@ -407,9 +407,27 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch,
     }
 }
 
+// cw must be even!
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
 {
+    int y;
+    for (y=0; y < ch; ++y) {
+        uint8_t c = (basecol + y) & 0x0f;
+        uint8_t colour = (basecol + y) & 0x0f;
+        uint16_t* dest = &screen[(cy+y)*SCROLL_A_W + cx];
+        int x;
+        for (x=0; x < cw; x += 2) {
+            // left char
+            c = 128 + (*src >> 4);
+            *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
+            // right char
+            c = 128 + (*src & 0x0f);
+            *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
+            ++src;
+        }
+    }
 }
+
 
 /*
  Sprite Attribute Table
