@@ -347,8 +347,6 @@ static void megadrive_init()
     // palette 3: highlight palette - colour 0 black, all others white.
     //
     // Create our charsets, with various colours
-    // Don't bother with black colour 0 (use spaces instead)
-    // or white colour 1 (use the highlight palette)
     // Start at 15, to hit palette 0 flashing colour
     load_charset(VRAM_CHARSET0, 15);
     load_charset(VRAM_CHARSET1, 14);
@@ -537,10 +535,50 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 	}
 }
 
-// TODO: should just pass in level and score as bcd
+
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
-    // TODO!
+    const uint8_t cx = 0;
+    const uint8_t cy = 0;
+    uint8_t c = 1;
+    uint16_t *dest = &screen[cy*SCROLL_A_W + cx];
+
+    // Level
+    {
+        uint8_t bcd = bin2bcd8(level);
+        *dest++ = tileattr('L', c);
+        *dest++ = tileattr('V', c);
+        ++dest;
+        *dest++ = tileattr(hexdigits[bcd >> 4], c);
+        *dest++ = tileattr(hexdigits[bcd & 0x0f], c);
+        ++dest;
+        ++dest;
+    }
+
+    // Score
+    {
+        uint32_t bcd = bin2bcd32(score);
+        *dest++ = tileattr(hexdigits[(bcd >> 28)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 24)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 20)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 16)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 12)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 8)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 4)&0x0f], c);
+        *dest++ = tileattr(hexdigits[(bcd >> 0)&0x0f], c);
+        ++dest;
+        ++dest;
+    }
+
+
+    // Lives
+    {
+        c = 2;
+        for(int i = 0; i < 7 && i < lives; ++i) {
+            *dest++ = tileattr('*', c);
+        }
+        *dest++ = tileattr((lives>7) ? '+' : ' ', c);
+    }
 }
 
 
