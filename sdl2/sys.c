@@ -435,10 +435,10 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
         uint8_t colour = (basecol + y) & 0x0f;
         for (x=0; x < cw; x+=2) {
             // left char
-            c = 128 + (*src >> 4);
+            c = DRAWCHR_2x2 + (*src >> 4);
             blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x) * 8, (cy + y) * 8, colour);
             // right char
-            c = 128 + (*src & 0x0f);
+            c = DRAWCHR_2x2 + (*src & 0x0f);
             blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x + 1) * 8, (cy + y) * 8, colour);
             ++src;
         }
@@ -498,18 +498,19 @@ static void plonkchar(uint8_t cx, uint8_t cy, uint8_t ch, uint8_t colour)
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
     for (uint8_t cy = cy_begin; cy < cy_end; ++cy) {
-        plonkchar(cx, cy, ch, colour);
+        plonkchar(cx, cy, chr, colour);
     }
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
+    //chr=127;
     for (uint8_t cx = cx_begin; cx < cx_end; ++cx) {
-        plonkchar(cx, cy, ch, colour);
+        plonkchar(cx, cy, chr, colour);
     }
 }
 

@@ -53,7 +53,7 @@ extern unsigned int export_palette_bin_len;
 // layer0 for vfx, double-buffered
 #define VRAM_LAYER0_MAP_BUF0  0x00000    //64*64*2 = 0x2000
 #define VRAM_LAYER0_MAP_BUF1  0x02000    //64*64*2 = 0x2000
-#define VRAM_LAYER0_TILES  0x08000
+#define VRAM_LAYER0_TILES  0x08000      // separate charset for tiles
 
 // hardwired:
 #define VRAM_PSG 0x1F9C0
@@ -381,30 +381,35 @@ void plat_init()
     // stand-in images for effect layers
     {
         uint8_t i;
-        veraaddr0(VRAM_LAYER0_TILES, VERA_INC_1);
+        veraaddr0(VRAM_LAYER0_TILES + 0*8, VERA_INC_1);
         // char 0
         for (i=0; i<8; ++i) {
             VERA.data0 = 0;
         }
-        //char 1
+        // main vfx char
+        veraaddr0(VRAM_LAYER0_TILES + DRAWCHR_BLOCK*8, VERA_INC_1);
         for (i=0; i<4; ++i) {
             //VERA.data0 = 0b10101010;
             //VERA.data0 = 0b01010101;
-            VERA.data0 = 0b11111111;
+            VERA.data0 = 0b01111110;
             VERA.data0 = 0b00000000;
         }
-        // hline
-        for (i=0; i<8; ++i) {
-            uint8_t j;
-            for (j=0; j<8; ++j) {
-                VERA.data0 = (i==j) ? 0xff : 0x00;
-            }
-        }
+        // 8 vline chars
+        veraaddr0(VRAM_LAYER0_TILES + DRAWCHR_VLINE*8, VERA_INC_1);
         // vline
         for (i=0; i<8; ++i) {
             uint8_t j;
             for (j=0; j<8; ++j) {
                 VERA.data0 = 1<<(7-i);
+            }
+        }
+
+        // 8 hline chars
+        veraaddr0(VRAM_LAYER0_TILES + DRAWCHR_HLINE*8, VERA_INC_1);
+        for (i=0; i<8; ++i) {
+            uint8_t j;
+            for (j=0; j<8; ++j) {
+                VERA.data0 = (i==j) ? 0xff : 0x00;
             }
         }
     }
@@ -590,13 +595,13 @@ static inline uint32_t layer0addr(uint8_t cx, uint8_t cy)
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
     uint8_t n;
     // char
     veraaddr0(layer0addr(cx,cy_begin), VERA_INC_128);
     for (n = cy_end - cy_begin; n; --n) {
-        VERA.data0 = ch;
+        VERA.data0 = chr;
     }
     // colour
     veraaddr0(layer0addr(cx,cy_begin)+1, VERA_INC_128);
@@ -606,13 +611,13 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch,
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
     uint8_t n;
     // char
     veraaddr0(layer0addr(cx_begin,cy), VERA_INC_2);
     for (n = cx_end - cx_begin; n; --n) {
-        VERA.data0 = ch;
+        VERA.data0 = chr;
     }
     // colour
     veraaddr0(layer0addr(cx_begin,cy)+1, VERA_INC_2);
@@ -665,7 +670,7 @@ void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
             {
                 int16_t cy = (( y >> FX) + 8) / 8;
                 plat_hline_noclip(0, SCREEN_W / 8, cy,
-                    2 + ((y >> FX) & 0x07), 15);
+                    DRAWCHR_HLINE + ((y >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_HZAPPER_ON);
             }
             break;
@@ -689,7 +694,7 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
             {
                 int16_t cx = ((x >> FX) + 8 ) / 8;
                 plat_vline_noclip(cx, 0, SCREEN_H / 8,
-                    10 + ((x >> FX) & 0x07), 15);
+                    DRAWCHR_VLINE + ((x >> FX) & 0x07), 15);
                 sprout16(x, y, SPR16_VZAPPER_ON);
             }
             break;

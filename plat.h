@@ -44,11 +44,17 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score);
 // to be rendered via charset.
 void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol);
 
+// character indexes used by drawing routines
+#define DRAWCHR_2x2 0    // 16 2x2 pixels
+#define DRAWCHR_BLOCK 127    // main char used for effects
+#define DRAWCHR_VLINE 16     // 8 vline chars
+#define DRAWCHR_HLINE 24     // 8 hline chars
+
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour);
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour);
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour);
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour);
 
 // Draw a box in chars (effects layer)
 void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);

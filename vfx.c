@@ -24,7 +24,7 @@ static void render_spawn(uint8_t e) {
     uint8_t t = SPAWN_DURATION-etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    plat_drawbox(cx-t, cy-t, t*2, t*2, 1, t);
+    plat_drawbox(cx-t, cy-t, t*2, t*2, DRAWCHR_BLOCK, t);
 }
 
 #define KABOOM_DURATION 16
@@ -33,7 +33,7 @@ static void render_kaboom(uint8_t e) {
     uint8_t t = etimer[e];
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
-    plat_drawbox(cx-t, cy-t, t*2, t*2, 1, t);
+    plat_drawbox(cx-t, cy-t, t*2, t*2, DRAWCHR_BLOCK, t);
 }
 
 #define ZOMBIFY_DURATION 16
@@ -43,8 +43,8 @@ static void render_zombify(uint8_t e) {
     uint8_t cx = ex[e];
     uint8_t cy = ey[e];
     uint8_t c = greenfade[t/2];
-    plat_drawbox(cx-t, cy-1, t*2, 2, 1, c);
-    plat_drawbox(cx-1, cy-t, 2, t*2, 1, c);
+    plat_drawbox(cx-t, cy-1, t*2, 2, DRAWCHR_BLOCK, c);
+    plat_drawbox(cx-1, cy-t, 2, t*2, DRAWCHR_BLOCK, c);
 }
 
 #define QUICKTEXT_DURATION 8
@@ -86,7 +86,7 @@ static void render_warp(uint8_t e) {
             c = (t-16)&0x0f;
         }
         ++t;
-        plat_drawbox(cx, cy, cw, ch, 1, c);
+        plat_drawbox(cx, cy, cw, ch, DRAWCHR_BLOCK, c);
         ++cx;
         ++cy;
         cw -= 2;

@@ -140,10 +140,10 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
         int x;
         for (x=0; x < cw; x += 2) {
             // left char
-            c = 128 + (*src >> 4);
+            c = DRAWCHR_2x2 + (*src >> 4);
             *dest++ = ((uint16_t)colour<<12) | c;
             // right char
-            c = 128 + (*src & 0x0f);
+            c = DRAWCHR_2x2 + (*src & 0x0f);
             *dest++ = ((uint16_t)colour<<12) | c;
             ++src;
         }
@@ -506,11 +506,12 @@ static uint16_t* bg1_mapaddr_sub(int cx, int cy)
     { return BG_MAP_RAM_SUB(9) + ((cy - TOP_SUB / 8) * 32) + cx; }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
+    chr = 127;
     uint8_t cy;
     uint16_t *dest;
-    uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
+    uint16_t out = (uint16_t)chr | (((uint16_t)colour)<<12);
     int8_t cy_begin_main = cclip(cy_begin, TOP_MAIN/8, BOTTOM_MAIN/8);
     int8_t cy_end_main = cclip(cy_end, TOP_MAIN/8, BOTTOM_MAIN/8);
     int8_t cy_begin_sub = cclip(cy_begin, TOP_SUB/8, BOTTOM_SUB/8);
@@ -531,11 +532,12 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch,
 }
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
+    chr = 127;
     uint8_t cx;
     uint16_t *dest;
-    uint16_t out = (uint16_t)ch | (((uint16_t)colour)<<12);
+    uint16_t out = (uint16_t)chr | (((uint16_t)colour)<<12);
     if ( cy >= (TOP_MAIN / 8) && cy < (BOTTOM_MAIN / 8)) {
         // Main display
         dest = bg1_mapaddr_main(cx_begin, cy);
