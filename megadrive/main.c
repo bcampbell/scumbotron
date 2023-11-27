@@ -47,6 +47,9 @@ int nsprites;   // number of sprites in use
 // Offscreen buffer in main ram, DMAed into vram each vblank.
 static uint16_t screen[64*32];
 
+// main palette colours (cooked down from exported rgba)
+static uint16_t palette[16];
+
 // VDP defs
 static volatile uint16_t* const vdp_data_port = (uint16_t*) 0xC00000;
 static volatile uint16_t* const vdp_ctrl_port = (uint16_t*) 0xC00004;
@@ -74,13 +77,18 @@ static volatile uint32_t* const vdp_ctrl_wide = (uint32_t*) 0xC00004;
 #define VRAM_SPRITE_ATTRS    0xF800 // 64 * ???
 #define VRAM_HSCROLL_TABLE   0xFC00
 
-#define CHARBASE (VRAM_CHARSET0/32)
+#define CHARBASE0 (VRAM_CHARSET0/32)
+#define CHARBASE1 (VRAM_CHARSET1/32)
+#define CHARBASE2 (VRAM_CHARSET2/32)
+#define CHARBASE3 (VRAM_CHARSET3/32)
+#define CHARBASE4 (VRAM_CHARSET4/32)
 #define SCROLL_A_W 64
 #define SCROLL_A_H 32
 
 
 static void load_charset(uint16_t dest, uint8_t colour);
 static void megadrive_init();
+static inline uint16_t tileattr(uint8_t chr, uint8_t colour);
 
 // DMA stuff
 
@@ -179,7 +187,7 @@ void dbug()
 // clear our offscreen buffer
 static void clearscreen()
 {
-    uint16_t attr = TILE_ATTR(0,1,0,0,CHARBASE+0);
+    uint16_t attr = TILE_ATTR(0,1,0,0,CHARBASE0 + 0);
     // two chars per uint32_t
     uint32_t aa = (attr<<16)|attr;
     for (int y=0; y<(SCREEN_H/8); ++y) {
@@ -231,6 +239,10 @@ void main()
             vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
             // copy screen to vram
             vdp_dma_vram((uint32_t)screen, VRAM_SCROLL_A, SCROLL_A_W * SCROLL_A_H);
+    
+            // cycle colour 15 (palette 0) 
+            uint16_t i = (((tick >> 1)) & 0x7) + 2;
+            vdp_color(15,palette[i]);
         }
         //vdp_color(0,0x0002);
 
@@ -325,38 +337,73 @@ static void megadrive_init()
     vdp_dma_vram((uint32_t)export_spr32_bin, VRAM_SPR32, export_spr32_bin_len/2);
     vdp_dma_vram((uint32_t)export_spr64x8_bin, VRAM_SPR64x8, export_spr64x8_bin_len/2);
 
-    // load charsets into vram in various colours
-    load_charset(VRAM_CHARSET0, 1);
-    load_charset(VRAM_CHARSET1, 2);
-    load_charset(VRAM_CHARSET2, 3);
-    load_charset(VRAM_CHARSET3, 4);
-    load_charset(VRAM_CHARSET4, 5);
+    // On VDP, colours are baked into the character tiles which makes
+    // per-character colouring tricky.
+    // But we have 4 palettes to play with and enough vram to load multiple
+    // copies of the characters, each of a different colour.
+    // palette 0: normal palette (with cycling colour 15)
+    // palette 1: extra colours for chars
+    // palette 2: more extra colours for chars
+    // palette 3: highlight palette - colour 0 black, all others white.
+    //
+    // Create our charsets, with various colours
+    // Don't bother with black colour 0 (use spaces instead)
+    // or white colour 1 (use the highlight palette)
+    // Start at 15, to hit palette 0 flashing colour
+    load_charset(VRAM_CHARSET0, 15);
+    load_charset(VRAM_CHARSET1, 14);
+    load_charset(VRAM_CHARSET2, 13);
+    load_charset(VRAM_CHARSET3, 12);
+    load_charset(VRAM_CHARSET4, 11);
 
-    // palette 0 - normal, no fancy stuff
+    // convert exported rgba palette to megadrive format
     {
         const uint8_t *src = export_palette_bin;
         for (int i=0; i<16; ++i) {
-            uint8_t r = src[0];
-            uint8_t g = src[1];
-            uint8_t b = src[2];
-            src += 4;
-            uint16_t c = ((b>>5)<<9) | ((g>>5)<<5) | ((r>>5)<<1);
-            vdp_color(i,c);
+                uint8_t r = src[0];
+                uint8_t g = src[1];
+                uint8_t b = src[2];
+                src += 4;
+                palette[i] = ((b>>5)<<9) | ((g>>5)<<5) | ((r>>5)<<1);
         }
+    }
+
+    // Palette 0, as exported.
+    // We'll cycle colour 15, but otherwise no fancy stuff.
+    {
+        for (int i=0; i<16; ++i) {
+            vdp_color(i,palette[i]);
+        }
+    }
+    // Palette 1
+    {
+        vdp_color(16 + 11, palette[6]);
+        vdp_color(16 + 12, palette[7]);
+        vdp_color(16 + 13, palette[8]);
+        vdp_color(16 + 14, palette[9]);
+        vdp_color(16 + 15, palette[10]);
+    }
+    // Palette 2
+    {
+        vdp_color(32 + 11, palette[0]); // fudge to get black! white can use palette 3
+        vdp_color(32 + 12, palette[2]);
+        vdp_color(32 + 13, palette[3]);
+        vdp_color(32 + 14, palette[4]);
+        vdp_color(32 + 15, palette[5]);
     }
     // palette 3, for highlighting sprites
     // color 0 black (even if never seen!), all others white
     {
-        vdp_color(48 + 0, 0x0000);
-        for (int i=1; i<16; ++i) {
-            vdp_color(48+i, 0b0000111011101110);
+        vdp_color(48 + 0, palette[0]);
+        for (int i = 1; i < 16; ++i) {
+            vdp_color(48 + i, palette[1]);
         }
     }
 
     // clear our offscreen buffer in main ram
     {
         for (int i = 0; i < SCROLL_A_W * SCROLL_A_H; ++i) {
-            screen[i] = TILE_ATTR(0,1,0,0,CHARBASE+0);
+            screen[i] = TILE_ATTR(0,1,0,0,CHARBASE0 + 0);
         }
         // Clear scroll A plane.
         vdp_dma_vram((uint32_t)screen, VRAM_SCROLL_A, SCROLL_A_W * SCROLL_A_H);
@@ -368,6 +415,8 @@ static void megadrive_init()
 
 // render the 1-bit charset in the given colour, loading it to vram
 // starting at dest.
+// We only use 128 chars in our charset to save space.
+// So no accents or whatnot.
 static void load_charset(uint16_t dest, uint8_t colour)
 {
     uint8_t buf[4*8*128];
@@ -388,41 +437,52 @@ static void load_charset(uint16_t dest, uint8_t colour)
             }
         }
     }
-    vdp_dma_vram(buf, dest, (4*8*128)/2);
+    vdp_dma_vram((uint32_t)buf, dest, (4*8*128)/2);
 }
 
 
 
-void plat_clr()
+// Map from colour indexes to palette and charset, to allow chars of any colour.
+typedef struct {
+    uint16_t pal;
+    uint16_t chrbase;
+} chrcolour_entry;
+
+const static chrcolour_entry chrcolour_table[16] = {
+    // palette, charset base
+    {2, CHARBASE4},
+    {3, CHARBASE0}, // special case - use highlight palette for white
+    {2, CHARBASE3},
+    {2, CHARBASE2},
+
+    {2, CHARBASE1},
+    {2, CHARBASE0},
+    {1, CHARBASE4},
+    {1, CHARBASE3},
+
+    {1, CHARBASE2},
+    {1, CHARBASE1},
+    {1, CHARBASE0},
+    {0, CHARBASE4},
+
+    {0, CHARBASE3},
+    {0, CHARBASE2},
+    {0, CHARBASE1},
+    {0, CHARBASE0},
+};
+
+static inline uint16_t tileattr(uint8_t chr, uint8_t colour)
 {
-    // Not used. We clear everything every frame anyway.
-    return;
+    uint8_t pal = chrcolour_table[colour].pal;
+    uint16_t chrbase = chrcolour_table[colour].chrbase;
+    return TILE_ATTR(pal, 1, 0, 0, chrbase + chr);
 }
 
-// draw len number of chars
-void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
-{
-    // draw into our offscreen array in main ram
-    uint16_t *dest = &screen[cy*SCROLL_A_W + cx];
-    colour = 0;
-    for (int i=0; i<len; ++i) {
-        uint8_t chr = *txt++;
-        // pal, pri, flipv, fliph, index
-		uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + chr);
-		*dest++ = attr;
-	}
-}
-
-// TODO: should just pass in level and score as bcd
-void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
-{
-    // TODO!
-}
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch, uint8_t colour)
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
-    uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + ch);
+    uint16_t attr = tileattr(chr, colour);
     uint16_t *p = &screen[cy*SCROLL_A_W + cx_begin];
     for (int x=0; x<cx_end-cx_begin; ++x) {
         *p++ = attr;
@@ -430,9 +490,9 @@ void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t ch,
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t ch, uint8_t colour)
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
-    uint16_t attr = TILE_ATTR(colour,1,0,0,CHARBASE + ch);
+    uint16_t attr = tileattr(chr, colour);
     uint16_t *p = &screen[cy_begin*SCROLL_A_W + cx];
     for (int y=0; y<cy_end-cy_begin; ++y) {
         *p = attr;
@@ -445,20 +505,42 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
 {
     int y;
     for (y=0; y < ch; ++y) {
-        uint8_t c = (basecol + y) & 0x0f;
         uint8_t colour = (basecol + y) & 0x0f;
         uint16_t* dest = &screen[(cy+y)*SCROLL_A_W + cx];
         int x;
         for (x=0; x < cw; x += 2) {
             // left char
-            c = DRAWCHR_2x2 + (*src >> 4);
-            *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
+            uint8_t chr = DRAWCHR_2x2 + (*src >> 4);
+            *dest++ = tileattr(chr, colour);
             // right char
-            c = DRAWCHR_2x2 + (*src & 0x0f);
-            *dest++ = TILE_ATTR(0,1,0,0,CHARBASE + c);
+            chr = DRAWCHR_2x2 + (*src & 0x0f);
+            *dest++ = tileattr(chr, colour);
             ++src;
         }
     }
+}
+
+
+// Not used. We clear everything every frame anyway.
+void plat_clr()
+{
+}
+
+// draw len number of chars
+void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
+{
+    // draw into our offscreen array in main ram
+    uint16_t *dest = &screen[cy*SCROLL_A_W + cx];
+    for (int i=0; i<len; ++i) {
+        uint8_t chr = *txt++;
+	    *dest++ = tileattr(chr, colour);
+	}
+}
+
+// TODO: should just pass in level and score as bcd
+void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
+{
+    // TODO!
 }
 
 
@@ -534,6 +616,7 @@ void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 
 void sprout64x8(int16_t x, int16_t y, uint8_t img)
 {
+    // use two 32x8 sprites
     internal_sprout(x, y, (SPR64x8_TILEBASE + (img*2) * 4), 0b1100, 0);
     internal_sprout(x + (32 << FX), y, (SPR64x8_TILEBASE + ((img*2) + 1) * 4), 0b1100, 0);
 }

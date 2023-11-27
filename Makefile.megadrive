@@ -101,7 +101,11 @@ $(EXPORT_DIR)/chars.c: chars.png
 
 .PHONY: run
 run: $(BUILD_DIR)/scumbotron.bin
-	blastem $<
+	blastem -r J $<
+
+.PHONY: runpal
+runpal: $(BUILD_DIR)/scumbotron.bin
+	blastem -r E $<
 
 .PHONY: clean
 clean:
