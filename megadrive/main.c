@@ -606,6 +606,8 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 
 
 // controllers
+static uint8_t firelock = 0;    // fire bits if locked (else 0)
+static uint8_t facing = 0;  // last non-zero direction
 
 uint8_t plat_raw_dualstick()
 {
@@ -617,8 +619,20 @@ uint8_t plat_raw_dualstick()
     if (j & BUTTON_LEFT) out |= INP_LEFT;
     if (j & BUTTON_RIGHT) out |= INP_RIGHT;
 
-    // replicate dirs to fudge firing for now.
-    return ((out&0x0f) <<4) | (out&0x0f);
+    if (out != 0) {
+        facing = out;
+    }
+
+    if (j & BUTTON_A) {
+        if (!firelock) {
+            firelock = (facing<<4);
+        }
+        out |= firelock;
+    } else {
+        firelock = 0;
+    }
+
+    return out;
 }
 
 // Returns direction + MENU_ bits.
