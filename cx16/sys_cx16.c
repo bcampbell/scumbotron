@@ -391,7 +391,7 @@ void plat_init()
         for (i=0; i<4; ++i) {
             //VERA.data0 = 0b10101010;
             //VERA.data0 = 0b01010101;
-            VERA.data0 = 0b01111110;
+            VERA.data0 = 0b11111111;
             VERA.data0 = 0b00000000;
         }
         // 8 vline chars
