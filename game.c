@@ -184,7 +184,7 @@ static void render_STATE_TITLESCREEN()
         const uint8_t cx = (SCREEN_TEXT_W-32)/2;
         const uint8_t cy = 4;
         plat_mono4x2(cx,cy, logo_img, 32, 4, (tick/2) & 0x0f);
-        plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1983 SCUMWAYS INC.", 1);
+        plat_text((SCREEN_TEXT_W-22)/2, cy + 6, "(C) 1984 SCUMWAYS INC.", 1);
     }
     // controls
     {

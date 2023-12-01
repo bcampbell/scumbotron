@@ -1255,7 +1255,7 @@ bool marine_playercollide(uint8_t g, uint8_t plr)
     player_add_score(score_vals[SCORE_100]);
     vfx_play_quicktext(gobx[g], goby[g] + (4<<FX), score_strings[SCORE_100]);
     sfx_play(SFX_MARINE_SAVED, 1);
-
+    player_extend_powerup_time(plr);
     return false;   // Don't kill player.
 }
 /*

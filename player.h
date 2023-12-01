@@ -35,6 +35,10 @@ void player_add_score(uint8_t points);
 void player_extra_life(uint8_t plr);    // give extra life
 void player_powerup(uint8_t plr);   // power up weapon
 void player_next_weapon(uint8_t plr);   // upgrade to next weapon type
+// Reset the timeout for the current weapon/power
+static inline void player_extend_powerup_time(uint8_t plr) {
+    plrweaponage[plr] = 0;
+}
 
 #define MAX_SHOTS 12
 // shot vars
