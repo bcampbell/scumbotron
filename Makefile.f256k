@@ -1,0 +1,71 @@
+# To look at asm:
+# mos-cx16-clang -Icx16 -Os -o /tmp/gob.s -Wl,--lto-emit-asm gob.c
+
+# disassemble whole lot: (compile with -g!)
+# llvm-objdump -dSr game.prg.elf >/tmp/game.s
+
+BUILD_DIR=build_f256k
+EXPORT_DIR=export_f256k
+
+SRCS = f256k/main_f256k.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
+	$(addprefix $(EXPORT_DIR)/, palette.c chars.c spr16.c)
+
+OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
+#OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
+
+CC := mos-f256k-clang
+CFLAGS = -If256k -Os
+LDFLAGS =
+LDLIBS =
+DEPFLAGS = -MMD -MP -MF $@.d
+
+DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
+
+
+$(BUILD_DIR)/scumbotron.bin: $(OBJ_FILES)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(BUILD_DIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: %.s
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+-include $(DEP_FILES)
+
+# graphics exporting
+$(EXPORT_DIR)/palette.c: sprites16.png
+	tools/png2sprites -palette rgba -c -var export_palette_bin $< $@
+
+$(EXPORT_DIR)/spr16.c: sprites16.png
+	tools/png2sprites -w 16 -h 16 -fmt 4bpp -num 128 -c -var export_spr16_bin $< $@
+
+$(EXPORT_DIR)/spr32.c: sprites32.png
+	tools/png2sprites -w 32 -h 32 -num 3 -fmt 4bpp -c -var export_spr32_bin $< $@
+# speech bubble sprites
+$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
+	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp -c -var export_spr64x8_bin $< $@
+
+$(EXPORT_DIR)/chars.c: chars.png
+	tools/png2sprites -w 8 -h 8 -num 128 -fmt 1bpp -c -var export_chars_bin $< $@
+
+
+# Tell make not to delete the intermediate .c files - we want to check them
+# into git.
+.PRECIOUS: $(SRCS_EXPORTED)
+
+.PHONY: run
+run: $(BUILD_DIR)/scumbotron.bin
+	$(HOME)/crap/junior-emulator/bin/jr256 $<@2000
+
+.PHONY: clean
+clean:
+	- rm -rf $(BUILD_DIR)
+
+.PHONY: dump
+dump:
+	llvm-objdump -d --print-imm-hex build_f256k/scumbotron.bin.elf
+
