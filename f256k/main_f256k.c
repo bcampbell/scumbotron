@@ -1,10 +1,24 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
 
+#include "api.h"
 
 
-
+#define MMU_MEM_CTRL (*(volatile unsigned char *)0x00)
 #define MMU_IO_CTRL (*(volatile unsigned char *)0x01)
+
+#define MMU_EDIT_EN 0x80
+
+#define MMU_MEM_BANK_0 (*(volatile unsigned char *)0x08)
+#define MMU_MEM_BANK_1 (*(volatile unsigned char *)0x09)
+#define MMU_MEM_BANK_2 (*(volatile unsigned char *)0x0A)
+#define MMU_MEM_BANK_3 (*(volatile unsigned char *)0x0B)
+#define MMU_MEM_BANK_4 (*(volatile unsigned char *)0x0C)
+#define MMU_MEM_BANK_5 (*(volatile unsigned char *)0x0D)
+#define MMU_MEM_BANK_6 (*(volatile unsigned char *)0x0E)
+#define MMU_MEM_BANK_7 (*(volatile unsigned char *)0x0F)
+
+
 // Tiny VICKY I/O pages
 #define VICKY_IO_PAGE_REGISTERS			0	// Low level I/O registers
 #define VICKY_IO_PAGE_FONT_AND_LUTS		1	// Text display font memory and graphics color LUTs
@@ -25,6 +39,54 @@
 #define BRDR_WIDTH (*(volatile unsigned char *)0xD008)
 #define BRDR_HEIGHT (*(volatile unsigned char *)0xD009)
 
+
+
+
+#define PS2_CTRL (*(volatile uint8_t *)0xD640)
+#define PS2_OUT  (*(volatile uint8_t *)0xD641)
+#define KBD_IN (*(volatile uint8_t *)0xD642)
+#define MS_IN (*(volatile uint8_t *)0xD643)
+#define PS2_STAT (*(volatile uint8_t *)0xD644)
+
+
+// irq vector
+#define VIRQ (*(uint16_t*)0xFFFE)
+
+// group 0 regs
+#define INT_PENDING_0 (*(volatile uint8_t *)0xD660)
+#define INT_POLARITY_0 (*(volatile uint8_t *)0xD664)
+#define INT_EDGE_0 (*(volatile uint8_t *)0xD668)
+#define INT_MASK_0 (*(volatile uint8_t *)0xD66C)
+
+// group 0 bits
+#define INT_VKY_SOF 0x01 // TinyVicky Start Of Frame interrupt.
+#define INT_VKY_SOL 0x02 // TinyVicky Start Of Line interrupt
+#define INT_PS2_KBD 0x04 // PS/2 keyboard event
+#define INT_PS2_MOUSE 0x08 // PS/2 mouse event
+#define INT_TIMER_0 0x10 // TIMER0 has reached its target value
+#define INT_TIMER_1 0x20 // TIMER1 has reached its target value
+
+// group 1 bits
+
+#define INT_VIA1 0x40   // F256k Only: Local keyboard
+
+//0x40 RESERVED
+//0x80 Cartridge Interrupt asserted by the cartidge
+
+// group 1 regs
+#define INT_PENDING_1 (*(volatile uint8_t *)0xD661)
+#define INT_POLARITY_1 (*(volatile uint8_t *)0xD665)
+#define INT_EDGE_1 (*(volatile uint8_t *)0xD669)
+#define INT_MASK_1 (*(volatile uint8_t *)0xD66D)
+
+// TODO: group 2 and 3 interrupt regs
+
+#define VKY_GR_CLUT_0 0xD000
+
+
+#define VIA_IORB (*(volatile uint8_t *)0xDC00)
+
+
 volatile uint8_t tick = 0;
 
 extern unsigned char export_palette_bin[];
@@ -39,11 +101,65 @@ extern unsigned char export_chars_bin[];
 extern unsigned int export_chars_bin_len;
 
 
+static uint8_t nsprites = 0;
+
+__attribute__((interrupt)) void irq(void)
+{
+    uint8_t foo = MMU_IO_CTRL;
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    uint8_t pending0 = INT_PENDING_0;
+    if (pending0 & INT_VKY_SOF) {
+        ++tick;
+    }
+    if (pending0 & INT_PS2_KBD) {
+        
+    }
+    // clear the interrupts
+    INT_PENDING_0 = 0;
+    MMU_IO_CTRL = foo;
+}
+
 void init_text();
 
+static void waitvbl()
+{
+    uint8_t t = tick;
+    while (t==tick)
+    {
+    }
+}
+
+
+void init_gubbins()
+{
+    __asm("clc\nsei\n");
+
+    // TODO: don't switch to an unknown MLUT!
+    MMU_MEM_CTRL = MMU_EDIT_EN;
+
+    MMU_MEM_BANK_0 = 0;
+    MMU_MEM_BANK_1 = 1;
+    MMU_MEM_BANK_2 = 2;
+    MMU_MEM_BANK_3 = 3;
+    MMU_MEM_BANK_4 = 4;
+    MMU_MEM_BANK_5 = 5;
+    MMU_MEM_BANK_6 = 6;
+    MMU_MEM_BANK_7 = 7;
+    MMU_MEM_CTRL = 0;
+
+    VIRQ = (uint16_t)irq;
+
+    // SOF (vblank)
+
+    INT_MASK_0 = ~(INT_VKY_SOF|INT_PS2_KBD);
+
+    __asm("cli\n");
+}
+
 int main(void) {
+    init_gubbins();
     MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
-    VKY_MSTR_CTRL_0 = 0b00000001;
+    VKY_MSTR_CTRL_0 = 0b00100111;   // enable sprites,graphics and text
     VKY_MSTR_CTRL_1 = 0b00000110;
 
     MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
@@ -57,8 +173,6 @@ int main(void) {
 
     game_init();
 
-
-
     MMU_IO_CTRL = 0;
 
     BRDR_CTRL = 1;
@@ -67,13 +181,11 @@ int main(void) {
 
     uint8_t i = 0;
     while (1) {
-        ++tick;
+        waitvbl();
         MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
         uint8_t *p = ((uint8_t*)0xC000);
-        *p = tick;
-        BRDR_BLUE = i;
-        ++i;
         game_tick();
+        nsprites = 0;
         game_render();
     }
 
@@ -128,6 +240,20 @@ void init_text()
         MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
         const uint8_t* src = export_palette_bin;
         uint8_t * dest = ((uint8_t*)0xD840);
+        for (uint8_t i = 0; i < 16; ++i) {
+            dest[0] = src[2];   // b
+            dest[1] = src[1];   // g
+            dest[2] = src[0];    // r
+            dest[3] = 0;    //src[3];   // a
+            src += 4;
+            dest += 4;
+        }
+    }
+    // sprite palette 0
+    {
+        MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
+        const uint8_t* src = export_palette_bin;
+        uint8_t * dest = ((uint8_t*)VKY_GR_CLUT_0);
         for (uint8_t i = 0; i < 16; ++i) {
             dest[0] = src[2];   // b
             dest[1] = src[1];   // g
@@ -192,8 +318,36 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr
 {
 }
 
+
+
 void sprout16(int16_t x, int16_t y, uint8_t img)
 {
+    if (nsprites>=64) {
+        return;
+    }
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    uint16_t addr =(uint16_t)export_spr16_bin;
+    uint8_t *spr = (uint8_t*)(0xD900 + (nsprites*8));
+    // -ssllcce
+    // ss: size 00=32x32 01=24x24 10=16x16 11=8x8
+    // ll: layer
+    // cc: lut
+    // e: enable
+    *spr++ = 0b01000001;
+    *spr++ = addr & 0xff;
+    *spr++ = addr >> 8;
+    *spr++ = 0;
+
+    x = (x >> FX);
+    y = (y >> FX);
+    x += 32;
+    y += 32;
+
+    *spr++ = x & 0xff;
+    *spr++ = x >> 8;
+    *spr++ = y & 0xff;
+    *spr++ = y >> 8;
+    ++nsprites;
 }
 
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
@@ -286,17 +440,50 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 }
 
 
+static uint8_t firelock = 0;    // fire bits if locked (else 0)
+static uint8_t facing = 0;  // last non-zero direction
+
 // Returns direction + FIRE_ bits.
 uint8_t plat_raw_dualstick()
 {
-    return 0;
-}
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    uint8_t j = VIA_IORB;
+    uint8_t out = 0;
+    if ((j & 0x01) == 0) out |= INP_UP;
+    if ((j & 0x02) == 0) out |= INP_DOWN;
+    if ((j & 0x04) == 0) out |= INP_LEFT;
+    if ((j & 0x08) == 0) out |= INP_RIGHT;
 
+    if (out != 0) {
+        facing = out;
+    }
+
+    // button pressed?
+    if ((j & 0x10) == 0) {
+        if (!firelock) {
+            firelock = (facing<<4);
+        }
+        out |= firelock;
+    } else {
+        firelock = 0;
+    }
+
+    return out;
+}
+ 
 
 // Returns direction + MENU_ bits.
 uint8_t plat_raw_menukeys()
 {
-    return 0;
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    uint8_t j = VIA_IORB;
+    uint8_t out = 0;
+    if ((j & 0x01) == 0) out |= INP_UP;
+    if ((j & 0x02) == 0) out |= INP_DOWN;
+    if ((j & 0x04) == 0) out |= INP_LEFT;
+    if ((j & 0x08) == 0) out |= INP_RIGHT;
+    if ((j & 0x10) == 0) out |= INP_MENU_START | INP_MENU_A;
+    return out;
 }
 
 
@@ -315,5 +502,8 @@ bool plat_loadscores(void* begin, int nbytes)
 {
     return false;
 }
+
+
+
 
 
