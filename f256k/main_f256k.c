@@ -40,7 +40,17 @@
 #define BRDR_HEIGHT (*(volatile unsigned char *)0xD009)
 
 
+// VICKY cursor registers
+#define VKY_CURSOR_CCR (*(volatile unsigned char *)0xD010)
+#define VKY_CURSOR_CCH (*(volatile unsigned char *)0xD012)
+#define VKY_CURSOR_CURX (*(volatile uint16_t *)0xD014)
+#define VKY_CURSOR_CURY (*(volatile uint16_t *)0xD016)
 
+
+
+
+
+//
 
 #define PS2_CTRL (*(volatile uint8_t *)0xD640)
 #define PS2_OUT  (*(volatile uint8_t *)0xD641)
@@ -94,7 +104,9 @@ extern uint16_t lzsa_srcptr;
 extern uint16_t lzsa_dstptr;
 void lzsa2_unpack();
 
-volatile uint8_t tick = 0;
+static void sprites_init();
+static void sprites_beginframe();
+static void sprites_endframe();
 
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
@@ -110,8 +122,8 @@ extern const unsigned int export_spr16_02_zbin_len;
 extern const unsigned char export_spr16_03_zbin[];
 extern const unsigned int export_spr16_03_zbin_len;
 
-static uint8_t nsprites = 0;
 
+volatile uint8_t tick = 0;
 __attribute__((interrupt)) void irq(void)
 {
     uint8_t foo = MMU_IO_CTRL;
@@ -128,8 +140,6 @@ __attribute__((interrupt)) void irq(void)
     MMU_IO_CTRL = foo;
 }
 
-void init_text();
-
 static void waitvbl()
 {
     uint8_t t = tick;
@@ -143,9 +153,8 @@ void init_gubbins()
 {
     __asm("clc\nsei\n");
 
-    // TODO: don't switch to an unknown MLUT!
+    // TODO: be more careful about MLUT twiddling?
     MMU_MEM_CTRL = MMU_EDIT_EN;
-
     MMU_MEM_BANK_0 = 0;
     MMU_MEM_BANK_1 = 1;
     MMU_MEM_BANK_2 = 2;
@@ -158,13 +167,10 @@ void init_gubbins()
 
     VIRQ = (uint16_t)irq;
 
-    // SOF (vblank)
-
+    // Enable SOF (vblank)
     INT_MASK_0 = ~(INT_VKY_SOF|INT_PS2_KBD);
 
-
-
-    // unpack sprite data into higher banks
+    // unpack sprite data into ram bank 8 and onward
     // each chunk unpacks to 8KB
     const uint16_t spr16_chunks[4] = {
         (uint16_t)export_spr16_00_zbin,
@@ -188,53 +194,6 @@ void init_gubbins()
     MMU_MEM_CTRL = 0;
 
     __asm("cli\n");
-}
-
-int main(void) {
-    init_gubbins();
-    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
-    VKY_MSTR_CTRL_0 = 0b00100111;   // enable sprites,graphics and text
-    VKY_MSTR_CTRL_1 = 0b00000110;
-
-    MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
-    uint8_t *foo = (uint8_t*)0xC000;
-    for (uint8_t i=0; i<255; ++i) 
-    {
-        foo[i] = i;
-    }
-
-    init_text();
-
-    game_init();
-
-    MMU_IO_CTRL = 0;
-
-    BRDR_CTRL = 1;
-    BRDR_WIDTH = 31;
-    BRDR_HEIGHT = 31;
-
-    uint8_t i = 0;
-    while (1) {
-        waitvbl();
-        MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
-        uint8_t *p = ((uint8_t*)0xC000);
-        game_tick();
-        nsprites = 0;
-        game_render();
-    }
-
-    return 0;
-}
-
-static inline uint8_t *chrmem(uint8_t cx, uint8_t cy)
-{
-    return ((uint8_t*)0xC000) + (cy*40) + cx;
-}
-
-
-// set up text layer stuff
-void init_text()
-{
 
     // decompress charset into place 
     {
@@ -290,19 +249,60 @@ void init_text()
     }
 }
 
+int main(void) {
+    init_gubbins();
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    VKY_MSTR_CTRL_0 = 0b00100111;   // enable sprites,graphics and text
+    VKY_MSTR_CTRL_1 = 0b00000110;
+
+    // cursor off
+    VKY_CURSOR_CCR = 0;
+
+    game_init();
+
+    MMU_IO_CTRL = 0;
+
+    BRDR_CTRL = 1;
+    BRDR_WIDTH = 31;
+    BRDR_HEIGHT = 31;
+
+    sprites_init();
+    uint8_t i = 0;
+    while (1) {
+        waitvbl();
+        game_tick();
+        sprites_beginframe();
+        game_render();
+        sprites_endframe();
+    }
+
+    return 0;
+}
+
+static inline uint8_t *chrmem(uint8_t cx, uint8_t cy)
+{
+    return ((uint8_t*)0xC000) + (cy*40) + cx;
+}
+
 
 
 // text layer. This is persistent - if you draw text it'll stay onscreen until
 // overwritten, or plat_clr() is called.
 void plat_clr()
 {
-    MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
-    //MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
     for (uint8_t cy = 0; cy<SCREEN_TEXT_H; ++cy) {
+        MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
         uint8_t* dest = chrmem(0,cy);
         for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
             *dest++ = 0;
         }
+        /*
+        MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
+        uint8_t* dest = chrmem(0,cy);
+        for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
+            *dest++ = 0;
+        }
+        */
     }
 }
 
@@ -311,15 +311,21 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 {
     MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
     uint8_t* dest = chrmem(cx,cy);
-    for (int i=0; i<len; ++i) {
-        *dest++ = *txt++;
+    if (colour==0) {
+        for (int i=0; i<len; ++i) {
+            *dest++ = 0;
+        }
+    } else {
+        for (int i=0; i<len; ++i) {
+            *dest++ = *txt++;
+        }
+        MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
+        dest = chrmem(cx,cy);
+        for (int i=0; i<len; ++i) {
+            *dest++ = colour<<4;
+        }
     }
 
-    MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
-    dest = chrmem(cx,cy);
-    for (int i=0; i<len; ++i) {
-        *dest++ = colour<<4;
-    }
 }
 
 // TODO: should just pass in level and score as bcd
@@ -343,7 +349,32 @@ void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr
 {
 }
 
+static uint8_t nsprites = 0;
+static uint8_t nsprites_prev = 0;
 
+static void sprites_init()
+{
+    nsprites = 0;
+    nsprites_prev = 0;
+}
+
+static void sprites_beginframe()
+{
+    nsprites = 0;
+}
+
+static void sprites_endframe()
+{
+    // clear any additional sprites used on the previous frame
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    uint8_t *spr = (uint8_t*)(0xD900 + (nsprites * 8));
+    for (uint8_t i = nsprites; i < nsprites_prev; ++i) {
+        *spr = 0;
+        spr += 8;
+    }
+
+    nsprites_prev = nsprites;
+}
 
 void sprout16(int16_t x, int16_t y, uint8_t img)
 {
