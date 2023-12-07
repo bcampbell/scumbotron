@@ -87,19 +87,28 @@
 #define VIA_IORB (*(volatile uint8_t *)0xDC00)
 
 
+
+// ---- lzsa decompression
+
+extern uint16_t lzsa_srcptr;
+extern uint16_t lzsa_dstptr;
+void lzsa2_unpack();
+
 volatile uint8_t tick = 0;
 
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
-extern unsigned char export_spr16_bin[];
-extern unsigned int export_spr16_bin_len;
-extern unsigned char export_spr32_bin[];
-extern unsigned int export_spr32_bin_len;
-extern unsigned char export_spr64x8_bin[];
-extern unsigned int export_spr64x8_bin_len;
-extern unsigned char export_chars_bin[];
-extern unsigned int export_chars_bin_len;
+extern unsigned char export_chars_zbin[];
+extern unsigned int export_chars_zbin_len;
 
+extern const unsigned char export_spr16_00_zbin[];
+extern const unsigned int export_spr16_00_zbin_len;
+extern const unsigned char export_spr16_01_zbin[];
+extern const unsigned int export_spr16_01_zbin_len;
+extern const unsigned char export_spr16_02_zbin[];
+extern const unsigned int export_spr16_02_zbin_len;
+extern const unsigned char export_spr16_03_zbin[];
+extern const unsigned int export_spr16_03_zbin_len;
 
 static uint8_t nsprites = 0;
 
@@ -145,13 +154,38 @@ void init_gubbins()
     MMU_MEM_BANK_5 = 5;
     MMU_MEM_BANK_6 = 6;
     MMU_MEM_BANK_7 = 7;
-    MMU_MEM_CTRL = 0;
+    MMU_MEM_CTRL = 0;   // done!
 
     VIRQ = (uint16_t)irq;
 
     // SOF (vblank)
 
     INT_MASK_0 = ~(INT_VKY_SOF|INT_PS2_KBD);
+
+
+
+    // unpack sprite data into higher banks
+    // each chunk unpacks to 8KB
+    const uint16_t spr16_chunks[4] = {
+        (uint16_t)export_spr16_00_zbin,
+        (uint16_t)export_spr16_01_zbin,
+        (uint16_t)export_spr16_02_zbin,
+        (uint16_t)export_spr16_03_zbin,
+    };
+    for (uint8_t i = 0; i < 4; ++i) {
+
+        MMU_MEM_CTRL = MMU_EDIT_EN;
+        MMU_MEM_BANK_7 = (8+i);
+        MMU_MEM_CTRL = 0;   // done!
+    
+        lzsa_srcptr = spr16_chunks[i];
+        lzsa_dstptr = 0xE000;
+        lzsa2_unpack();
+    }
+    // restore bank 7 so our irq handler is there!
+    MMU_MEM_CTRL = MMU_EDIT_EN;
+    MMU_MEM_BANK_7 = 7;
+    MMU_MEM_CTRL = 0;
 
     __asm("cli\n");
 }
@@ -202,21 +236,12 @@ static inline uint8_t *chrmem(uint8_t cx, uint8_t cy)
 void init_text()
 {
 
-    // load font
+    // decompress charset into place 
     {
-        asm("nop\nnop\nnop\n");
-
         MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
-        const uint8_t* src = export_chars_bin;
-        uint8_t* dest = ((uint8_t*)0xC000);
-        for (int i=0; i<128; ++i) {
-            for (int j=0; j<8; ++j) {
-                *dest++ = *src++;
-                asm("nop\n");
-            }
-            asm("nop\nnop\n");
-        }
-        asm("nop\nnop\nnop\n");
+        lzsa_srcptr = (uint16_t)export_chars_zbin;
+        lzsa_dstptr = 0xC000;
+        lzsa2_unpack();
     }
 
     // text fg palette
@@ -326,7 +351,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
         return;
     }
     MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
-    uint16_t addr =(uint16_t)export_spr16_bin;
+    uint32_t addr =(uint32_t)(0x10000 + (img*16*16));    // TODO
     uint8_t *spr = (uint8_t*)(0xD900 + (nsprites*8));
     // -ssllcce
     // ss: size 00=32x32 01=24x24 10=16x16 11=8x8
@@ -336,7 +361,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
     *spr++ = 0b01000001;
     *spr++ = addr & 0xff;
     *spr++ = addr >> 8;
-    *spr++ = 0;
+    *spr++ = (addr >> 16);
 
     x = (x >> FX);
     y = (y >> FX);

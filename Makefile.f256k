@@ -9,10 +9,11 @@ EXPORT_DIR=export_f256k
 
 SRCS = f256k/main_f256k.c \
 	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
-	$(addprefix $(EXPORT_DIR)/, palette.c chars.c spr16.c)
+	$(addprefix $(EXPORT_DIR)/, palette.c chars.c spr16_00.c spr16_01.c spr16_02.c spr16_03.c spr32.c spr64x8.c)
+SRCS_ASM = f256k/decompress_faster_v2.asm
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
-#OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
+OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.asm=.o))
 
 CC := mos-f256k-clang
 CFLAGS = -If256k -Os
@@ -30,7 +31,7 @@ $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: %.s
+$(BUILD_DIR)/%.o: %.asm
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -40,17 +41,52 @@ $(BUILD_DIR)/%.o: %.s
 $(EXPORT_DIR)/palette.c: sprites16.png
 	tools/png2sprites -palette rgba -c -var export_palette_bin $< $@
 
-$(EXPORT_DIR)/spr16.c: sprites16.png
-	tools/png2sprites -w 16 -h 16 -fmt 8bpp -num 4 -c -var export_spr16_bin $< $@
 
-$(EXPORT_DIR)/spr32.c: sprites32.png
-	tools/png2sprites -w 32 -h 32 -num 3 -fmt 4bpp -c -var export_spr32_bin $< $@
+# export spr16 out to 4x8KB chunks
+.PHONY: spr16_parts
+spr16_parts: sprites16.png
+	tools/png2sprites -w 16 -h 16 -num 128 -fmt 8bpp $< | split -b 8192 -d --additional-suffix .bin - $(EXPORT_DIR)/spr16_
+
+$(EXPORT_DIR)/spr16_00.bin: spr16_parts
+
+$(EXPORT_DIR)/spr16_01.bin: spr16_parts
+
+$(EXPORT_DIR)/spr16_02.bin: spr16_parts
+
+$(EXPORT_DIR)/spr16_03.bin: spr16_parts
+
+# export 32x32 sprites
+$(EXPORT_DIR)/spr32.bin: sprites32.png
+	tools/png2sprites -w 32 -h 32 -num 3 -fmt 8bpp $< $@
+
+#export 64x8 sprites (for speech bubbles)
+$(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
+	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp $< $@
+
+# export charset (will be compressed)
+$(EXPORT_DIR)/chars.bin: chars.png
+	tools/png2sprites -w 8 -h 8 -num 128 -fmt 1bpp $< $@
+
+# compress .bin files
+%.zbin: %.bin
+	lzsa -r -f 2 $< $@
+
+#.c source from .zbin
+%.c: %.zbin
+	cat $< | xxd -i -n export_`basename $<` | sed -e 's/unsigned/const unsigned/' >$@
+
+.PRECIOUS: $(SRCS_EXPORTED)
+
+# Turn palette into c source
+#%.c: %.bin
+#	xxd -i -n export_`basename $<` $< $@
+
+#$(EXPORT_DIR)/spr32.c: sprites32.png
+#	tools/png2sprites -w 32 -h 32 -num 3 -fmt 4bpp -c -var export_spr32_bin $< $@
 # speech bubble sprites
-$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
-	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp -c -var export_spr64x8_bin $< $@
+#$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
+#	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp -c -var export_spr64x8_bin $< $@
 
-$(EXPORT_DIR)/chars.c: chars.png
-	tools/png2sprites -w 8 -h 8 -num 128 -fmt 1bpp -c -var export_chars_bin $< $@
 
 
 # Tell make not to delete the intermediate .c files - we want to check them
@@ -59,7 +95,7 @@ $(EXPORT_DIR)/chars.c: chars.png
 
 .PHONY: run
 run: $(BUILD_DIR)/scumbotron.bin
-	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@2000 boot@2000
+	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@800 boot@800
 
 .PHONY: clean
 clean:
