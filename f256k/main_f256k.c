@@ -355,10 +355,10 @@ int main(void) {
             char buf[5];
             buf[0] = hexdigits[ps2_dualstick >> 4];
             buf[1] = hexdigits[ps2_dualstick & 0x07];
-            buf[2] = '.';
+            buf[2] = ' ';
             buf[3] = hexdigits[ps2_menukeys >> 4];
             buf[4] = hexdigits[ps2_menukeys & 0x07];
-            plat_textn(0,0,buf,5,tick&15);
+            plat_textn(SCREEN_TEXT_W-5, 0, buf, 5, 3);
         }
         sprites_endframe();
 
@@ -417,6 +417,50 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 // TODO: should just pass in level and score as bcd
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
+    const uint8_t cx = 0;
+    const uint8_t cy = 0;
+    uint8_t c = 1;
+    char buf[16];
+
+    {
+        uint8_t level_bcd = bin2bcd8(level);
+
+        buf[0] = 'L';
+        buf[1] = 'V';
+        buf[2] = ' ';
+
+        buf[3] = hexdigits[level_bcd >> 4];
+        buf[4] = hexdigits[level_bcd & 0x0f];
+    }
+
+    buf[5] = ' ';
+    buf[6] = ' ';
+
+    {
+        uint32_t score_bcd = bin2bcd32(score);
+
+        buf[7] = hexdigits[(score_bcd >> 28)&0x0f];
+        buf[8] = hexdigits[(score_bcd >> 24)&0x0f];
+        buf[9] = hexdigits[(score_bcd >> 20)&0x0f];
+        buf[10] = hexdigits[(score_bcd >> 16)&0x0f];
+        buf[11] = hexdigits[(score_bcd >> 12)&0x0f];
+        buf[12] = hexdigits[(score_bcd >> 8)&0x0f];
+        buf[13] = hexdigits[(score_bcd >> 4)&0x0f];
+        buf[14] = hexdigits[(score_bcd >> 0)&0x0f];
+    }
+
+    plat_textn(cx, cy, buf, 15, 1);
+
+    // Lives
+    {
+        uint8_t i=0;
+        for(i=0; i < 7 && i < lives; ++i) {
+            buf[i] = '*';  // heart
+        }
+        buf[i] = (lives > 7) ? '+' : ' ';
+        ++i;
+        plat_textn(cx+17, cy, buf, i, 2);
+    }
 }
 
 // Render bonkers encoding where each byte encodes a 4x2 block of pixels,
