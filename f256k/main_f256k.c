@@ -1,7 +1,8 @@
 #include "../plat.h"
 #include "../gob.h" // for ZAPPER_*
+#include "../misc.h"
 
-#include "api.h"
+//#include "api.h"
 
 
 #define MMU_MEM_CTRL (*(volatile unsigned char *)0x00)
@@ -123,18 +124,96 @@ extern const unsigned char export_spr16_03_zbin[];
 extern const unsigned int export_spr16_03_zbin_len;
 
 
+// PS/2 kbd
+//
+//
+
+volatile uint8_t ps2_dualstick = 0;
+volatile uint8_t ps2_menukeys = 0;
+volatile uint8_t ps2_state = 0;     // 0x01 = extend, 0x02 = release
+volatile bool ps2_release = false;
+
+static inline uint8_t ps2_code_to_dualstick(uint8_t scancode, bool extended)
+{
+    if( extended) {
+        switch (scancode) {
+            // cursor keys E0 + ...
+            case 0x75: return INP_FIRE_UP;
+            case 0x72: return INP_FIRE_DOWN;
+            case 0x6B: return INP_FIRE_LEFT;
+            case 0x74: return INP_FIRE_RIGHT;
+        }
+    } else {
+        switch (scancode) {
+            // WASD
+            case 0x1D: return INP_UP;
+            case 0x1B: return INP_DOWN;
+            case 0x1C: return INP_LEFT;
+            case 0x23: return INP_RIGHT;
+        }
+    }
+    return 0;
+}
+
+static inline uint8_t ps2_code_to_menukeys(uint8_t scancode, bool extended) {
+    if (extended) {
+        switch (scancode) {
+            // cursor keys E0 + ...
+            case 0x75: return INP_UP;
+            case 0x72: return INP_DOWN;
+            case 0x6B: return INP_LEFT;
+            case 0x74: return INP_RIGHT;
+        }
+    } else {
+        switch (scancode) {
+            // cursor keys
+            case 0x5A: return INP_MENU_START;   // Enter
+            case 0x76: return INP_MENU_ESC;     // Esc 
+        }
+    }
+    return 0;
+}
+
+
+
 volatile uint8_t tick = 0;
 __attribute__((interrupt)) void irq(void)
 {
+    static uint8_t latch = 0;
     uint8_t foo = MMU_IO_CTRL;
     MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
     uint8_t pending0 = INT_PENDING_0;
     if (pending0 & INT_VKY_SOF) {
         ++tick;
     }
+
     if (pending0 & INT_PS2_KBD) {
-        
+        while( !(PS2_STAT & 0x01)) {
+            uint8_t k = KBD_IN;
+            if (k == 0xe0) {
+                // extend
+                ps2_state |= 0x01; // extend
+            } else if (k == 0xf0) {
+                ps2_state |= 0x02;
+            } else {
+                // not E0 or F0. Time to decode the sequence.
+                bool extended = (ps2_state & 0x01) ? true : false;
+                if ((ps2_state & 0x02) == 0) {
+                    // key pressed
+                    ps2_dualstick |= ps2_code_to_dualstick(k, extended);
+                    ps2_menukeys |= ps2_code_to_menukeys(k, extended);
+                } else {
+                    // key released
+                    ps2_dualstick &= ~ps2_code_to_dualstick(k, extended);
+                    ps2_menukeys &= ~ps2_code_to_menukeys(k, extended);
+                }
+
+                //clear extended and release flags.
+                ps2_state = 0;
+           }
+       }
     }
+
     // clear the interrupts
     INT_PENDING_0 = 0;
     MMU_IO_CTRL = foo;
@@ -267,13 +346,22 @@ int main(void) {
     BRDR_HEIGHT = 31;
 
     sprites_init();
-    uint8_t i = 0;
     while (1) {
         waitvbl();
         game_tick();
         sprites_beginframe();
         game_render();
+        {
+            char buf[5];
+            buf[0] = hexdigits[ps2_dualstick >> 4];
+            buf[1] = hexdigits[ps2_dualstick & 0x07];
+            buf[2] = '.';
+            buf[3] = hexdigits[ps2_menukeys >> 4];
+            buf[4] = hexdigits[ps2_menukeys & 0x07];
+            plat_textn(0,0,buf,5,tick&15);
+        }
         sprites_endframe();
+
     }
 
     return 0;
@@ -296,13 +384,11 @@ void plat_clr()
         for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
             *dest++ = 0;
         }
-        /*
         MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
-        uint8_t* dest = chrmem(0,cy);
+        dest = chrmem(0,cy);
         for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
             *dest++ = 0;
         }
-        */
     }
 }
 
@@ -342,6 +428,31 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
 // Draw horizontal line of chars, range [cx_begin, cx_end).
 void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
+    return;
+    colour = 15;
+    if (colour == 0) {
+        chr = 0;
+    }
+
+    __asm("nop\nnop\nnop\n");
+    uint8_t *dest = chrmem(cx_begin, cy);
+    uint8_t w = cx_end - cx_begin;
+    {
+        MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
+
+        for (uint8_t i=0; i<w; ++i) {
+            *dest++ = chr;
+        } 
+    }
+    __asm("nop\nnop\nnop\n");
+    {
+        MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
+        dest = chrmem(cx_begin, cy);
+        for (uint8_t i=0; i<w; ++i) {
+            *dest++ = colour;
+        } 
+    }
+    __asm("nop\nnop\nnop\n");
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
@@ -524,7 +635,7 @@ uint8_t plat_raw_dualstick()
         firelock = 0;
     }
 
-    return out;
+    return out | ps2_dualstick;
 }
  
 
@@ -539,7 +650,7 @@ uint8_t plat_raw_menukeys()
     if ((j & 0x04) == 0) out |= INP_LEFT;
     if ((j & 0x08) == 0) out |= INP_RIGHT;
     if ((j & 0x10) == 0) out |= INP_MENU_START | INP_MENU_A;
-    return out;
+    return out | ps2_menukeys;
 }
 
 

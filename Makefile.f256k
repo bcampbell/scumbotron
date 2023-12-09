@@ -16,8 +16,8 @@ OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.asm=.o))
 
 CC := mos-f256k-clang
-CFLAGS = -If256k -Os
-LDFLAGS =
+CFLAGS = -If256k -Os -flto
+LDFLAGS = -flto
 LDLIBS =
 DEPFLAGS = -MMD -MP -MF $@.d
 
@@ -95,7 +95,7 @@ $(EXPORT_DIR)/chars.bin: chars.png
 
 .PHONY: run
 run: $(BUILD_DIR)/scumbotron.bin
-	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@800 boot@800
+	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@7F8 boot@800
 
 .PHONY: clean
 clean:
