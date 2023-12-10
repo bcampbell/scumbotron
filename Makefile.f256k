@@ -4,16 +4,25 @@
 # disassemble whole lot: (compile with -g!)
 # llvm-objdump -dSr game.prg.elf >/tmp/game.s
 
-BUILD_DIR=build_f256k
-EXPORT_DIR=export_f256k
+BLD=build_f256k
+EXP=export_f256k
 
 SRCS = f256k/main_f256k.c \
 	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
-	$(addprefix $(EXPORT_DIR)/, palette.c chars.c spr16_00.c spr16_01.c spr16_02.c spr16_03.c spr32.c spr64x8.c)
-SRCS_ASM = f256k/decompress_faster_v2.asm
+	$(addprefix $(EXP)/, palette.c)
+#SRCS_ASM = f256k/decompress_faster_v2.asm
 
-OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
-OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.asm=.o))
+EXPORTED_BINS = $(addprefix $(EXP)/, spr16.bin spr32.bin spr64x8.bin chars.bin)
+
+# the game and data will be split up into 8KB chunks and compressed
+COMPRESSED_CHUNKS = $(addprefix $(BLD)/, game_00.zbin game_01.zbin game_02.zbin \
+					game_03.zbin game_04.zbin \
+					spr16_00.zbin spr16_01.zbin spr16_02.zbin spr16_03.zbin \
+					spr32.zbin spr64x8.zbin chars.zbin)
+
+
+OBJ_FILES = $(addprefix $(BLD)/,$(SRCS:.c=.o))
+OBJ_FILES += $(addprefix $(BLD)/,$(SRCS_ASM:.asm=.o))
 
 CC := mos-f256k-clang
 CFLAGS = -If256k -Os -flto
@@ -24,84 +33,67 @@ DEPFLAGS = -MMD -MP -MF $@.d
 DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
 
-$(BUILD_DIR)/scumbotron.bin: $(OBJ_FILES)
+# scumbotron.bin will be the fully-built package
+# (containing compressed game.bin, graphics and unpacking code).
+# putting it all together...
+$(BLD)/scumbotron.bin: $(COMPRESSED_CHUNKS) f256k/scumbotron.asm f256k/decompress_faster_v2.asm
+	64tass -b -o $@ -I build_f256k f256k/scumbotron.asm
+
+# chop game.bin and data into 8KB chunks and compress...
+# note grouped rule (&). These will all be generated in one go.
+$(COMPRESSED_CHUNKS) &: $(EXPORTED_BINS) $(BLD)/game.bin
+	f256k/chunks.sh
+
+# game.bin is the main game code, compiled with llvm-mos, and without graphics
+$(BLD)/game.bin: $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
-$(BUILD_DIR)/%.o: %.c
+$(BLD)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c $< -o $@
 
-$(BUILD_DIR)/%.o: %.asm
+$(BLD)/%.o: %.asm
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 -include $(DEP_FILES)
 
 # graphics exporting
-$(EXPORT_DIR)/palette.c: sprites16.png
+$(EXP)/palette.c: sprites16.png
 	tools/png2sprites -palette rgba -c -var export_palette_bin $< $@
 
+#tools/png2sprites -w 16 -h 16 -num 128 -fmt 8bpp $< | split -b 8192 -d --additional-suffix .bin - $(EXP)/spr16_
 
-# export spr16 out to 4x8KB chunks
-.PHONY: spr16_parts
-spr16_parts: sprites16.png
-	tools/png2sprites -w 16 -h 16 -num 128 -fmt 8bpp $< | split -b 8192 -d --additional-suffix .bin - $(EXPORT_DIR)/spr16_
-
-$(EXPORT_DIR)/spr16_00.bin: spr16_parts
-
-$(EXPORT_DIR)/spr16_01.bin: spr16_parts
-
-$(EXPORT_DIR)/spr16_02.bin: spr16_parts
-
-$(EXPORT_DIR)/spr16_03.bin: spr16_parts
+# export 16x16 sprites 
+$(EXP)/spr16.bin: sprites16.png
+	tools/png2sprites -w 16 -h 16 -num 128 -fmt 8bpp $< $@
 
 # export 32x32 sprites
-$(EXPORT_DIR)/spr32.bin: sprites32.png
+$(EXP)/spr32.bin: sprites32.png
 	tools/png2sprites -w 32 -h 32 -num 3 -fmt 8bpp $< $@
 
 #export 64x8 sprites (for speech bubbles)
-$(EXPORT_DIR)/spr64x8.bin: sprites64x8.png
+$(EXP)/spr64x8.bin: sprites64x8.png
 	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp $< $@
 
 # export charset (will be compressed)
-$(EXPORT_DIR)/chars.bin: chars.png
+$(EXP)/chars.bin: chars.png
 	tools/png2sprites -w 8 -h 8 -num 128 -fmt 1bpp $< $@
 
-# compress .bin files
-%.zbin: %.bin
-	lzsa -r -f 2 $< $@
-
-#.c source from .zbin
-%.c: %.zbin
-	cat $< | xxd -i -n export_`basename $<` | sed -e 's/unsigned/const unsigned/' >$@
-
-.PRECIOUS: $(SRCS_EXPORTED)
-
-# Turn palette into c source
-#%.c: %.bin
-#	xxd -i -n export_`basename $<` $< $@
-
-#$(EXPORT_DIR)/spr32.c: sprites32.png
-#	tools/png2sprites -w 32 -h 32 -num 3 -fmt 4bpp -c -var export_spr32_bin $< $@
-# speech bubble sprites
-#$(EXPORT_DIR)/spr64x8.c: sprites64x8.png
-#	tools/png2sprites -w 64 -h 8 -num 4 -fmt 4bpp -c -var export_spr64x8_bin $< $@
-
-
-
-# Tell make not to delete the intermediate .c files - we want to check them
-# into git.
-.PRECIOUS: $(SRCS_EXPORTED)
 
 .PHONY: run
-run: $(BUILD_DIR)/scumbotron.bin
-	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@7F8 boot@800
+run: $(BLD)/scumbotron.bin
+	$(HOME)/pubproj/junior-emulator/bin/jr256 $<@1000 boot@1000
 
 .PHONY: clean
 clean:
-	- rm -rf $(BUILD_DIR)
+	- rm -rf $(BLD)
 
 .PHONY: dump
-dump:
-	llvm-objdump -d --print-imm-hex build_f256k/scumbotron.bin.elf
+dump: $(BLD)/game.bin.elf
+	llvm-objdump -d --print-imm-hex $<
+
+.PHONY: sections
+sections: $(BLD)/game.bin.elf
+	llvm-objdump -h $<
 

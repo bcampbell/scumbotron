@@ -2,8 +2,9 @@
 #include "../gob.h" // for ZAPPER_*
 #include "../misc.h"
 
-//#include "api.h"
 
+// added a hack to junior-emulator to log writes to 0xF00D :-)
+#define F00D (*(volatile unsigned char *)0xF00D)
 
 #define MMU_MEM_CTRL (*(volatile unsigned char *)0x00)
 #define MMU_IO_CTRL (*(volatile unsigned char *)0x01)
@@ -98,12 +99,13 @@
 #define VIA_IORB (*(volatile uint8_t *)0xDC00)
 
 
-
+#if 0
 // ---- lzsa decompression
 
 extern uint16_t lzsa_srcptr;
 extern uint16_t lzsa_dstptr;
 void lzsa2_unpack();
+#endif
 
 static void sprites_init();
 static void sprites_beginframe();
@@ -111,6 +113,8 @@ static void sprites_endframe();
 
 extern unsigned char export_palette_bin[];
 extern unsigned int export_palette_bin_len;
+
+#if 0
 extern unsigned char export_chars_zbin[];
 extern unsigned int export_chars_zbin_len;
 
@@ -122,7 +126,7 @@ extern const unsigned char export_spr16_02_zbin[];
 extern const unsigned int export_spr16_02_zbin_len;
 extern const unsigned char export_spr16_03_zbin[];
 extern const unsigned int export_spr16_03_zbin_len;
-
+#endif
 
 // PS/2 kbd
 //
@@ -247,8 +251,11 @@ void init_gubbins()
     VIRQ = (uint16_t)irq;
 
     // Enable SOF (vblank)
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
     INT_MASK_0 = ~(INT_VKY_SOF|INT_PS2_KBD);
+    __asm("cli\n");
 
+#if 0
     // unpack sprite data into ram bank 8 and onward
     // each chunk unpacks to 8KB
     const uint16_t spr16_chunks[4] = {
@@ -281,6 +288,8 @@ void init_gubbins()
         lzsa_dstptr = 0xC000;
         lzsa2_unpack();
     }
+#endif
+
 
     // text fg palette
     {
@@ -347,6 +356,7 @@ int main(void) {
 
     sprites_init();
     while (1) {
+
         waitvbl();
         game_tick();
         sprites_beginframe();
