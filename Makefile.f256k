@@ -72,9 +72,10 @@ $(EXP)/spr16.bin: sprites16.png
 $(EXP)/spr32.bin: sprites32.png
 	tools/png2sprites -w 32 -h 32 -num 3 -fmt 8bpp $< $@
 
-#export 64x8 sprites (for speech bubbles)
+# export 64x8 sprites (for speech bubbles)
+# use 8 8x8 sprites
 $(EXP)/spr64x8.bin: sprites64x8.png
-	tools/png2sprites -w 64 -h 8 -num 4 -fmt 8bpp $< $@
+	tools/png2sprites -w 8 -h 8 -num 32 -fmt 8bpp $< $@
 
 # export charset (will be compressed)
 $(EXP)/chars.bin: chars.png

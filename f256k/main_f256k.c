@@ -94,6 +94,9 @@
 // TODO: group 2 and 3 interrupt regs
 
 #define VKY_GR_CLUT_0 0xD000
+#define VKY_GR_CLUT_1 0xD400
+#define VKY_GR_CLUT_2 0xD800
+#define VKY_GR_CLUT_3 0xDC00
 
 
 #define VIA_IORB (*(volatile uint8_t *)0xDC00)
@@ -127,6 +130,16 @@ extern const unsigned int export_spr16_02_zbin_len;
 extern const unsigned char export_spr16_03_zbin[];
 extern const unsigned int export_spr16_03_zbin_len;
 #endif
+
+
+// details for all the graphics data installed by the unpacker
+#define SPR16_00_START 0x10000
+#define SPR16_01_START 0x12000
+#define SPR16_02_START 0x14000
+#define SPR16_03_START 0x16000
+#define SPR32_START 0x18000
+#define SPR64x8_START 0x1A000
+
 
 // PS/2 kbd
 //
@@ -325,7 +338,7 @@ void init_gubbins()
     {
         MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
         const uint8_t* src = export_palette_bin;
-        uint8_t * dest = ((uint8_t*)VKY_GR_CLUT_0);
+        uint8_t *dest = ((uint8_t*)VKY_GR_CLUT_0);
         for (uint8_t i = 0; i < 16; ++i) {
             dest[0] = src[2];   // b
             dest[1] = src[1];   // g
@@ -333,6 +346,21 @@ void init_gubbins()
             dest[3] = 0;    //src[3];   // a
             src += 4;
             dest += 4;
+        }
+    }
+    // sprite palette 1 - highlight
+    {
+        MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
+        uint8_t *dest = ((uint8_t*)VKY_GR_CLUT_1);
+        *dest++ = 0;
+        *dest++ = 0;
+        *dest++ = 0;
+        *dest++ = 0;
+        for (uint8_t i = 1; i < 16; ++i) {
+            *dest++ = 255;
+            *dest++ = 255;
+            *dest++ = 255;
+            *dest++ = 255;
         }
     }
 }
@@ -520,23 +548,24 @@ static void sprites_endframe()
     nsprites_prev = nsprites;
 }
 
-void sprout16(int16_t x, int16_t y, uint8_t img)
+
+// sprite ctrl byte:
+// -ssllcce
+// ss: size 00=32x32 01=24x24 10=16x16 11=8x8
+// ll: layer
+// cc: lut
+// e: enable
+static void sprout_internal(int16_t x, int16_t y, uint8_t ctrl, uint32_t imgaddr)
 {
     if (nsprites>=64) {
         return;
     }
     MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
-    uint32_t addr =(uint32_t)(0x10000 + (img*16*16));    // TODO
     uint8_t *spr = (uint8_t*)(0xD900 + (nsprites*8));
-    // -ssllcce
-    // ss: size 00=32x32 01=24x24 10=16x16 11=8x8
-    // ll: layer
-    // cc: lut
-    // e: enable
-    *spr++ = 0b01000001;
-    *spr++ = addr & 0xff;
-    *spr++ = addr >> 8;
-    *spr++ = (addr >> 16);
+    *spr++ = ctrl;
+    *spr++ = imgaddr & 0xff;
+    *spr++ = imgaddr >> 8;
+    *spr++ = (imgaddr >> 16);
 
     x = (x >> FX);
     y = (y >> FX);
@@ -550,20 +579,61 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
     ++nsprites;
 }
 
+void sprout16(int16_t x, int16_t y, uint8_t img)
+{
+    uint32_t addr =(uint32_t)(SPR16_00_START + (img*16*16));
+    uint8_t ctrl = 0b01000001;  // 16x16, clut #0, enable
+    sprout_internal(x,y,ctrl,addr);
+}
+
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    uint32_t addr =(uint32_t)(SPR16_00_START + (img*16*16));
+    uint8_t ctrl = 0b01000011;  // 16x16, clut #1, enable
+    sprout_internal(x,y,ctrl,addr);
 }
 
 void sprout32(int16_t x, int16_t y, uint8_t img)
 {
+    uint32_t addr =(uint32_t)(SPR32_START + (img*32*32));
+    uint8_t ctrl = 0b00000001;  // 32x32, clut #0, enable
+    sprout_internal(x,y,ctrl,addr);
 }
 
 void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    uint32_t addr =(uint32_t)(SPR32_START + (img*32*32));
+    uint8_t ctrl = 0b00000011;  // 32x32, clut #1, enable
+    sprout_internal(x,y,ctrl,addr);
 }
 
 void sprout64x8(int16_t x, int16_t y, uint8_t img )
 {
+    // use 8 8x8 sprites (!!!)
+    uint32_t addr =(uint32_t)(SPR64x8_START + (img*8*8*8));
+    uint8_t ctrl = 0b01100001;  // 8x8, clut #0, enable
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
+    x += 8<<FX;
+    addr += 8*8;
+    sprout_internal(x,y,ctrl,addr);
 }
 
 
