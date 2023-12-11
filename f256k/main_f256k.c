@@ -357,8 +357,8 @@ int main(void) {
     sprites_init();
     while (1) {
 
-        waitvbl();
         game_tick();
+        waitvbl();
         sprites_beginframe();
         game_render();
         {
@@ -388,18 +388,22 @@ static inline uint8_t *chrmem(uint8_t cx, uint8_t cy)
 // overwritten, or plat_clr() is called.
 void plat_clr()
 {
+    MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
+    uint8_t* dest = chrmem(0,0);
     for (uint8_t cy = 0; cy<SCREEN_TEXT_H; ++cy) {
-        MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
-        uint8_t* dest = chrmem(0,cy);
         for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
-            *dest++ = 0;
-        }
-        MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
-        dest = chrmem(0,cy);
-        for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
-            *dest++ = 0;
+            *dest++ = ' ';
         }
     }
+    /*
+    MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
+    for (uint8_t cy = 0; cy<SCREEN_TEXT_H; ++cy) {
+        uint8_t* dest = chrmem(0,cy);
+        for (uint8_t cx = 0; cx<SCREEN_TEXT_W; ++cx) {
+            *dest++ = 1;
+        }
+    }
+    */
 }
 
 // draw len number of chars
@@ -482,31 +486,6 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
 // Draw horizontal line of chars, range [cx_begin, cx_end).
 void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
-    return;
-    colour = 15;
-    if (colour == 0) {
-        chr = 0;
-    }
-
-    __asm("nop\nnop\nnop\n");
-    uint8_t *dest = chrmem(cx_begin, cy);
-    uint8_t w = cx_end - cx_begin;
-    {
-        MMU_IO_CTRL = VICKY_IO_PAGE_CHAR_MEM;
-
-        for (uint8_t i=0; i<w; ++i) {
-            *dest++ = chr;
-        } 
-    }
-    __asm("nop\nnop\nnop\n");
-    {
-        MMU_IO_CTRL = VICKY_IO_PAGE_ATTR_MEM;
-        dest = chrmem(cx_begin, cy);
-        for (uint8_t i=0; i<w; ++i) {
-            *dest++ = colour;
-        } 
-    }
-    __asm("nop\nnop\nnop\n");
 }
 
 // Draw vertical line of chars, range [cy_begin, cy_end).

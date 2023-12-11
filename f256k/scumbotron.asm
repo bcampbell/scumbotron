@@ -182,10 +182,8 @@ _code_unpack_loop
 
 	lda r0
 	sta lzsa_dstptr
-	sta $F00D
 	lda r0+1
 	sta lzsa_dstptr+1
-	sta $F00D
 
 	txa
 	pha

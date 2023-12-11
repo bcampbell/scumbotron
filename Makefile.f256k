@@ -25,7 +25,7 @@ OBJ_FILES = $(addprefix $(BLD)/,$(SRCS:.c=.o))
 OBJ_FILES += $(addprefix $(BLD)/,$(SRCS_ASM:.asm=.o))
 
 CC := mos-f256k-clang
-CFLAGS = -If256k -Os -flto
+CFLAGS = -If256k -Os -flto -fno-builtin-memset
 LDFLAGS = -flto
 LDLIBS =
 DEPFLAGS = -MMD -MP -MF $@.d
