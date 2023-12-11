@@ -93,10 +93,16 @@
 
 // TODO: group 2 and 3 interrupt regs
 
+// IO page 0 (VICKY_IO_PAGE_REGISTERS)
+#define VKY_TEXT_FG_CLUT 0xD800
+#define VKY_TEXT_BG_CLUT 0xD840
+
+// IO page 1 (VICKY_IO_PAGE_FONT_AND_LUTS)
 #define VKY_GR_CLUT_0 0xD000
 #define VKY_GR_CLUT_1 0xD400
 #define VKY_GR_CLUT_2 0xD800
 #define VKY_GR_CLUT_3 0xDC00
+
 
 
 #define VIA_IORB (*(volatile uint8_t *)0xDC00)
@@ -307,9 +313,9 @@ void init_gubbins()
     // text fg palette
     {
         //
-        MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
+        MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
         const uint8_t* src = export_palette_bin;
-        uint8_t * dest = ((uint8_t*)0xD800);
+        uint8_t * dest = ((uint8_t*)VKY_TEXT_FG_CLUT);
         for (uint8_t i = 0; i < 16; ++i) {
             dest[0] = src[2];   // b
             dest[1] = src[1];   // g
@@ -322,9 +328,9 @@ void init_gubbins()
     // text bg palette
     {
         //
-        MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
+        MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
         const uint8_t* src = export_palette_bin;
-        uint8_t * dest = ((uint8_t*)0xD840);
+        uint8_t * dest = ((uint8_t*)VKY_TEXT_BG_CLUT);
         for (uint8_t i = 0; i < 16; ++i) {
             dest[0] = src[2];   // b
             dest[1] = src[1];   // g
@@ -365,6 +371,31 @@ void init_gubbins()
     }
 }
 
+
+// colour-cycle colour 15
+static void do_colourcycle()
+{
+    uint8_t idx = (((tick >> 1)) & 0x7) + 2;
+    const uint8_t* src = export_palette_bin + (idx * 4);
+ 
+    // sprite palette 
+    MMU_IO_CTRL = VICKY_IO_PAGE_FONT_AND_LUTS;
+    uint8_t *dest = ((uint8_t*)(VKY_GR_CLUT_0 + (15 * 4)));
+    dest[0] = src[2];   // b
+    dest[1] = src[1];   // g
+    dest[2] = src[0];   // r
+    dest[3] = src[3];   // a
+
+    // text fg palette 
+    MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
+    dest = ((uint8_t*)(VKY_TEXT_FG_CLUT + (15 * 4)));
+    dest[0] = src[2];   // b
+    dest[1] = src[1];   // g
+    dest[2] = src[0];   // r
+    dest[3] = src[3];   // a
+}
+
+
 int main(void) {
     init_gubbins();
     MMU_IO_CTRL = VICKY_IO_PAGE_REGISTERS;
@@ -387,6 +418,7 @@ int main(void) {
 
         game_tick();
         waitvbl();
+        do_colourcycle();
         sprites_beginframe();
         game_render();
         {
