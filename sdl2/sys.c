@@ -41,6 +41,7 @@ uint16_t screen_w;
 uint16_t screen_h;
 
 static SDL_Palette *palette;
+static char* scoreFile = NULL;
 
 // start PLAT_HAS_MOUSE
 int16_t plat_mouse_x = 0;
@@ -55,12 +56,13 @@ static void textentry_put(char c);
 #endif // PLAT_HAS_TEXTENTRY
 
 
-static void plat_init();
 static void plat_render_start();
 static void plat_render_finish();
 
+static bool startup();
+static void shutdown();
 static bool screen_rethink();
-static void pumpevents();
+static bool pumpevents();
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
 static void blit8_matte(const uint8_t *src, int srcw, int srch,
@@ -73,7 +75,7 @@ void plat_gatso(uint8_t t)
 {
 }
 
-void plat_init()
+static bool startup()
 {
     Uint32 flags = SDL_WINDOW_RESIZABLE;
 
@@ -81,6 +83,19 @@ void plat_init()
         goto bailout;
     }
 
+    // sort out the name for the high score file
+    {
+        scoreFile = NULL;
+        char* path = SDL_GetPrefPath(NULL, "scumbotron");
+        if (path) {
+            size_t n = strlen(path);
+            path = SDL_realloc(path, n + 5);    // + "score"
+            if (path) {
+                strcpy(path + n, "score");
+                scoreFile = path;
+            }
+        }
+    }
 
 //    if (fullscreen)
     flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
@@ -130,12 +145,21 @@ void plat_init()
         goto bailout;
     }
  
-    return;
+    return true;
 
 bailout:
     fprintf(stderr, "Init failed: %s\n", SDL_GetError());
-    exit(1);
+    return false;
 }
+
+static void shutdown()
+{
+    if (scoreFile) {
+        SDL_free(scoreFile);
+        scoreFile = NULL;
+    }
+}
+
 
 // Sets up screen on startup, or reconfigures screen when window is resized.
 static bool screen_rethink()
@@ -207,15 +231,14 @@ bailout:
 }
 
 
-static void pumpevents()
+static bool pumpevents()
 {
     SDL_PumpEvents();
     SDL_Event event;
     while (SDL_PollEvent(&event) == 1) {
       switch (event.type) {
         case SDL_QUIT:
-          exit(0);
-          break;
+          return true;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
             case SDLK_F11:
@@ -268,6 +291,7 @@ static void pumpevents()
 #endif // PLAT_HAS_TEXTENTRY
       }
     }
+    return false;
 }
 
 static void update_inp_mouse()
@@ -676,22 +700,48 @@ char plat_textentry_getchar()
 
 bool plat_savescores(const void* begin, int nbytes)
 {
-    return false;
+    if (!scoreFile) {
+        return false;
+    }
+    SDL_RWops* f = SDL_RWFromFile(scoreFile, "wb");
+    if (!f) {
+        return false;
+    }
+    // TODO: should write to temp file then rename.
+    size_t n = SDL_RWwrite(f, begin, 1, nbytes);
+    SDL_RWclose(f);
+    return (n == nbytes);
 }
 
 bool plat_loadscores(void* begin, int nbytes)
 {
-    return false;
+    if (!scoreFile) {
+        return false;
+    }
+    SDL_RWops* f = SDL_RWFromFile(scoreFile, "rb");
+    if (!f) {
+        return false;
+    }
+    // TODO: should read via a temp buffer
+    size_t n = SDL_RWread(f, begin, 1, nbytes);
+    SDL_RWclose(f);
+    return (n == nbytes);
 }
 
 int main(int argc, char* argv[]) {
-    plat_init();
+    if (!startup()) {
+        shutdown();
+        return 1;
+    }
     game_init();
 
     uint64_t starttime = SDL_GetTicks64();
     int frame = 0;
     while(1) {
-        pumpevents();
+        bool quit = pumpevents();
+        if (quit) {
+            break;
+        }
         update_inp_mouse();
         plat_render_start();
         game_render();
@@ -715,6 +765,8 @@ int main(int argc, char* argv[]) {
         }
 
     }
+    shutdown();
+    return 0;
 }
 
 
