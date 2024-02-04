@@ -194,14 +194,14 @@ void tick_STATE_ENTERHIGHSCORE()
 
     // Joystick editing
     {
-        uint8_t inp = inp_menukeys;
-        if (inp & INP_MENU_START) {
+        uint8_t inp = inp_gamepad;
+        if (inp & INP_PAD_START) {
             finished = true;
         }
-        if (inp & (INP_LEFT | INP_MENU_B)) {
+        if (inp & (INP_LEFT | INP_PAD_B)) {
             del = true;
         }
-        if (inp & (INP_RIGHT | INP_MENU_A)) {
+        if (inp & (INP_RIGHT | INP_PAD_A)) {
             if (entry_cursor < HIGHSCORE_NAME_SIZE) {
                 ++entry_cursor;
             } else {

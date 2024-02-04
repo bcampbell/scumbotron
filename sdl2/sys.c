@@ -40,6 +40,8 @@ static SDL_Texture* screenTexture = NULL;
 uint16_t screen_w;
 uint16_t screen_h;
 
+static bool quit = false;
+
 static SDL_Palette *palette;
 static char* scoreFile = NULL;
 
@@ -62,7 +64,7 @@ static void plat_render_finish();
 static bool startup();
 static void shutdown();
 static bool screen_rethink();
-static bool pumpevents();
+static void pumpevents();
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
 static void blit8_matte(const uint8_t *src, int srcw, int srch,
@@ -231,14 +233,15 @@ bailout:
 }
 
 
-static bool pumpevents()
+static void pumpevents()
 {
     SDL_PumpEvents();
     SDL_Event event;
     while (SDL_PollEvent(&event) == 1) {
       switch (event.type) {
         case SDL_QUIT:
-          return true;
+          quit = true;
+          return;
         case SDL_KEYDOWN:
           switch (event.key.keysym.sym) {
             case SDLK_F11:
@@ -291,7 +294,6 @@ static bool pumpevents()
 #endif // PLAT_HAS_TEXTENTRY
       }
     }
-    return false;
 }
 
 static void update_inp_mouse()
@@ -356,7 +358,12 @@ uint8_t plat_raw_dualstick()
     return state;
 }
 
-uint8_t plat_raw_menukeys()
+uint8_t plat_raw_gamepad()
+{
+    return 0;
+}
+
+uint8_t plat_raw_keys()
 {
     uint8_t state = 0;
     const Uint8 *keys = SDL_GetKeyboardState(NULL);
@@ -364,18 +371,16 @@ uint8_t plat_raw_menukeys()
     static const struct {
         uint8_t scancode;
         uint8_t bitmask;
-    } mapping[8] = {
+    } mapping[6] = {
         {SDL_SCANCODE_UP, INP_UP},
         {SDL_SCANCODE_DOWN, INP_DOWN},
         {SDL_SCANCODE_LEFT, INP_LEFT},
         {SDL_SCANCODE_RIGHT, INP_RIGHT},
-        {SDL_SCANCODE_RETURN, INP_MENU_START},
-        {SDL_SCANCODE_ESCAPE, INP_MENU_ESC},
-        //{SDL_SCANCODE_SPACE, INP_MENU_A},
-        //{SDL_SCANCODE_RCTRL, INP_MENU_B},
+        {SDL_SCANCODE_RETURN, INP_KEY_ENTER},
+        {SDL_SCANCODE_ESCAPE, INP_KEY_ESC},
     };
    
-    for (i = 0; i < 8; ++i) {
+    for (i = 0; i < 6; ++i) {
         if (keys[mapping[i].scancode]) {
             state |= mapping[i].bitmask;
         }
@@ -728,6 +733,11 @@ bool plat_loadscores(void* begin, int nbytes)
     return (n == nbytes);
 }
 
+void plat_quit()
+{
+    quit = true;
+}
+
 int main(int argc, char* argv[]) {
     if (!startup()) {
         shutdown();
@@ -737,8 +747,9 @@ int main(int argc, char* argv[]) {
 
     uint64_t starttime = SDL_GetTicks64();
     int frame = 0;
+    quit = false;
     while(1) {
-        bool quit = pumpevents();
+        pumpevents();
         if (quit) {
             break;
         }

@@ -42,15 +42,15 @@ extern uint16_t statetimer;
 // helper functions for navigating title/highscore/story screens
 static inline bool nav_fwd() {
     // or mousebutton?
-    return (inp_menukeys & INP_RIGHT);
+    return ((inp_gamepad & INP_RIGHT) || (inp_keys & INP_RIGHT));
 }
 
 static inline bool nav_prev() {
-    return (inp_menukeys & INP_LEFT);
+    return ((inp_gamepad & INP_LEFT) || (inp_keys & INP_LEFT));
 }
 
 static inline bool nav_backtotitle() {
-    return (inp_menukeys & (INP_MENU_ESC|INP_MENU_START));
+    return ((inp_keys & (INP_KEY_ESC|INP_KEY_ENTER)) || (inp_gamepad & INP_PAD_START));
 }
 
 // In game.c:

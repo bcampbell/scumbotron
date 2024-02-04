@@ -1,11 +1,13 @@
 #include "input.h"
 
 uint8_t inp_dualstick = 0;
-uint8_t inp_menukeys = 0;
+uint8_t inp_gamepad = 0;
+uint8_t inp_keys = 0;
 uint8_t inp_cheatkeys = 0;
 
 static uint8_t dualstick_prevraw = 0;
-static uint8_t menukeys_prevraw = 0;
+static uint8_t gamepad_prevraw = 0;
+static uint8_t keys_prevraw = 0;
 static uint8_t cheatkeys_prevraw = 0;
 
 // Dejam an input axis, where the player might press conflicting
@@ -54,12 +56,20 @@ void inp_tick()
         dualstick_prevraw = raw;
     }
 
-    // menukeys update
+    // gamepad update
     {
-        uint8_t raw = plat_raw_menukeys();
+        uint8_t raw = plat_raw_gamepad();
         // Which ones were pressed since last check?
-        inp_menukeys = (~menukeys_prevraw) & raw;
-        menukeys_prevraw = raw;
+        inp_gamepad = (~gamepad_prevraw) & raw;
+        gamepad_prevraw = raw;
+    }
+
+    // keyboard update
+    {
+        uint8_t raw = plat_raw_keys();
+        // Which ones were pressed since last check?
+        inp_keys = (~keys_prevraw) & raw;
+        keys_prevraw = raw;
     }
 
     // cheatkeys update

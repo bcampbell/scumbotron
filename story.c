@@ -205,7 +205,7 @@ void tick_STATE_GALLERY_GOODIES()
 {
     ++statetimer;
     if (nav_backtotitle()) {
-        enter_STATE_NEWGAME();
+        enter_STATE_TITLESCREEN();
         return;
     }
 

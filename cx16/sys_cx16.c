@@ -75,6 +75,12 @@ static uint8_t sprremaining;
 // from previous frame
 static uint8_t sprremainingprev;
 
+// Unsupported
+void plat_quit()
+{
+    // Could exit back out to basic?
+}
+
 // set the border colour for raster-timing
 void plat_gatso(uint8_t g)
 {
@@ -778,17 +784,9 @@ uint8_t plat_raw_dualstick()
     return raw;
 }
 
-uint8_t plat_raw_menukeys()
+uint8_t plat_raw_gamepad()
 {
     uint8_t state = 0;
-
-    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_UP; }
-    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_LEFT; }
-    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
-    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
-    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_MENU_START; }
-    if (inp_keypressed(KEYCODE_ESC)) { state |= INP_MENU_ESC; }
-
     long j1 = (uint16_t)cx16_k_joystick_get(1);
     if (!(j1 & JOY_UP_MASK)) {state |= INP_UP;}
     if (!(j1 & JOY_DOWN_MASK)) {state |= INP_DOWN;}
@@ -797,12 +795,27 @@ uint8_t plat_raw_menukeys()
     //if (!(j1 & 0x4000)) {state |= ???;}     // X
     //if (!(j1 & 0x0080)) {state |= ???;}   //B
     //if (!(j1 & 0x0040)) {state |= ???;}   //Y
-    if (!(j1 & 0x8000)) {state |= INP_MENU_A;}  // A
-    if (!(j1 & 0x0080)) {state |= INP_MENU_B;}  // A
-    if (!(j1 & 0x0010)) {state |= INP_MENU_START;}  // START
+    if (!(j1 & 0x8000)) {state |= INP_PAD_A;}  // A
+    if (!(j1 & 0x0080)) {state |= INP_PAD_B;}  // A
+    if (!(j1 & 0x0010)) {state |= INP_PAD_START;}  // START
     
     return state;
 }
+
+uint8_t plat_raw_keys()
+{
+    uint8_t state = 0;
+
+    if (inp_keypressed(KEYCODE_UPARROW)) { state |= INP_UP; }
+    if (inp_keypressed(KEYCODE_LEFTARROW)) { state |= INP_LEFT; }
+    if (inp_keypressed(KEYCODE_DOWNARROW)) { state |= INP_DOWN; }
+    if (inp_keypressed(KEYCODE_RIGHTARROW)) { state |= INP_RIGHT; }
+    if (inp_keypressed(KEYCODE_ENTER)) { state |= INP_KEY_ENTER; }
+    if (inp_keypressed(KEYCODE_ESC)) { state |= INP_KEY_ESC; }
+    
+    return state;
+}
+
 
 uint8_t plat_raw_cheatkeys()
 {

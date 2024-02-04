@@ -29,6 +29,9 @@ extern volatile uint8_t tick;
 #define FX 6
 #define FX_ONE (1<<FX)
 
+// Request immediate exit, if supported by platform. A likely no-op :-)
+void plat_quit();
+
 // text layer. This is persistent - if you draw text it'll stay onscreen until
 // overwritten, or plat_clr() is called.
 void plat_clr();
@@ -191,16 +194,24 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 #define INP_FIRE_DOWN 0x40
 #define INP_FIRE_LEFT 0x20
 #define INP_FIRE_RIGHT 0x10
-#define INP_MENU_A 0x10     // primary/action button
-#define INP_MENU_B 0x20     // secondary/cancel button
-#define INP_MENU_START 0x40
-#define INP_MENU_ESC 0x80
 
+#define INP_PAD_A 0x10     // primary/action button
+#define INP_PAD_B 0x20     // secondary/cancel button
+#define INP_PAD_START 0x40
+//#define INP_PAD_SELECT 0x80
+
+#define INP_KEY_ENTER 0x10   // Enter key
+#define INP_KEY_ESC 0x80     // Escape key
+                             //
 // Returns direction + FIRE_ bits.
 uint8_t plat_raw_dualstick();
 
-// Returns direction + MENU_ bits.
-uint8_t plat_raw_menukeys();
+// Returns direction + PAD_ bits.
+uint8_t plat_raw_gamepad();
+
+// Returns direction + KEY_ bits.
+uint8_t plat_raw_keys();
+
 
 #define INP_CHEAT_POWERUP 0x01
 #define INP_CHEAT_EXTRALIFE 0x02

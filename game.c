@@ -113,8 +113,8 @@ void game_render()
 // If player requests pause, enter STATE_PAUSED and return true.
 static bool pausemode_check()
 {
-    // TODO: also check gamepad START
-    if( inp_menukeys & (INP_MENU_ESC)) {
+    // Check for gamepad START or ESC or ENTER key.
+    if((inp_gamepad & INP_PAD_START) || (inp_keys & (INP_KEY_ESC | INP_KEY_ENTER))) {
         // Pause records current state and will resume it when unpausing.
         enter_STATE_PAUSED();
         return true;
@@ -139,8 +139,14 @@ static void tick_STATE_TITLESCREEN()
     // collect some entropy
     rnd();
 
-    uint8_t inp = inp_menukeys;
-    if (inp & (INP_MENU_START|INP_MENU_A)) {
+
+    if (inp_keys & INP_KEY_ESC) {
+        plat_quit();
+        return;
+    }
+
+    if ((inp_gamepad & (INP_PAD_START | INP_PAD_A)) ||
+        (inp_keys & INP_KEY_ENTER)) {
         enter_STATE_NEWGAME();
         return;
     }
@@ -619,25 +625,52 @@ static void render_STATE_COMPLETE()
  */
 
 static uint8_t state_paused_prevstate;
-static uint8_t state_paused_resume;
+static uint8_t state_paused_sel; // 0=resume, 1=quit 0x80=execute!
 
 void enter_STATE_PAUSED()
 {
     state_paused_prevstate = state;
-    state_paused_resume = false;
+    state_paused_sel = 0;
     state = STATE_PAUSED;
 }
 
 static void tick_STATE_PAUSED()
 {
-    if (state_paused_resume) {
-        state = state_paused_prevstate;
-        return;
+    if (state_paused_sel & 0x80) {
+        switch (state_paused_sel & 0x7f) {
+            case 0:
+                state = state_paused_prevstate;
+                return;
+            case 1:
+                enter_STATE_TITLESCREEN();
+                return;
+        }
     }
 
-    if (inp_menukeys & (INP_MENU_START|INP_MENU_ESC)) {
+    if (inp_gamepad & INP_UP || inp_keys & INP_UP) {
+        if( state_paused_sel > 0) {
+            --state_paused_sel;
+        }
+    }
+    if (inp_gamepad & INP_DOWN || inp_keys & INP_DOWN) {
+        if( state_paused_sel < 1) {
+            ++state_paused_sel;
+        }
+    }
+
+    // support mashing escape to quit game 
+    if (inp_keys & INP_KEY_ESC)
+    {
+        if (state_paused_sel == 1) {
+            state_paused_sel |= 0x80;   // actually quit
+        } else {
+            state_paused_sel = 1;   // select quit
+        }
+    }
+
+    if (inp_gamepad & INP_PAD_START || inp_keys & INP_KEY_ENTER) {
         // give the rendering one tick to erase the pause message
-        state_paused_resume = true;
+        state_paused_sel |= 0x80;
     }
 }
 
@@ -650,16 +683,18 @@ static void render_STATE_PAUSED()
 
     // if we're resuming, erase message now!
     uint8_t colour = 0;
-    if (!state_paused_resume) {
+    if (!(state_paused_sel & 0x80)) {
         colour = 1; //(tick/2)&0x0f;
     }
-    uint8_t cy = 3;
+    uint8_t cy = 10;
     uint8_t cx = (SCREEN_TEXT_W-10)/2;
-    plat_text(cx, cy,   "**********", colour);
-    plat_text(cx, cy+1, "*        *", colour);
-    plat_text(cx, cy+2, "* PAUSED *", colour);
-    plat_text(cx, cy+3, "*        *", colour);
-    plat_text(cx, cy+4, "**********", colour);
+
+    plat_text(cx, cy, "* PAUSED *", colour);
+    plat_text(cx+1, cy+2, "CONTINUE", colour);
+    plat_text(cx+1, cy+3, "QUIT", colour);
+
+    plat_text(cx-1, cy + 2 + (state_paused_sel & 0x7f), ">", (tick>>1) & 0x0F);
+
 }
 
 /*

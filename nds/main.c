@@ -53,6 +53,11 @@ static void clr_bg1();
 static void do_colour_cycling();
 static uint8_t glyph(char ascii);
 
+// Unsupported
+void plat_quit()
+{
+}
+
 
 uint8_t plat_raw_dualstick()
 {
@@ -78,27 +83,32 @@ uint8_t plat_raw_dualstick()
     return state;
 }
 
-uint8_t plat_raw_menukeys()
+uint8_t plat_raw_gamepad()
 {
-    static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[8] = {
+    static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[7] = {
         {KEY_UP, INP_UP},
         {KEY_DOWN, INP_DOWN},
         {KEY_LEFT, INP_LEFT},
         {KEY_RIGHT, INP_RIGHT},
-        {KEY_START, INP_MENU_START},
-        {KEY_A, INP_MENU_A},
-        {KEY_B, INP_MENU_B},
+        {KEY_START, INP_PAD_START},
+        {KEY_A, INP_PAD_A},
+        {KEY_B, INP_PAD_B},
     };
 
     int i;
     uint8_t state = 0;
     uint32 curr = keysCurrent();
-    for (i = 0; i < 8; ++i) {
+    for (i = 0; i < 7; ++i) {
         if ((curr & key_mapping[i].hw)) {
             state |= key_mapping[i].bitmask;
         }
     }
     return state;
+}
+
+uint8_t plat_raw_keys()
+{
+    return 0;   // no keyboards here!
 }
 
 uint8_t plat_raw_cheatkeys()
