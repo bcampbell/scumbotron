@@ -668,7 +668,7 @@ static void tick_STATE_PAUSED()
         }
     }
 
-    if (inp_gamepad & INP_PAD_START || inp_keys & INP_KEY_ENTER) {
+    if (inp_gamepad & (INP_PAD_START|INP_PAD_A) || inp_keys & INP_KEY_ENTER) {
         // give the rendering one tick to erase the pause message
         state_paused_sel |= 0x80;
     }

@@ -45,18 +45,6 @@ static bool quit = false;
 static SDL_Palette *palette;
 static char* scoreFile = NULL;
 
-// start PLAT_HAS_MOUSE
-int16_t plat_mouse_x = 0;
-int16_t plat_mouse_y = 0;
-uint8_t plat_mouse_buttons = 0;
-static uint8_t mouse_watchdog = 0; // >0 = active
-// end PLAT_HAS_MOUSE
-static void update_inp_mouse();
-
-#ifdef PLAT_HAS_TEXTENTRY
-static void textentry_put(char c);
-#endif // PLAT_HAS_TEXTENTRY
-
 
 static void plat_render_start();
 static void plat_render_finish();
@@ -73,6 +61,19 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch,
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
 
+
+// from input_sdl2.c:
+void controller_init();
+void controller_added(int id);
+void controller_removed(SDL_JoystickID joyid);
+void controller_shutdown();
+void mouse_update(SDL_Renderer* rr);
+void mouse_render();
+#ifdef PLAT_HAS_TEXTENTRY
+void textentry_put(char c);
+#endif // PLAT_HAS_TEXTENTRY
+
+
 void plat_gatso(uint8_t t)
 {
 }
@@ -81,7 +82,7 @@ static bool startup()
 {
     Uint32 flags = SDL_WINDOW_RESIZABLE;
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) != 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) {
         goto bailout;
     }
 
@@ -146,7 +147,8 @@ static bool startup()
     if (!audio_init()) {
         goto bailout;
     }
- 
+
+    controller_init(); 
     return true;
 
 bailout:
@@ -156,6 +158,7 @@ bailout:
 
 static void shutdown()
 {
+    controller_shutdown(); 
     if (scoreFile) {
         SDL_free(scoreFile);
         scoreFile = NULL;
@@ -292,117 +295,18 @@ static void pumpevents()
           }
           break;
 #endif // PLAT_HAS_TEXTENTRY
+        case SDL_CONTROLLERDEVICEADDED:
+          controller_added((int)event.cdevice.which);
+          break;
+        case SDL_CONTROLLERDEVICEREMOVED:
+          controller_removed((SDL_JoystickID)event.cdevice.which);
+          break;
       }
     }
 }
 
-static void update_inp_mouse()
-{
-    int x,y;
-    Uint32 b = SDL_GetMouseState(&x, &y);
-    uint8_t mb = 0;
-    if (b & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-        mb |= 0x01;
-    }
-    if (b & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-        mb |= 0x02;
-    }
-    if (b & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
-        mb |= 0x04;
-    }
-
-    float lx, ly;
-    SDL_RenderWindowToLogical(renderer, x,y, &lx, &ly);
-    int16_t mx = (int16_t)(lx * (float)FX_ONE);
-    int16_t my = (int16_t)(ly * (float)FX_ONE);
-
-    if (mb != 0 || mx != plat_mouse_x || my != plat_mouse_y) {
-        plat_mouse_buttons = mb;
-        plat_mouse_x = mx;
-        plat_mouse_y = my;
-        mouse_watchdog = 60;
-    } else {
-       if (mouse_watchdog > 0) {
-           --mouse_watchdog;
-       }
-    }
-}
 
 
-
-
-uint8_t plat_raw_dualstick()
-{
-    uint8_t state = 0;
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    uint8_t i;
-    static const struct {
-        uint8_t scancode;
-        uint8_t bitmask;
-    } mapping[8] = {
-        {SDL_SCANCODE_UP, INP_FIRE_UP},
-        {SDL_SCANCODE_DOWN, INP_FIRE_DOWN},
-        {SDL_SCANCODE_LEFT, INP_FIRE_LEFT},
-        {SDL_SCANCODE_RIGHT, INP_FIRE_RIGHT},
-        {SDL_SCANCODE_W, INP_UP},
-        {SDL_SCANCODE_S, INP_DOWN},
-        {SDL_SCANCODE_A, INP_LEFT},
-        {SDL_SCANCODE_D, INP_RIGHT},
-    };
-
-    for (i = 0; i < 8; ++i) {
-        if (keys[mapping[i].scancode]) {
-            state |= mapping[i].bitmask;
-        }
-    }
-    return state;
-}
-
-uint8_t plat_raw_gamepad()
-{
-    return 0;
-}
-
-uint8_t plat_raw_keys()
-{
-    uint8_t state = 0;
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    uint8_t i;
-    static const struct {
-        uint8_t scancode;
-        uint8_t bitmask;
-    } mapping[6] = {
-        {SDL_SCANCODE_UP, INP_UP},
-        {SDL_SCANCODE_DOWN, INP_DOWN},
-        {SDL_SCANCODE_LEFT, INP_LEFT},
-        {SDL_SCANCODE_RIGHT, INP_RIGHT},
-        {SDL_SCANCODE_RETURN, INP_KEY_ENTER},
-        {SDL_SCANCODE_ESCAPE, INP_KEY_ESC},
-    };
-   
-    for (i = 0; i < 6; ++i) {
-        if (keys[mapping[i].scancode]) {
-            state |= mapping[i].bitmask;
-        }
-    }
-    return state;
-}
-
-uint8_t plat_raw_cheatkeys()
-{
-    uint8_t state = 0;
-    const Uint8 *keys = SDL_GetKeyboardState(NULL);
-    if (keys[SDL_SCANCODE_F1]) {
-        state |= INP_CHEAT_POWERUP;
-    }
-    if (keys[SDL_SCANCODE_F2]) {
-        state |= INP_CHEAT_EXTRALIFE;
-    }
-    if (keys[SDL_SCANCODE_F3]) {
-        state |= INP_CHEAT_NEXTLEVEL;
-    }
-    return state;
-}
 
 void plat_render_start()
 {
@@ -668,41 +572,6 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state) {
     }
 }
 
-#ifdef PLAT_HAS_TEXTENTRY
-
-static char textentry_buf[16] = {0};
-static size_t textentry_n = 0;
-
-static void textentry_put(char c)
-{
-    if (textentry_n < sizeof(textentry_buf)) {
-        textentry_buf[textentry_n++] = c;
-    }
-}
-
-void plat_textentry_start()
-{
-    SDL_StartTextInput();
-    textentry_n = 0;    // clear buffer
-}
-
-void plat_textentry_stop()
-{
-    SDL_StopTextInput();
-}
-
-char plat_textentry_getchar()
-{
-    char c = '\0';
-    if (textentry_n > 0) {
-        --textentry_n;
-        c = textentry_buf[textentry_n];
-    }
-    return c;
-}
-
-#endif // PLAT_HAS_TEXTENTRY
-
 bool plat_savescores(const void* begin, int nbytes)
 {
     if (!scoreFile) {
@@ -753,12 +622,12 @@ int main(int argc, char* argv[]) {
         if (quit) {
             break;
         }
-        update_inp_mouse();
+        // Renderer needed for coord mapping.
+        mouse_update(renderer);
+
         plat_render_start();
         game_render();
-        if (mouse_watchdog > 0) {
-            sprout16(plat_mouse_x, plat_mouse_y, 0);
-        }
+        mouse_render();
         plat_render_finish();
 
         game_tick();
