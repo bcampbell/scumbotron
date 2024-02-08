@@ -116,7 +116,7 @@ static bool startup()
         palette = SDL_AllocPalette(256);
 
         const uint8_t *src = export_palette_bin;
-        SDL_Color colors[16];
+        SDL_Color colors[256];
         for (int i = 0; i < 16; ++i) {
             colors[i].r = *src++;
             colors[i].g = *src++;
