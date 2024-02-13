@@ -725,6 +725,11 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
 {
 }
 
+// Unsupported
+void plat_quit()
+{
+}
+
 
 // controllers
 static uint8_t firelock = 0;    // fire bits if locked (else 0)
@@ -732,6 +737,7 @@ static uint8_t facing = 0;  // last non-zero direction
 
 uint8_t plat_raw_dualstick()
 {
+    // TODO: implement using plat_raw_gamepad()
     uint16_t j = joy_get_state(0);
 
     uint8_t out = 0;
@@ -757,7 +763,7 @@ uint8_t plat_raw_dualstick()
 }
 
 // Returns direction + MENU_ bits.
-uint8_t plat_raw_menukeys()
+uint8_t plat_raw_gamepad()
 {
     uint16_t j = joy_get_state(0);
     uint8_t out = 0;
@@ -765,12 +771,17 @@ uint8_t plat_raw_menukeys()
     if (j & BUTTON_DOWN) out |= INP_DOWN;
     if (j & BUTTON_LEFT) out |= INP_LEFT;
     if (j & BUTTON_RIGHT) out |= INP_RIGHT;
-    if (j & BUTTON_A) out |= INP_MENU_A;
-    if (j & BUTTON_B) out |= INP_MENU_B;
-    if (j & BUTTON_START) out |= INP_MENU_START;
-    if (j & BUTTON_MODE) out |= INP_MENU_ESC;
+    if (j & BUTTON_A) out |= INP_PAD_A;
+    if (j & BUTTON_B) out |= INP_PAD_B;
+    if (j & BUTTON_START) out |= INP_PAD_START;
+    //if (j & BUTTON_MODE) out |= INP_???;
     return out;
 } 
+
+uint8_t plat_raw_keys()
+{
+    return 0;   // no keyboards here!
+}
 
 uint8_t plat_raw_cheatkeys()
 {
