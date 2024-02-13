@@ -196,6 +196,11 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
     // TODO!
 }
 
+// Unsupported
+void plat_quit()
+{
+}
+
 // input
 
 // start PLAT_HAS_TEXTENTRY
@@ -218,8 +223,7 @@ uint8_t plat_raw_dualstick()
     return 0;
 }
 
-uint8_t plat_raw_menukeys()
-{
+uint8_t plat_raw_gamepad() {
     uint8_t out = 0;
     uint8_t b = pce_joypad_read();
 
@@ -227,12 +231,19 @@ uint8_t plat_raw_menukeys()
     if (b & KEY_RIGHT) { out |= INP_RIGHT; }
     if (b & KEY_UP) { out |= INP_UP; }
     if (b & KEY_DOWN) { out |= INP_DOWN; }
-    if (b & KEY_1) { out |= INP_MENU_A; }
-    if (b & KEY_2) { out |= INP_MENU_B; }
-    if (b & KEY_RUN) { out |= INP_MENU_START; }
-    if (b & KEY_SELECT) { out |= INP_MENU_ESC; }
-    return 0;    
+
+    if (b & KEY_1) { out |= INP_PAD_A; }
+    if (b & KEY_2) { out |= INP_PAD_B; }
+    if (b & KEY_RUN) { out |= INP_PAD_START; }
+    //if (b & KEY_SELECT) { out |= INP_PAD_???; }
+    return out;
 }
+
+uint8_t plat_raw_keys()
+{
+    return 0;   // no keyboards here!
+}
+
 
 uint8_t plat_raw_cheatkeys()
 {
