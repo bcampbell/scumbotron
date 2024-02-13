@@ -10,7 +10,7 @@ OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 CC := gcc
 LDFLAGS =
 LDLIBS = `sdl2-config --libs`
-CFLAGS = -ggdb `sdl2-config --cflags` -Wall -Isdl2
+CFLAGS = `sdl2-config --cflags` -Wall -Isdl2
 DEPFLAGS = -MMD -MP -MF $@.d
 
 DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
@@ -22,7 +22,7 @@ else
     CFLAGS += -O3
 endif
 
-$(BUILD_DIR)/game: $(OBJ_FILES)
+$(BUILD_DIR)/scumbotron: $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(BUILD_DIR)/%.o: %.c
