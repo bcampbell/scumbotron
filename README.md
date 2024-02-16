@@ -3,27 +3,49 @@
 A lost arcade game from the 80s.
 Shoot all the things.
 
-## cx16 build requirements
+## Building
 
-- llvm-mos-sdk
-- golang (to compile the `png2sprites` tool)
-- lzsa (compression tool)
-- tass assembler
-- x16emu (optional, for running the game)
+Assumes a unixy system. Should build fine on windows if you've got appropriate tools installed.
 
-## build instructions
-
-Assumes a unixy system. Would build fine on windows if you've got everything
-installed, although you might need to fiddle about to replicate
-`cx16/pack.sh`, which is a bash script.
+Need golang to compile the `png2sprites` tool:
 
 ```
-$ make -f Makefile.cx16
+$ cd tools
+$ go build png2sprites.go
 ```
 
-Run in the emulator:
+Then run the Makefile for whichever platform you want:
 
 ```
-$ make -f Makefile.cx16 run
+$ make -f Makefile.sdl2
 ```
+
+The produced executable/rom/whatever will be in the `build_<PLATFORM>` dir.
+
+
+## Platform status
+
+### cx16
+
+Build broken (overruns BASIC RAM limit)
+
+### sdl2
+
+Working. (tested on windows and linux)
+
+### megadrive
+
+Working. A little slow. No sound.
+
+### nds
+
+Working and emu and real hw. No sound. Screen layout a little awkward.
+
+### pce
+
+Broken. Suspect llvm-sdk-mos pce implementation needs tweaking.
+
+### f256k
+
+Partial. Trouble running on emulation/IDE (older IDE releases include PGZ loader?).
 

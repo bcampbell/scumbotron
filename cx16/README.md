@@ -9,6 +9,12 @@ less compact code!
 The linker is pretty good about warning if this happens.
 
 
+## BUG - The cx16 version will currently not build!
+
+It now overruns the BASIC RAM limit, and needs some fiddling to get it back down to size.
+I suspect newer llvm-mos-sdk cx16 library/kernal bindings bloat things out a bit,
+but haven't really investigated too much yet.
+
 ## cx16 build requirements
 
 - llvm-mos-sdk
@@ -16,6 +22,22 @@ The linker is pretty good about warning if this happens.
 - lzsa (compression tool)
 - tass assembler
 - x16emu (optional, for running the game)
+
+## build instructions
+
+Assumes a unixy system. Would build fine on windows if you've got everything
+installed, although you might need to fiddle about to replicate
+`cx16/pack.sh`, which is a bash script.
+
+```
+$ make -f Makefile.cx16
+```
+
+Run in the emulator:
+
+```
+$ make -f Makefile.cx16 run
+```
 
 ## details
 
