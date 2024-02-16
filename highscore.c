@@ -13,8 +13,10 @@ static uint8_t entry_cursor;
 void highscore_init()
 {
     // try and load in the scores...
-    bool loaded = plat_loadscores(highscore_table, sizeof(highscore_table));
-
+    bool loaded = false;
+#ifdef PLAT_HAS_SCORESAVE 
+    loaded = plat_loadscores(highscore_table, sizeof(highscore_table));
+#endif
     if (!loaded) {
         // fill out default score table.
         uint32_t score = 10000;
@@ -259,8 +261,10 @@ void tick_STATE_ENTERHIGHSCORE()
 #ifdef PLAT_HAS_TEXTENTRY
         plat_textentry_stop();
 #endif
+#ifdef PLAT_HAS_SCORESAVE
         // no error handling
         plat_savescores(highscore_table, sizeof(highscore_table));
+#endif
         enter_STATE_HIGHSCORES();
     }
 }

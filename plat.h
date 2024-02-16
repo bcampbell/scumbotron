@@ -32,12 +32,15 @@ extern volatile uint8_t tick;
 // Request immediate exit, if supported by platform. A likely no-op :-)
 void plat_quit();
 
-// text layer. This is persistent - if you draw text it'll stay onscreen until
+// Text layer. This is persistent - if you draw text it'll stay onscreen until
 // overwritten, or plat_clr() is called.
+// TODO: work out the details here, and how it interacts with effects.
 void plat_clr();
-// draw len number of chars
+
+// Draw len number of chars
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour);
-// draw null-terminated string
+// Draw null-terminated string.
+// Provided by draw_common.c
 void plat_text(uint8_t cx, uint8_t cy, const char* txt, uint8_t colour);
 
 // TODO: should just pass in level and score as bcd
@@ -60,6 +63,7 @@ void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr
 void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour);
 
 // Draw a box in chars (effects layer)
+// Provided by draw_common.c
 void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t colour);
 
 
@@ -117,6 +121,8 @@ void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
 void sprout64x8(int16_t x, int16_t y, uint8_t img );
 
 
+
+// these are all provided by draw_common.c
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
 void plat_shot_render(int16_t x, int16_t y, uint8_t direction, uint8_t power);
 void plat_pickup_render(int16_t x, int16_t y, uint8_t kind);
@@ -127,8 +133,6 @@ void plat_tank_render(int16_t x, int16_t y, bool highlight);
 void plat_amoeba_big_render(int16_t x, int16_t y);
 void plat_amoeba_med_render(int16_t x, int16_t y);
 void plat_amoeba_small_render(int16_t x, int16_t y);
-void plat_hzapper_render(int16_t x, int16_t y, uint8_t state);
-void plat_vzapper_render(int16_t x, int16_t y, uint8_t state);
 void plat_fragger_render(int16_t x, int16_t y);
 void plat_frag_render(int16_t x, int16_t y, uint8_t dir);
 void plat_vulgon_render(int16_t x, int16_t y, bool highlight, uint8_t anger);
@@ -146,6 +150,10 @@ void plat_bossseg_render(int16_t x, int16_t y, uint8_t phase, bool atrest, bool 
 
 void plat_bub_render(int16_t x, int16_t y, uint8_t bubidx);
 void plat_cursor_render(int16_t x, int16_t y);
+
+// these two are platform-specific
+void plat_hzapper_render(int16_t x, int16_t y, uint8_t state);
+void plat_vzapper_render(int16_t x, int16_t y, uint8_t state);
 
 #ifdef PLAT_HAS_MOUSE
 extern int16_t plat_mouse_x;

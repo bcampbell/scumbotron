@@ -15,5 +15,6 @@ extern uint16_t screen_h;
 
 #define PLAT_HAS_MOUSE
 #define PLAT_HAS_TEXTENTRY
+#define PLAT_HAS_SCORESAVE
 
 #endif // PLAT_DETAILS_H

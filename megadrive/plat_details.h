@@ -7,4 +7,8 @@
 
 extern uint16_t screen_h;
 
+// No PLAT_HAS_MOUSE
+// No PLAT_HAS_TEXTENTRY
+// No PLAT_HAS_SCORESAVE
+
 #endif // PLAT_DETAILS_H
