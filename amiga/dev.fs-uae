@@ -1,0 +1,5 @@
+[config]
+amiga_model = A500
+kickstart_file = Kickstart-v1.3-rev34.5-1987-Commodore-A500-A1000-A2000-CDTV.rom
+hard_drive_0 = dh0
+
