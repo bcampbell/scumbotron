@@ -11,17 +11,17 @@
 #include <hardware/intbits.h>
 
 #include "../plat.h"
+#include "gfx_amiga.h"
 
 volatile struct Custom *custom = (struct Custom*)0xdff000;
 
-
-//
+// Some chipmem allocations.
 uint8_t *screen_mem = NULL;
+uint8_t *spr16_mem = NULL;
+uint8_t *spr32_mem = NULL;
+uint8_t *spr64x8_mem = NULL;
 UWORD *copperlist_mem = NULL;
 
-#define COPPERLIST_MEMSIZE 1024
-// 4 bitplanes
-#define SCREEN_MEMSIZE (SCREEN_W/8 * SCREEN_H * 4)
 
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
@@ -35,11 +35,6 @@ static volatile APTR VBR=0;
 static APTR SystemIrq;
  
 struct View *ActiView;
-
-
-bool gfx_init();
-void gfx_shutdown();
-
 
 static APTR GetVBR(void) {
 	APTR vbr = 0;
@@ -158,9 +153,23 @@ void FreeSystem() {
 	Permit();
 }
 
+__attribute__((always_inline)) inline short Joy1Button(){
+    *(volatile UBYTE*)0xBFE201 = 0x03;
+    return !((*(volatile UBYTE*)0xbfe001)&32);
+}	
 __attribute__((always_inline)) inline short MouseLeft(){return !((*(volatile UBYTE*)0xbfe001)&64);}	
 __attribute__((always_inline)) inline short MouseRight(){return !((*(volatile UWORD*)0xdff016)&(1<<10));}
 
+
+void dbug()
+{
+    uint8_t b = plat_raw_gamepad();
+    char buf[8];
+    for (int i=0; i<8; ++i) {
+        buf[i] = b & (1<<i) ? '*' : '.';
+    }
+    plat_textn(0,0,buf,8,15);
+}
 
 
 
@@ -179,12 +188,26 @@ int main() {
 		Exit(0);
 
     // Grab some chipmem
+
     copperlist_mem = (UWORD*)AllocMem(COPPERLIST_MEMSIZE, MEMF_CHIP);
     if (!copperlist_mem) {
         goto done;
     }
     screen_mem = (uint8_t*)AllocMem(SCREEN_MEMSIZE, MEMF_CHIP);
     if (!screen_mem) {
+        goto done;
+    }
+    // *2 to account for mask!
+    spr16_mem = (uint8_t*)AllocMem(SPR16_SIZE * SPR16_NUM * 2, MEMF_CHIP);
+    if (!spr16_mem) {
+        goto done;
+    }
+    spr32_mem = (uint8_t*)AllocMem(SPR32_SIZE * SPR32_NUM * 2, MEMF_CHIP);
+    if (!spr32_mem) {
+        goto done;
+    }
+    spr64x8_mem = (uint8_t*)AllocMem(SPR64x8_SIZE * SPR64x8_NUM * 2, MEMF_CHIP);
+    if (!spr64x8_mem) {
         goto done;
     }
 
@@ -207,16 +230,12 @@ int main() {
     game_init();
 
     // main loop
-    UWORD c = 0xf000;
-
-    int foo = 0;
-	while(!MouseLeft()) {
-        //custom->color[0] = c++;
+	while(1) {
         WaitVbl();
         game_tick();
         ++tick;
         game_render();
-        ++foo;
+        dbug();
     }   
 
 	// END
@@ -231,6 +250,19 @@ done:
         FreeMem(screen_mem, SCREEN_MEMSIZE);
         screen_mem = NULL;
     }
+    if (spr16_mem) {
+        FreeMem(spr16_mem, SPR16_SIZE * SPR16_NUM * 2);
+        spr16_mem = NULL;
+    }
+    if (spr32_mem) {
+        FreeMem(spr32_mem, SPR32_SIZE * SPR32_NUM * 2);
+        spr32_mem = NULL;
+    }
+    if (spr64x8_mem) {
+        FreeMem(spr64x8_mem, SPR64x8_SIZE * SPR64x8_NUM * 2);
+        spr64x8_mem = NULL;
+    }
+
 	CloseLibrary((struct Library*)DOSBase);
 	CloseLibrary((struct Library*)GfxBase);
 }
@@ -310,15 +342,65 @@ void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_
  */
 
 // Returns direction + FIRE_ bits.
+// dualstick faked using plat_raw_gamepad()
+static uint8_t firelock = 0;    // fire bits if locked (else 0)
+static uint8_t facing = 0;  // last non-zero direction
+
 uint8_t plat_raw_dualstick()
 {
-    return 0;
+    uint8_t pad = plat_raw_gamepad();
+
+    uint8_t out = pad & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT);
+    if (out != 0) {
+        facing = out;
+    }
+
+    if (pad & INP_PAD_A) {
+        if (!firelock) {
+            firelock = (facing<<4);
+        }
+        out |= firelock;
+    } else {
+        firelock = 0;
+    }
+
+    return out;
 }
 
 // Returns direction + PAD_ bits.
 uint8_t plat_raw_gamepad()
 {
-    return 0;
+
+    UWORD dat = custom->joy1dat;
+    UWORD pra0 = (*(volatile UBYTE*)0xbfe001);
+
+    uint8_t out = 0;
+
+    // Left: bit9
+    if ((dat >> 9) & 1) {
+        out |= INP_LEFT;
+    }
+    // Right: bit1
+    if ((dat >> 1) & 1) {
+        out |= INP_RIGHT;
+    }
+    //Forward: bit9 xor bit#8
+    if (((dat >> 9) & 1) != ((dat>>8) & 1)) {
+        out |= INP_UP;
+    }
+    //Back: bit1 xor bit0
+    if (((dat >> 1) & 1) != ((dat>>0) & 1)) {
+        out |= INP_DOWN;
+    }
+
+    if (Joy1Button()) {
+        out |= INP_PAD_A;
+    }
+
+    if (MouseLeft() && MouseRight()) {
+        out |= INP_PAD_START;
+    }
+    return out;
 }
 
 

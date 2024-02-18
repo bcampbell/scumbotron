@@ -11,28 +11,13 @@
 //#include <hardware/intbits.h>
 
 #include "../plat.h"
+#include "gfx_amiga.h"
 
-extern volatile struct Custom *custom;
-extern uint8_t *screen_mem;
-extern UWORD *copperlist_mem;
-
-
-
-extern const unsigned char export_chars_bin[];
-
-
-#define CUSTOM_OFFSET(X) offsetof(struct Custom, X)
-
-
-// num of bytes to get to next bitplane (we're using interleaved bitplanes)
-#define SCREEN_PLANE_STRIDE (SCREEN_W/8)
-
-// num of bytes to get to next line (4 bitplanes)
-#define SCREEN_LINE_STRIDE (4*SCREEN_PLANE_STRIDE)
-
+static void init_spr16_data();
 
 bool gfx_init()
 {
+    init_spr16_data();
     // now build the copperlist
     {
         UWORD* cl = copperlist_mem;
@@ -153,6 +138,29 @@ bool gfx_init()
 
 
 
+static void init_spr16_data()
+{
+    const UWORD *src = (const UWORD*)export_spr16_bin;
+    UWORD *dest = (UWORD*)(spr16_mem);
+    // For each 16x16 sprite...
+    for (int n = 0; n < SPR16_NUM; ++n) {
+        UWORD *mask = dest + (SPR16_SIZE/2);    // mask follows bitplanes
+        for (int y=0; y<16; ++y) {
+            UWORD bits = 0x0000;
+            for(int i=0; i<4; ++i) {
+                bits &= *src;
+                *dest++ = *src++;
+            }
+            // same mask for all bitplanes
+            for(int i=0; i<4; ++i) {
+                *mask++ = bits;
+            }
+        }
+        dest += (SPR16_SIZE/2); // skip mask
+    }
+}
+
+
 void gfx_shutdown()
 {
 }
@@ -196,6 +204,22 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 
 void sprout16(int16_t x, int16_t y, uint8_t img)
 {
+    x = x >> FX;
+    y = y >> FX;
+
+    if (x<0 || y<0 || x >= (SCREEN_W-16) || y >= (SCREEN_H-16)) {
+        return;
+    }
+
+    UWORD *dest = (UWORD*)(screen_mem + y * SCREEN_LINE_STRIDE);
+    dest += x/16;
+    const UWORD *src = (const UWORD*)(spr16_mem + (img * SPR16_SIZE * 2));
+
+    for (int y=0; y<4*16; ++y) {
+        *dest = *src++;
+        dest += (SCREEN_PLANE_STRIDE/2);
+    }
+
 }
 
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
