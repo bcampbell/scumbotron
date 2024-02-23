@@ -11,17 +11,10 @@
 #include <hardware/intbits.h>
 
 #include "../plat.h"
+#include "../misc.h"
 #include "gfx_amiga.h"
 
 volatile struct Custom *custom = (struct Custom*)0xdff000;
-
-// Some chipmem allocations.
-uint8_t *screen_mem = NULL;
-uint8_t *spr16_mem = NULL;
-uint8_t *spr32_mem = NULL;
-uint8_t *spr64x8_mem = NULL;
-UWORD *copperlist_mem = NULL;
-
 
 struct ExecBase *SysBase;
 struct DosLibrary *DOSBase;
@@ -155,20 +148,30 @@ void FreeSystem() {
 
 __attribute__((always_inline)) inline short Joy1Button(){
     *(volatile UBYTE*)0xBFE201 = 0x03;
-    return !((*(volatile UBYTE*)0xbfe001)&32);
+    return !((*(volatile UBYTE*)0xbfe001)&128);
 }	
 __attribute__((always_inline)) inline short MouseLeft(){return !((*(volatile UBYTE*)0xbfe001)&64);}	
 __attribute__((always_inline)) inline short MouseRight(){return !((*(volatile UWORD*)0xdff016)&(1<<10));}
 
 
-void dbug()
-{
-    uint8_t b = plat_raw_gamepad();
-    char buf[8];
-    for (int i=0; i<8; ++i) {
-        buf[i] = b & (1<<i) ? '*' : '.';
+static uint8_t vertb_cnt = 0;
+static uint8_t blit_cnt = 0;
+
+static __attribute__((interrupt)) void interruptHandler() {
+
+    UWORD req = custom->intreqr;
+
+    if (req & INTF_VERTB) {
+        ++vertb_cnt;
     }
-    plat_textn(0,0,buf,8,15);
+
+    if (req & INTF_BLIT) {
+        ++blit_cnt;
+        // update the blitq
+        gfx_blit_irq_handler();
+    }
+
+    custom->intreq = req & 0x7fff;  // reset all
 }
 
 
@@ -187,30 +190,6 @@ int main() {
 	if (!DOSBase)
 		Exit(0);
 
-    // Grab some chipmem
-
-    copperlist_mem = (UWORD*)AllocMem(COPPERLIST_MEMSIZE, MEMF_CHIP);
-    if (!copperlist_mem) {
-        goto done;
-    }
-    screen_mem = (uint8_t*)AllocMem(SCREEN_MEMSIZE, MEMF_CHIP);
-    if (!screen_mem) {
-        goto done;
-    }
-    // *2 to account for mask!
-    spr16_mem = (uint8_t*)AllocMem(SPR16_SIZE * SPR16_NUM * 2, MEMF_CHIP);
-    if (!spr16_mem) {
-        goto done;
-    }
-    spr32_mem = (uint8_t*)AllocMem(SPR32_SIZE * SPR32_NUM * 2, MEMF_CHIP);
-    if (!spr32_mem) {
-        goto done;
-    }
-    spr64x8_mem = (uint8_t*)AllocMem(SPR64x8_SIZE * SPR64x8_NUM * 2, MEMF_CHIP);
-    if (!spr64x8_mem) {
-        goto done;
-    }
-
 	//KPrintF("Hello debugger from Amiga!\n");
 	Write(Output(), (APTR)"Hello console!\n", 15);
 
@@ -218,50 +197,39 @@ int main() {
 	//warpmode(0);
 
 	TakeSystem();
+
+	SetInterruptHandler((APTR)interruptHandler);
+	custom->intena = INTF_SETCLR | INTF_INTEN | INTF_BLIT | INTF_VERTB;
+
+
 	WaitVbl();
     if (!gfx_init()) {
         goto done;
     }
 
-    custom->cop1lc = (ULONG)copperlist_mem;
-	custom->copjmp1 = 0x7fff; //start coppper
 	custom->dmacon = DMAF_SETCLR | DMAF_MASTER | DMAF_RASTER | DMAF_COPPER | DMAF_BLITTER;
 
     game_init();
 
     // main loop
 	while(1) {
-        WaitVbl();
+        custom->color[0] = 0x000;
+        WaitLine(240);
+        custom->color[0] = 0x888;
+        gfx_endrender();    // flip buffers
+        custom->color[0] = 0x800;
+        gfx_startrender();
+        custom->color[0] = 0x080;
+        game_render();
+        custom->color[0] = 0x008;
         game_tick();
         ++tick;
-        game_render();
-        dbug();
     }   
 
 	// END
 done:
     gfx_shutdown();
 	FreeSystem();
-    if (copperlist_mem) {
-        FreeMem(copperlist_mem, COPPERLIST_MEMSIZE);
-        copperlist_mem = NULL;
-    }
-    if (screen_mem) {
-        FreeMem(screen_mem, SCREEN_MEMSIZE);
-        screen_mem = NULL;
-    }
-    if (spr16_mem) {
-        FreeMem(spr16_mem, SPR16_SIZE * SPR16_NUM * 2);
-        spr16_mem = NULL;
-    }
-    if (spr32_mem) {
-        FreeMem(spr32_mem, SPR32_SIZE * SPR32_NUM * 2);
-        spr32_mem = NULL;
-    }
-    if (spr64x8_mem) {
-        FreeMem(spr64x8_mem, SPR64x8_SIZE * SPR64x8_NUM * 2);
-        spr64x8_mem = NULL;
-    }
 
 	CloseLibrary((struct Library*)DOSBase);
 	CloseLibrary((struct Library*)GfxBase);
