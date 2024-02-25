@@ -223,6 +223,7 @@ int main() {
         game_render();
         custom->color[0] = 0x008;
         game_tick();
+        custom->color[0] = 0x000;
         ++tick;
     }   
 
@@ -252,39 +253,12 @@ void plat_gatso(uint8_t t)
 {
 }
 
-/*
- * TEXT FUNCTIONS
- */
-
-// Clear text
-void plat_clr()
-{
-}
-
 
 // TODO: should just pass in level and score as bcd
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
 }
 
-
-// Render bonkers encoding where each byte encodes a 4x2 block of pixels,
-// to be rendered via charset.
-void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
-{
-}
-
-
-// Draw horizontal line of chars, range [cx_begin, cx_end).
-void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
-{
-}
-
-
-// Draw vertical line of chars, range [cy_begin, cy_end).
-void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
-{
-}
 
 
 /*

@@ -16,20 +16,46 @@
 #include "../misc.h"
 #include "gfx_amiga.h"
 
+#include <stddef.h>
+
+/***
+ */
+
+typedef struct DamageEntry
+{
+    size_t offset;   // screen offset (with bit0 clear)
+    UWORD w_words;   // width in words
+    UWORD h_lines;        // hight in lines
+} DamageEntry;
+
+#define MAX_DAMAGEENTRIES 128
+
+typedef struct DamageList
+{
+    uint16_t nentries;
+    DamageEntry entries[MAX_DAMAGEENTRIES];
+} DamageList;
+
+
 static void init_spr16_data();
 
 // Some chipmem allocations.
 static uint8_t *screenbuf[2] = {NULL, NULL};
+static uint8_t *textbuf = NULL;
 static uint8_t *spr16_mem = NULL;
 static uint8_t *spr32_mem = NULL;
 static uint8_t *spr64x8_mem = NULL;
 static UWORD *copperlist_mem = NULL;
 
+static UWORD* cop_bpl_bookmark;
 
 static uint8_t *backbuf = NULL;
 static uint8_t *frontbuf = NULL;
 
-static UWORD* cop_bpl_bookmark;
+static DamageList damagelists[2] = {0};
+DamageList *front_damage = NULL;
+DamageList *back_damage = NULL;
+
 
 static bool grab_chipmem()
 {
@@ -44,7 +70,16 @@ static bool grab_chipmem()
         }
     }
     frontbuf = screenbuf[0];
+    front_damage = &damagelists[0];
     backbuf = screenbuf[1];
+    back_damage = &damagelists[1];
+
+
+
+    textbuf = (uint8_t*)AllocMem(SCREEN_MEMSIZE, MEMF_CHIP);
+    if (!textbuf) {
+        return false;
+    }
 
     // *2 to account for mask!
     spr16_mem = (uint8_t*)AllocMem(SPR16_SIZE * SPR16_NUM * 2, MEMF_CHIP);
@@ -73,6 +108,10 @@ static void free_chipmem()
             FreeMem(screenbuf[i], SCREEN_MEMSIZE);
             screenbuf[i] = NULL;
         }
+    }
+    if (textbuf) {
+        FreeMem(textbuf, SCREEN_MEMSIZE);
+        textbuf = NULL;
     }
     if (spr16_mem) {
         FreeMem(spr16_mem, SPR16_SIZE * SPR16_NUM * 2);
@@ -219,29 +258,53 @@ static void init_copperlist()
 
 static void init_spr16_data()
 {
-    // Exported data is image only, and we'll generate a mask here on the fly.
-    // Images are 4 bitplanes interleaved.
-    const UWORD *src = (const UWORD*)export_spr16_bin;
-    UWORD *dest = (UWORD*)(spr16_mem);
-    // For each 16x16 sprite...
-    for (int n = 0; n < SPR16_NUM; ++n) {
-        UWORD *mask = dest + (SPR16_SIZE/2);    // mask follows bitplanes
-        for (int y=0; y<16; ++y) {
-            // Build the mask on the fly.
-            UWORD bits = 0x0000;
-            for(int i=0; i<4; ++i) {
-                bits |= *src;
-                *dest++ = *src++;
+    {
+        // Exported data is image only, and we'll generate a mask here on the fly.
+        // Images are 4 bitplanes interleaved.
+        const UWORD *src = (const UWORD*)export_spr16_bin;
+        UWORD *dest = (UWORD*)(spr16_mem);
+        // For each 16x16 sprite...
+        for (int n = 0; n < SPR16_NUM; ++n) {
+            UWORD *mask = dest + (SPR16_SIZE/2);    // mask follows bitplanes
+            for (int y=0; y<16; ++y) {
+                // Build the mask on the fly.
+                UWORD bits = 0x0000;
+                for(int i=0; i<4; ++i) {
+                    bits |= *src;
+                    *dest++ = *src++;
+                }
+                // same mask for all bitplanes
+                for(int i=0; i<4; ++i) {
+                    *mask++ = bits;
+                }
             }
-            // same mask for all bitplanes
-            for(int i=0; i<4; ++i) {
-                *mask++ = bits;
-            }
+            dest += (SPR16_SIZE/2); // skip mask
         }
-        dest += (SPR16_SIZE/2); // skip mask
+    }
+    {
+        const UWORD *src = (const UWORD*)export_spr32_bin;
+        UWORD *dest = (UWORD*)(spr32_mem);
+        // For each 32x32 sprite...
+        for (int n = 0; n < SPR32_NUM; ++n) {
+            UWORD *mask = dest + (SPR32_SIZE/2);    // mask follows bitplanes
+            for (int y = 0; y < 32; ++y) {
+                for( int x = 0; x < 32; x+= 16) {
+                    // Build the mask on the fly.
+                    UWORD bits = 0x0000;
+                    for(int i=0; i<4; ++i) {
+                        bits |= *src;
+                        *dest++ = *src++;
+                    }
+                    // same mask for all bitplanes
+                    for(int i=0; i<4; ++i) {
+                        *mask++ = bits;
+                    }
+                }
+            }
+            dest += (SPR32_SIZE/2); // skip mask
+        }
     }
 }
-
 
 bool gfx_init()
 {
@@ -260,14 +323,139 @@ void gfx_shutdown()
     free_chipmem();
 }
 
+
+/******************************
+ * blitqueue stuff.
+ */
+
+#define BLITOP_WORDCOPY 0
+#define BLITOP_DRAWSPR 1
+
+struct blitop_drawspr
+{
+    uint16_t kind;
+    uint8_t* srcimg;
+    uint8_t* srcmask;
+    UWORD srcmod;
+    uint8_t* dest;
+    UWORD destmod;
+    UWORD xshift;
+    UWORD bltsize;
+};
+
+// copy word-aligned data
+struct blitop_wordcopy
+{
+    uint16_t kind;
+    APTR bltapt;
+    UWORD bltamod;
+    APTR bltdpt;
+    UWORD bltdmod;
+    UWORD bltsize;
+};
+
+union blitop
+{
+    uint16_t kind;
+    struct blitop_drawspr drawspr;
+    struct blitop_wordcopy wordcopy;
+};
+
+
+#define MAX_BLITOPS 128
+int blitq_head = 0;
+int blitq_tail = 0;
+
+union blitop blitq[MAX_BLITOPS];
+
+void blitq_do(union blitop *op) {
+    switch (op->kind) {
+        case BLITOP_WORDCOPY:
+            {
+                custom->bltcon0 = SRCA | DEST | 0xF0;
+                custom->bltcon1 = 0;
+
+                custom->bltapt = op->wordcopy.bltapt;
+                custom->bltamod = op->wordcopy.bltamod;
+
+                custom->bltdpt = op->wordcopy.bltdpt;
+                custom->bltdmod = op->wordcopy.bltdmod;
+
+                custom->bltafwm = 0xffff;
+                custom->bltalwm = 0xffff;
+
+                custom->bltsize = op->wordcopy.bltsize;
+            }
+            break;
+
+        case BLITOP_DRAWSPR:
+            {
+                // blit a sprite image with mask
+                UWORD xshift = op->drawspr.xshift;
+
+                // a: srcmask b: srcimg c: background
+                // function: d = (a & b) | c   => 0xCA
+                custom->bltcon0 = SRCA | SRCB | SRCC | DEST | 0xCA | (xshift << ASHIFTSHIFT);
+                custom->bltcon1 = xshift << BSHIFTSHIFT;
+                custom->bltapt = op->drawspr.srcmask;
+                custom->bltamod = op->drawspr.srcmod;
+
+                custom->bltbpt = op->drawspr.srcimg;
+                custom->bltbmod = op->drawspr.srcmod;
+
+                custom->bltcpt = op->drawspr.dest;
+                custom->bltcmod = op->drawspr.destmod;
+
+                custom->bltdpt = op->drawspr.dest;
+                custom->bltdmod = op->drawspr.destmod;
+
+                custom->bltafwm = 0xffff;
+                custom->bltalwm = 0x0000;
+
+                // hhhhhhhh hhwwwwww
+                // h: lines
+                // w: words
+                custom->bltsize = op->drawspr.bltsize;
+            }
+            break;
+    }
+}
+
 // Draw len number of chars
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
-    uint8_t* dest = backbuf + (cy * 8 * SCREEN_LINE_STRIDE) + cx;
+    size_t offset = (cy * 8 * SCREEN_LINE_STRIDE) + cx;
+
+    uint8_t* dest = textbuf + offset;
+
+    // Record the damage.
+    if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+        DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+        d->offset = offset;
+        d->w_words = (len+1)/2;
+        d->h_lines = 8;
+    }
+    if(front_damage->nentries<MAX_DAMAGEENTRIES) {
+        DamageEntry* d = &front_damage->entries[front_damage->nentries++];
+        d->offset = offset;
+        d->w_words = (len+1)/2;
+        d->h_lines = 8;
+    }
 
     for( ; len>0; --len) {
         uint8_t chr = (uint8_t)*txt++;
         const uint8_t* src = export_chars_bin + (chr * 8);
+#if 0
+        // add to queue
+        struct blitop_drawchar *op = &(blitq[blitq_head].drawchar);
+        op->kind = BLITOP_DRAWCHAR;
+        op->xshift = (cx & 0x01) ? 8 : 0;
+        op->dest = dest;    // & 0xffffffe;
+        op->srcimg = (uint8_t *)(spr16_mem);
+        op->srcmask = op->srcimg;
+        ++blitq_head;
+        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+#endif
         // for each bitplane:
         for (int i = 0; i < 4; ++i) {
             if (colour & (1<<i)) {
@@ -294,99 +482,20 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
         dest -= SCREEN_LINE_STRIDE;
         dest += 1;
     }
+
 }
 
-/******************************
- * blitqueue stuff.
- */
-
-#define BLITOP_CLR 0
-#define BLITOP_DRAWSPR16 1
-
-struct blitop_clr
+// Clear text
+void plat_clr()
 {
-    uint16_t kind;
-};
-
-struct blitop_drawspr16
-{
-    uint16_t kind;
-    uint8_t* srcimg;
-    uint8_t* srcmask;
-    uint8_t* dest;
-    UWORD xshift;
-};
-
-union blitop
-{
-    uint16_t kind;
-    struct blitop_clr clr;
-    struct blitop_drawspr16 drawspr16;
-};
-
-
-#define MAX_BLITOPS 128
-int blitq_head = 0;
-int blitq_tail = 0;
-
-union blitop blitq[MAX_BLITOPS];
-
-void blitq_do(union blitop *op) {
-    switch (op->kind) {
-        case BLITOP_CLR:
-            {
-                UWORD h = (SCREEN_H-100)*4;
-                UWORD wwords = SCREEN_PLANE_STRIDE/2;
-                custom->bltcon0 = DEST | 0x00;
-                custom->bltcon1 = 0;
-                custom->bltdpt = backbuf;
-                custom->bltdmod = 0;
-
-                custom->bltafwm = 0xffff;
-                custom->bltalwm = 0xffff;
-
-                // hhhhhhhh hhwwwwww
-                // h: lines
-                // w: words
-                custom->bltsize = (h<<6) | wwords;
-            }
-            break;
-        case BLITOP_DRAWSPR16:
-            {
-                // blit a 16x16 image with mask
-                UWORD h=16*4;
-                WORD wwords= 2;
-                UWORD xshift = op->drawspr16.xshift;
-
-                // a: srcmask b: srcimg c: background
-                // function: d = (a & b) | c   => 0xCA
-                custom->bltcon0 = SRCA | SRCB | SRCC | DEST | 0xCA | (xshift << ASHIFTSHIFT);
-                custom->bltcon1 = xshift << BSHIFTSHIFT;
-                custom->bltapt = op->drawspr16.srcmask;
-                custom->bltamod = -2;
-
-                custom->bltbpt = op->drawspr16.srcimg;
-                custom->bltbmod = -2;
-
-                custom->bltcpt = op->drawspr16.dest;
-                custom->bltcmod = SCREEN_PLANE_STRIDE - (wwords*2);
-
-                custom->bltdpt = op->drawspr16.dest;
-                custom->bltdmod = SCREEN_PLANE_STRIDE - (wwords*2);
-
-                custom->bltafwm = 0xffff;
-                custom->bltalwm = 0x0000;
-
-                // hhhhhhhh hhwwwwww
-                // h: lines
-                // w: words
-                custom->bltsize = (h<<6) | wwords;
-            }
-            break;
-    }
+    memset(textbuf, 0, SCREEN_MEMSIZE);
 }
 
-
+// Render bonkers encoding where each byte encodes a 4x2 block of pixels,
+// to be rendered via charset.
+void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t ch, uint8_t basecol)
+{
+}
 
 void gfx_startrender()
 {
@@ -402,12 +511,20 @@ void gfx_startrender()
     blitq_head = 0;
     blitq_tail = 0;
     // clear screen.
-    {
-        struct blitop_clr *op = &(blitq[blitq_head].clr);
-        op->kind = BLITOP_CLR;
+    for (int i = 0; i < back_damage->nentries; ++i) {
+        DamageEntry *ent = &back_damage->entries[i];
+
+        struct blitop_wordcopy *op = &(blitq[blitq_head].wordcopy);
+        op->kind = BLITOP_WORDCOPY;
+        op->bltapt = textbuf + ent->offset;
+        op->bltamod = SCREEN_PLANE_STRIDE - (ent->w_words*2);
+        op->bltdpt = backbuf + ent->offset;
+        op->bltdmod = SCREEN_PLANE_STRIDE - (ent->w_words*2);
+        op->bltsize = ((ent->h_lines*4) << 6) | ent->w_words;
         ++blitq_head;
-        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
     }
+    custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+    back_damage->nentries = 0;
 }
 
 
@@ -431,10 +548,15 @@ void gfx_endrender()
 //       }
 //    }
 
-    // swap buffers
-    uint8_t *tmp = backbuf;
-    backbuf = frontbuf;
-    frontbuf = tmp;
+    // swap buffers and damagelists
+    {
+        uint8_t *btmp = backbuf;
+        backbuf = frontbuf;
+        frontbuf = btmp;
+        DamageList* dtmp = back_damage;
+        back_damage = front_damage;
+        front_damage = dtmp;
+    }
 
     // show the front buffer
     copper_emit_bitplanes(cop_bpl_bookmark, frontbuf);
@@ -465,15 +587,31 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
         return; // TOO MANY!
     }
 
-    // add to queue
-    struct blitop_drawspr16 *op = &(blitq[blitq_head].drawspr16);
-    op->kind = BLITOP_DRAWSPR16;
-    op->xshift = x & 0xf;
-    op->dest = (backbuf + y * SCREEN_LINE_STRIDE) + (2*(x/16));
-    op->srcimg = (uint8_t *)(spr16_mem + (img * SPR16_SIZE * 2));
-    op->srcmask = op->srcimg + SPR16_SIZE;
-    ++blitq_head;
-    custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+    size_t offset = (y * SCREEN_LINE_STRIDE) + (2 * (x / 16));
+
+    // Add to blit queue.
+    if (blitq_head < MAX_BLITOPS) {
+        const UWORD w_words = 2;  // 2 words to account for shifting.
+        struct blitop_drawspr *op = &(blitq[blitq_head].drawspr);
+        op->kind = BLITOP_DRAWSPR;
+        op->xshift = x & 0xf;
+        op->dest = backbuf + offset;
+        op->destmod = SCREEN_PLANE_STRIDE - (w_words*2);
+        op->srcimg = (uint8_t *)(spr16_mem + (img * SPR16_SIZE * 2));
+        op->srcmask = op->srcimg + SPR16_SIZE;
+        op->srcmod = 2 - (w_words*2);
+        op->bltsize = ((16*4)<<6) | w_words;
+
+        ++blitq_head;
+        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+    }
+    // Record the damage.
+    if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+        DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+        d->offset = offset;
+        d->w_words = (x & 0xF) ? 2 : 1;
+        d->h_lines = 16;
+    }
 }
 
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
@@ -482,6 +620,40 @@ void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 
 void sprout32(int16_t x, int16_t y, uint8_t img)
 {
+    x = x >> FX;
+    y = y >> FX;
+    if (x<0 || y<0 || x >= (SCREEN_W-32) || y >= (SCREEN_H-32)) {
+        return;
+    }
+    if (blitq_head == MAX_BLITOPS) {
+        return; // TOO MANY!
+    }
+
+    size_t offset = (y * SCREEN_LINE_STRIDE) + (2 * (x / 16));
+
+    // Add to blit queue.
+    if (blitq_head < MAX_BLITOPS) {
+        const UWORD w_words = 3;  // 3 words to account for shifting.
+        struct blitop_drawspr *op = &(blitq[blitq_head].drawspr);
+        op->kind = BLITOP_DRAWSPR;
+        op->xshift = x & 0xf;
+        op->dest = backbuf + offset;
+        op->destmod = SCREEN_PLANE_STRIDE - (w_words*2);
+        op->srcimg = (uint8_t *)(spr32_mem + (img * SPR32_SIZE * 2));
+        op->srcmask = op->srcimg + SPR32_SIZE;
+        op->srcmod = 4 - (w_words*2);
+        op->bltsize = ((32*4)<<6) | w_words;
+
+        ++blitq_head;
+        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+    }
+    // Record the damage.
+    if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+        DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+        d->offset = offset;
+        d->w_words = (x & 0xF) ? 3 : 2;
+        d->h_lines = 32;
+    }
 }
 
 void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
@@ -498,6 +670,18 @@ void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 }
 
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
+{
+}
+
+
+// Draw horizontal line of chars, range [cx_begin, cx_end).
+void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
+{
+}
+
+
+// Draw vertical line of chars, range [cy_begin, cy_end).
+void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
 }
 

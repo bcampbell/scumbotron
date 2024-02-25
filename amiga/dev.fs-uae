@@ -1,9 +1,9 @@
 [config]
-amiga_model = A500
+amiga_model = A1200
 kickstart_file = Kickstart-v1.3-rev34.5-1987-Commodore-A500-A1000-A2000-CDTV.rom
 hard_drive_0 = dh0
-cpu_model = 68040
-cpu_speed = 16
+#cpu_model = 68020
+#cpu_speed = 25
 
 chip_memory = 1024
 fast_memory = 1024
