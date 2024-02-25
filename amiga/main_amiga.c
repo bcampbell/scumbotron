@@ -216,7 +216,7 @@ int main() {
         custom->color[0] = 0x000;
         WaitLine(240);
         custom->color[0] = 0x888;
-        gfx_endrender();    // flip buffers
+        gfx_present_frame();    // flip buffers
         custom->color[0] = 0x800;
         gfx_startrender();
         custom->color[0] = 0x080;

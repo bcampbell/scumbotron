@@ -37,7 +37,8 @@ typedef struct DamageList
 } DamageList;
 
 
-static void init_spr16_data();
+static void init_sprite_data();
+static void init_copperlist();
 
 // Some chipmem allocations.
 static uint8_t *screenbuf[2] = {NULL, NULL};
@@ -48,6 +49,8 @@ static uint8_t *spr64x8_mem = NULL;
 static UWORD *copperlist_mem = NULL;
 
 static UWORD* cop_bpl_bookmark;
+static UWORD* cop_color15_bookmark;
+static UWORD palette[16];
 
 static uint8_t *backbuf = NULL;
 static uint8_t *frontbuf = NULL;
@@ -143,6 +146,14 @@ static UWORD *copper_emit_bitplanes(UWORD* cl, uint8_t* screen)
 }
 
 
+static UWORD *copper_emit_color15(UWORD* cl, UWORD colour)
+{
+    *cl++ = CUSTOM_OFFSET(color[15]);
+    *cl++ = colour;
+    return cl;
+}
+
+
 static void init_copperlist()
 {
     // now build the copperlist
@@ -186,7 +197,9 @@ static void init_copperlist()
 
         cop_bpl_bookmark = cl;
         cl = copper_emit_bitplanes(cl, frontbuf);
-
+        cop_color15_bookmark = cl;
+        cl = copper_emit_color15(cl, palette[15]);
+#if 0
 //        *cl++ = CUSTOM_OFFSET(color[0]);
 //        *cl++ = 0x0000;
         *cl++ = CUSTOM_OFFSET(color[1]);
@@ -227,6 +240,7 @@ static void init_copperlist()
         *cl++ = (12<<8) | (12<<4) | (12);
         *cl++ = CUSTOM_OFFSET(color[15]);
         *cl++ = (15<<8) | (15<<4) | (15);
+#endif
 
 /*
         *cl++ = 0x2001;
@@ -256,7 +270,9 @@ static void init_copperlist()
     }
 }
 
-static void init_spr16_data()
+
+// exported spritedata has no mask, and may not be in chipmem.
+static void init_sprite_data()
 {
     {
         // Exported data is image only, and we'll generate a mask here on the fly.
@@ -311,8 +327,15 @@ bool gfx_init()
     if (!grab_chipmem()) {
         return false;
     }
+    // convert palette to amiga format 
+    for (int i = 0; i < 16; ++i) {
+        const uint8_t *c = &export_palette_bin[i*4]; // rgba
+        palette[i] = (c[0]>>4)<<8 | (c[1]>>4)<<4 | (c[2]>>4);
+        custom->color[i] = palette[i];
+    }
 
-    init_spr16_data();
+
+    init_sprite_data();
     init_copperlist();
     return true;
 }
@@ -538,9 +561,8 @@ bool is_blitter_busy() {
     return (*(volatile UWORD*)&custom->dmaconr&(1<<14));// ? true:false;
 }
 
-void gfx_endrender()
+void gfx_present_frame()
 {
-    UWORD c=0;
     // Wait until all the blitting is done
 //    while (blitq_tail < blitq_head) {
 //        if (!is_blitter_busy()) {
@@ -560,6 +582,8 @@ void gfx_endrender()
 
     // show the front buffer
     copper_emit_bitplanes(cop_bpl_bookmark, frontbuf);
+    // update color15
+    copper_emit_color15(cop_color15_bookmark, palette[tick & 0x0f]);
 }
 
 void gfx_blit_irq_handler()
