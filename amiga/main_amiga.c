@@ -213,18 +213,19 @@ int main() {
 
     // main loop
 	while(1) {
-        custom->color[0] = 0x000;
-        WaitLine(240);
-        custom->color[0] = 0x888;
+        //custom->color[0] = 0x000;
+        WaitVbl();  //Line(240);
+        //custom->color[0] = 0x888;
         gfx_present_frame();    // flip buffers
-        custom->color[0] = 0x800;
+        //custom->color[0] = 0x800;
         gfx_startrender();
-        custom->color[0] = 0x080;
+        //custom->color[0] = 0x080;
         game_render();
-        custom->color[0] = 0x008;
+        //custom->color[0] = 0x008;
         game_tick();
-        custom->color[0] = 0x000;
         ++tick;
+        //custom->color[0] = 0x444;
+        gfx_wait_for_blitting();
     }   
 
 	// END

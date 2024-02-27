@@ -19,6 +19,7 @@
 #include <stddef.h>
 
 /***
+ *
  */
 
 typedef struct DamageEntry
@@ -38,28 +39,33 @@ typedef struct DamageList
 
 
 static void init_sprite_data();
-static void init_copperlist();
+static void build_copperlist(UWORD *cl);
 
 // Some chipmem allocations.
-static uint8_t *screenbuf[2] = {NULL, NULL};
-static uint8_t *textbuf = NULL;
+static uint8_t *screenbuf[2] = {NULL, NULL};    // Main screen buffers
+static uint8_t *bgbuf = NULL;                   // Background buffer
 static uint8_t *spr16_mem = NULL;
 static uint8_t *spr32_mem = NULL;
 static uint8_t *spr64x8_mem = NULL;
 static UWORD *copperlist_mem = NULL;
 
-static UWORD* cop_bpl_bookmark;
-static UWORD* cop_color15_bookmark;
-static UWORD palette[16];
+static UWORD* cop_bpl_bookmark;     // Where copperlist sets bitplane addrs
+static UWORD* cop_color15_bookmark; // Where copperlist sets colour 15
+static UWORD palette[16];           // Master palette in amiga xrgb format
 
-static uint8_t *backbuf = NULL;
-static uint8_t *frontbuf = NULL;
-
+// We also need a damage list for each buffer, for erasing.
+// To erase, we blit chunks of the bgbuf over the damaged area.
 static DamageList damagelists[2] = {0};
-DamageList *front_damage = NULL;
-DamageList *back_damage = NULL;
+
+// front is the screen we're displaying, back is the one we're
+// drawing into. These will be swapped each frame.
+static uint8_t *backbuf = NULL;
+static DamageList *front_damage = NULL;
+static uint8_t *frontbuf = NULL;
+static DamageList *back_damage = NULL;
 
 
+// Allocate all the chipmem we need.
 static bool grab_chipmem()
 {
     copperlist_mem = (UWORD*)AllocMem(COPPERLIST_MEMSIZE, MEMF_CHIP);
@@ -77,10 +83,8 @@ static bool grab_chipmem()
     backbuf = screenbuf[1];
     back_damage = &damagelists[1];
 
-
-
-    textbuf = (uint8_t*)AllocMem(SCREEN_MEMSIZE, MEMF_CHIP);
-    if (!textbuf) {
+    bgbuf = (uint8_t*)AllocMem(SCREEN_MEMSIZE, MEMF_CHIP);
+    if (!bgbuf) {
         return false;
     }
 
@@ -112,9 +116,9 @@ static void free_chipmem()
             screenbuf[i] = NULL;
         }
     }
-    if (textbuf) {
-        FreeMem(textbuf, SCREEN_MEMSIZE);
-        textbuf = NULL;
+    if (bgbuf) {
+        FreeMem(bgbuf, SCREEN_MEMSIZE);
+        bgbuf = NULL;
     }
     if (spr16_mem) {
         FreeMem(spr16_mem, SPR16_SIZE * SPR16_NUM * 2);
@@ -132,6 +136,8 @@ static void free_chipmem()
 
 
 
+// Output copper instructions for setting bitplane addrs for screen.
+// (used to edit the copperlist each frame for double buffering)
 static UWORD *copper_emit_bitplanes(UWORD* cl, uint8_t* screen)
 {
     uint8_t *plane = screen;
@@ -146,6 +152,8 @@ static UWORD *copper_emit_bitplanes(UWORD* cl, uint8_t* screen)
 }
 
 
+// Output copper instruction for setting color 15.
+// Used for flashing colour.
 static UWORD *copper_emit_color15(UWORD* cl, UWORD colour)
 {
     *cl++ = CUSTOM_OFFSET(color[15]);
@@ -154,124 +162,58 @@ static UWORD *copper_emit_color15(UWORD* cl, UWORD colour)
 }
 
 
-static void init_copperlist()
+// Assumes there is enough chipmem at cl to fit it!
+static void build_copperlist(UWORD *cl)
 {
-    // now build the copperlist
-    {
-        UWORD* cl = copperlist_mem;
+    // set up display
+    *cl++ = CUSTOM_OFFSET(diwstrt);
+    *cl++ = (0x2c << 8) | 0x81;         // yyyyyyyyxxxxxxxx 
 
-        // set up display
-        *cl++ = CUSTOM_OFFSET(diwstrt);
-        *cl++ = (0x2c << 8) | 0x81;         // yyyyyyyyxxxxxxxx 
+    *cl++ = CUSTOM_OFFSET(diwstop);
+    *cl++ = ((0x2c + SCREEN_H - 256) << 8) | (0x81 + SCREEN_W - 256);
+    *cl++ = CUSTOM_OFFSET(diwhigh);
+    *cl++ = (1 << 13) | (1 << 8);
 
-        *cl++ = CUSTOM_OFFSET(diwstop);
-        *cl++ = ((0x2c + SCREEN_H - 256) << 8) | (0x81 + SCREEN_W - 256);
-        *cl++ = CUSTOM_OFFSET(diwhigh);
-        *cl++ = (1 << 13) | (1 << 8);
+    *cl++ = CUSTOM_OFFSET(ddfstrt);
+    *cl++ = 0x81 / 2;
+    *cl++ = CUSTOM_OFFSET(ddfstop);
+    *cl++ = (0x81 / 2) - 8 + (8 * (SCREEN_W / 16));
 
-        *cl++ = CUSTOM_OFFSET(ddfstrt);
-        *cl++ = 0x81 / 2;
-        *cl++ = CUSTOM_OFFSET(ddfstop);
-        *cl++ = (0x81 / 2) - 8 + (8 * (SCREEN_W / 16));
+    *cl++ = CUSTOM_OFFSET(fmode);
+    *cl++ = 0;
 
-        *cl++ = CUSTOM_OFFSET(fmode);
-        *cl++ = 0;
+    *cl++ = CUSTOM_OFFSET(bplcon0);
+    *cl++ = 4<<12;      // 4 bitplanes
 
-        *cl++ = CUSTOM_OFFSET(bplcon0);
-        *cl++ = 4<<12;      // 4 bitplanes
+    *cl++ = CUSTOM_OFFSET(bplcon1);
+    *cl++ = 0;
+//        *cl++ = CUSTOM_OFFSET(bplcon2);
+//        *cl ++ = 0;
+    *cl++ = CUSTOM_OFFSET(bplcon3);
+    *cl ++ = (1<<6);    // lores sprites
 
-        *cl++ = CUSTOM_OFFSET(bplcon1);
-        *cl++ = 0;
-    //        *cl++ = CUSTOM_OFFSET(bplcon2);
-    //        *cl ++ = 0;
-        *cl++ = CUSTOM_OFFSET(bplcon3);
-        *cl ++ = (1<<6);    // lores sprites
+    *cl++ = CUSTOM_OFFSET(bplcon4);
+    *cl++ = 0x11;
 
-        *cl++ = CUSTOM_OFFSET(bplcon4);
-        *cl++ = 0x11;
+    *cl++ = CUSTOM_OFFSET(bpl1mod);
+    *cl++ = (SCREEN_W/8)*3;
+    *cl++ = CUSTOM_OFFSET(bpl2mod);
+    *cl++ = (SCREEN_W/8)*3;
 
-        *cl++ = CUSTOM_OFFSET(bpl1mod);
-        *cl++ = (SCREEN_W/8)*3;
-        *cl++ = CUSTOM_OFFSET(bpl2mod);
-        *cl++ = (SCREEN_W/8)*3;
+    cop_bpl_bookmark = cl;
+    cl = copper_emit_bitplanes(cl, frontbuf);
+    cop_color15_bookmark = cl;
+    cl = copper_emit_color15(cl, palette[15]);
 
-        cop_bpl_bookmark = cl;
-        cl = copper_emit_bitplanes(cl, frontbuf);
-        cop_color15_bookmark = cl;
-        cl = copper_emit_color15(cl, palette[15]);
-#if 0
-//        *cl++ = CUSTOM_OFFSET(color[0]);
-//        *cl++ = 0x0000;
-        *cl++ = CUSTOM_OFFSET(color[1]);
-        *cl++ = (15<<8) | (15<<4) | (15);
-        *cl++ = CUSTOM_OFFSET(color[1]);
-        *cl++ = (7<<8) | (7<<4) | (7);
-
-        *cl++ = CUSTOM_OFFSET(color[2]);
-        *cl++ = (15<<8) | (0<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[3]);
-        *cl++ = (0<<8) | (15<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[4]);
-        *cl++ = (0<<8) | (0<<4) | (15);
-
-
-        *cl++ = CUSTOM_OFFSET(color[5]);
-        *cl++ = (15<<8) | (15<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[6]);
-        *cl++ = (0<<8) | (15<<4) | (15);
-        *cl++ = CUSTOM_OFFSET(color[7]);
-        *cl++ = (15<<8) | (0<<4) | (15);
-
-        *cl++ = CUSTOM_OFFSET(color[8]);
-        *cl++ = (7<<8) | (0<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[9]);
-        *cl++ = (0<<8) | (7<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[10]);
-        *cl++ = (0<<8) | (0<<4) | (7);
-
-        *cl++ = CUSTOM_OFFSET(color[11]);
-        *cl++ = (7<<8) | (7<<4) | (0);
-        *cl++ = CUSTOM_OFFSET(color[12]);
-        *cl++ = (0<<8) | (7<<4) | (7);
-        *cl++ = CUSTOM_OFFSET(color[13]);
-        *cl++ = (7<<8) | (0<<4) | (7);
-
-        *cl++ = CUSTOM_OFFSET(color[14]);
-        *cl++ = (12<<8) | (12<<4) | (12);
-        *cl++ = CUSTOM_OFFSET(color[15]);
-        *cl++ = (15<<8) | (15<<4) | (15);
-#endif
-
-/*
-        *cl++ = 0x2001;
-        *cl++ = 0xFF00;
-        *cl++ = CUSTOM_OFFSET(color[0]);
-        *cl++ = (15<<8) | (0<<4) | (0);
-
-        *cl++ = 0x3001;
-        *cl++ = 0xFF00;
-        *cl++ = CUSTOM_OFFSET(color[0]);
-        *cl++ = (0<<8) | (15<<4) | (0);
-        
-        *cl++ = 0x9001;
-        *cl++ = 0xFF00;
-        *cl++ = CUSTOM_OFFSET(color[0]);
-        *cl++ = (0<<8) | (0<<4) | (15);
-
-        *cl++ = 0xFFFF;
-        *cl++ = 0xFFFE;
-        *cl++ = CUSTOM_OFFSET(color[0]);
-        *cl++ = (4<<8) | (4<<4) | (4);
-*/
-
-        // start running.
-        custom->cop1lc = (ULONG)copperlist_mem;
-        custom->copjmp1 = 0x7fff;
-    }
+    // end.
+    *cl++ = 0xFFFF;
+    *cl++ = 0xFFFE;
 }
 
 
 // exported spritedata has no mask, and may not be in chipmem.
+// TODO: just export proper data, and compress it into the exe?
+// Or just link it directly into chipmem for startup.
 static void init_sprite_data()
 {
     {
@@ -327,16 +269,19 @@ bool gfx_init()
     if (!grab_chipmem()) {
         return false;
     }
-    // convert palette to amiga format 
+    // convert 32bit rgba palette to 16bit xrgb amiga format 
     for (int i = 0; i < 16; ++i) {
-        const uint8_t *c = &export_palette_bin[i*4]; // rgba
+        const uint8_t *c = &export_palette_bin[i*4]; // byte per component
         palette[i] = (c[0]>>4)<<8 | (c[1]>>4)<<4 | (c[2]>>4);
         custom->color[i] = palette[i];
     }
 
 
     init_sprite_data();
-    init_copperlist();
+    // Create and start the copperlist.
+    build_copperlist(copperlist_mem);
+    custom->cop1lc = (ULONG)(copperlist_mem);
+    custom->copjmp1 = 0x7fff;
     return true;
 }
 
@@ -386,8 +331,8 @@ union blitop
 
 
 #define MAX_BLITOPS 128
-int blitq_head = 0;
-int blitq_tail = 0;
+volatile int blitq_head = 0;
+volatile int blitq_tail = 0;
 
 union blitop blitq[MAX_BLITOPS];
 
@@ -449,7 +394,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 {
     size_t offset = (cy * 8 * SCREEN_LINE_STRIDE) + cx;
 
-    uint8_t* dest = textbuf + offset;
+    uint8_t* dest = bgbuf + offset;
 
     // Record the damage.
     if(back_damage->nentries<MAX_DAMAGEENTRIES) {
@@ -511,7 +456,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 // Clear text
 void plat_clr()
 {
-    memset(textbuf, 0, SCREEN_MEMSIZE);
+    memset(bgbuf, 0, SCREEN_MEMSIZE);
 }
 
 // Render bonkers encoding where each byte encodes a 4x2 block of pixels,
@@ -539,7 +484,7 @@ void gfx_startrender()
 
         struct blitop_wordcopy *op = &(blitq[blitq_head].wordcopy);
         op->kind = BLITOP_WORDCOPY;
-        op->bltapt = textbuf + ent->offset;
+        op->bltapt = bgbuf + ent->offset;
         op->bltamod = SCREEN_PLANE_STRIDE - (ent->w_words*2);
         op->bltdpt = backbuf + ent->offset;
         op->bltdmod = SCREEN_PLANE_STRIDE - (ent->w_words*2);
@@ -561,15 +506,22 @@ bool is_blitter_busy() {
     return (*(volatile UWORD*)&custom->dmaconr&(1<<14));// ? true:false;
 }
 
-void gfx_present_frame()
+void gfx_wait_for_blitting()
 {
+    UWORD c = 0;
+   // while (blitq_tail < blitq_head) {
+   //    custom->color[0] = c++; 
+   // }
     // Wait until all the blitting is done
-//    while (blitq_tail < blitq_head) {
 //        if (!is_blitter_busy()) {
 //            custom->intreq = INTF_SETCLR | INTF_BLIT; // kick!!!
 //       }
 //    }
 
+}
+
+void gfx_present_frame()
+{
     // swap buffers and damagelists
     {
         uint8_t *btmp = backbuf;
@@ -583,20 +535,25 @@ void gfx_present_frame()
     // show the front buffer
     copper_emit_bitplanes(cop_bpl_bookmark, frontbuf);
     // update color15
-    copper_emit_color15(cop_color15_bookmark, palette[tick & 0x0f]);
+    //copper_emit_color15(cop_color15_bookmark, palette[tick & 0x0f]);
 }
 
 void gfx_blit_irq_handler()
 {
     if (is_blitter_busy()) {
         // still busy. wait for next interrupt.
+        custom->color[0] = 0x004;
         return;
     }
 
     if (blitq_tail < blitq_head) {
         int i = blitq_tail;
         ++blitq_tail;
+        custom->color[0] = 0x00f;
         blitq_do(&blitq[i]);
+        custom->color[0] = 0x008;
+    } else {
+        custom->color[0] = 0x000;
     }
 }
 

@@ -40,6 +40,7 @@ bool gfx_init();
 void gfx_shutdown();
 
 void gfx_startrender();
+void gfx_wait_for_blitting();
 void gfx_present_frame();
 
 void gfx_blit_irq_handler();
