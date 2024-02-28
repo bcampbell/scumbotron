@@ -393,37 +393,28 @@ void blitq_do(union blitop *op) {
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
     size_t offset = (cy * 8 * SCREEN_LINE_STRIDE) + cx;
-
     uint8_t* dest = bgbuf + offset;
+
+    size_t wordstart = offset / 2;
+    size_t wordend = (offset + len + 1) / 2;
 
     // Record the damage.
     if(back_damage->nentries<MAX_DAMAGEENTRIES) {
         DamageEntry* d = &back_damage->entries[back_damage->nentries++];
-        d->offset = offset;
-        d->w_words = (len+1)/2;
+        d->offset = wordstart * 2;
+        d->w_words = wordend - wordstart;
         d->h_lines = 8;
     }
     if(front_damage->nentries<MAX_DAMAGEENTRIES) {
         DamageEntry* d = &front_damage->entries[front_damage->nentries++];
-        d->offset = offset;
-        d->w_words = (len+1)/2;
+        d->offset = wordstart * 2;
+        d->w_words = wordend - wordstart;
         d->h_lines = 8;
     }
 
     for( ; len>0; --len) {
         uint8_t chr = (uint8_t)*txt++;
         const uint8_t* src = export_chars_bin + (chr * 8);
-#if 0
-        // add to queue
-        struct blitop_drawchar *op = &(blitq[blitq_head].drawchar);
-        op->kind = BLITOP_DRAWCHAR;
-        op->xshift = (cx & 0x01) ? 8 : 0;
-        op->dest = dest;    // & 0xffffffe;
-        op->srcimg = (uint8_t *)(spr16_mem);
-        op->srcmask = op->srcimg;
-        ++blitq_head;
-        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
-#endif
         // for each bitplane:
         for (int i = 0; i < 4; ++i) {
             if (colour & (1<<i)) {
@@ -467,6 +458,7 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
 
 void gfx_startrender()
 {
+#if 0
     {
         char buf[8];
         buf[0] = hexdigits[blitq_head >> 4];
@@ -475,6 +467,7 @@ void gfx_startrender()
         buf[3] = hexdigits[blitq_tail & 0x0f];
         plat_textn(0,20,buf,4,15);
     }
+#endif
     // reset blit queue
     blitq_head = 0;
     blitq_tail = 0;
