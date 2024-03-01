@@ -140,7 +140,8 @@ static void free_chipmem()
 // (used to edit the copperlist each frame for double buffering)
 static UWORD *copper_emit_bitplanes(UWORD* cl, uint8_t* screen)
 {
-    uint8_t *plane = screen;
+    // Show (SCREEN_XPAD, SCREEN_YPAD) at top left.
+    uint8_t *plane = screen + (SCREEN_YPAD * SCREEN_LINE_STRIDE) + (SCREEN_XPAD/8);
     for (int i = 0; i < 4; ++i) {
         *cl++ = CUSTOM_OFFSET(bplpt[i]);
         *cl++ = (UWORD)((ULONG)plane >> 16);
@@ -165,19 +166,20 @@ static UWORD *copper_emit_color15(UWORD* cl, UWORD colour)
 // Assumes there is enough chipmem at cl to fit it!
 static void build_copperlist(UWORD *cl)
 {
-    // set up display
+    // set up display window
     *cl++ = CUSTOM_OFFSET(diwstrt);
-    *cl++ = (0x2c << 8) | 0x81;         // yyyyyyyyxxxxxxxx 
+    *cl++ = (0x2c << 8) | 0x81;    // recommended topleft yyyyyyyyxxxxxxxx 
 
     *cl++ = CUSTOM_OFFSET(diwstop);
     *cl++ = ((0x2c + SCREEN_H - 256) << 8) | (0x81 + SCREEN_W - 256);
     *cl++ = CUSTOM_OFFSET(diwhigh);
     *cl++ = (1 << 13) | (1 << 8);
 
+    // Set data fetch for lowres, as per hw reference manual
     *cl++ = CUSTOM_OFFSET(ddfstrt);
-    *cl++ = 0x81 / 2;
+    *cl++ = 0x0038;
     *cl++ = CUSTOM_OFFSET(ddfstop);
-    *cl++ = (0x81 / 2) - 8 + (8 * (SCREEN_W / 16));
+    *cl++ = 0x00D0;
 
     *cl++ = CUSTOM_OFFSET(fmode);
     *cl++ = 0;
@@ -196,9 +198,9 @@ static void build_copperlist(UWORD *cl)
     *cl++ = 0x11;
 
     *cl++ = CUSTOM_OFFSET(bpl1mod);
-    *cl++ = (SCREEN_W/8)*3;
+    *cl++ = (SCREEN_PLANE_STRIDE * 3) + ((2 * SCREEN_XPAD) / 8);
     *cl++ = CUSTOM_OFFSET(bpl2mod);
-    *cl++ = (SCREEN_W/8)*3;
+    *cl++ = (SCREEN_PLANE_STRIDE * 3) + ((2 * SCREEN_XPAD) / 8);
 
     cop_bpl_bookmark = cl;
     cl = copper_emit_bitplanes(cl, frontbuf);
@@ -298,7 +300,10 @@ void gfx_shutdown()
 
 #define BLITOP_WORDCOPY 0
 #define BLITOP_DRAWSPR 1
+#define BLITOP_HZAPPER 2
+#define BLITOP_VZAPPER 3
 
+// sprite with mask
 struct blitop_drawspr
 {
     uint16_t kind;
@@ -322,11 +327,27 @@ struct blitop_wordcopy
     UWORD bltsize;
 };
 
+struct blitop_hzapper
+{
+    uint16_t kind;
+    APTR bltdpt;
+    UWORD bltdmod;
+};
+
+struct blitop_vzapper
+{
+    uint16_t kind;
+    APTR bltdpt;    // first dest word
+    UWORD xshift;   // 0-15, pixel within word
+};
+
 union blitop
 {
     uint16_t kind;
     struct blitop_drawspr drawspr;
     struct blitop_wordcopy wordcopy;
+    struct blitop_hzapper hzapper;
+    struct blitop_vzapper vzapper;
 };
 
 
@@ -386,12 +407,60 @@ void blitq_do(union blitop *op) {
                 custom->bltsize = op->drawspr.bltsize;
             }
             break;
+        case BLITOP_HZAPPER:
+            {
+                // A constant FFFF
+                // D dest
+                custom->bltcon0 = DEST | 0xF0;
+                custom->bltcon1 = 0;
+
+                custom->bltadat = 0xFFFF;
+
+                custom->bltdpt = op->hzapper.bltdpt;
+                custom->bltdmod = op->hzapper.bltdmod;
+
+                custom->bltafwm = 0xffff;
+                custom->bltalwm = 0xffff;
+
+                // hhhhhhhh hhwwwwww
+                // 4 bitplanes high
+                custom->bltsize = (4<<6) | (SCREEN_W/16);
+            }
+            break;
+        case BLITOP_VZAPPER:
+            {
+                // A existing bg
+                // B constant, the pattern we want to blit
+                // D dest
+                custom->bltcon0 = SRCA | DEST | 0b11111100;
+                custom->bltcon1 = 0;
+
+                custom->bltapt = op->vzapper.bltdpt;
+                custom->bltamod = SCREEN_PLANE_STRIDE - 2;
+
+                // the constant word image
+                custom->bltbdat = 0x8000 >> op->vzapper.xshift;
+
+                custom->bltdpt = op->vzapper.bltdpt;
+                custom->bltdmod = SCREEN_PLANE_STRIDE - 2;
+
+                custom->bltafwm = 0xffff;
+                custom->bltalwm = 0xffff;
+
+                // hhhhhhhh hhwwwwww
+                // full screen height, 1 word wide
+                // FUDGE to avoid bltsize height overflow!!!
+                custom->bltsize = (((SCREEN_H-1)*4)<<6) | 1;
+            }
+            break;
     }
 }
 
 // Draw len number of chars
 void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t colour)
 {
+    cx += (SCREEN_XPAD / 8);
+    cy += (SCREEN_YPAD / 8);
     size_t offset = (cy * 8 * SCREEN_LINE_STRIDE) + cx;
     uint8_t* dest = bgbuf + offset;
 
@@ -447,6 +516,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 // Clear text
 void plat_clr()
 {
+    // Don't need to set offscreen area, but hey.
     memset(bgbuf, 0, SCREEN_MEMSIZE);
 }
 
@@ -528,7 +598,7 @@ void gfx_present_frame()
     // show the front buffer
     copper_emit_bitplanes(cop_bpl_bookmark, frontbuf);
     // update color15
-    //copper_emit_color15(cop_color15_bookmark, palette[tick & 0x0f]);
+    copper_emit_color15(cop_color15_bookmark, palette[tick & 0x0f]);
 }
 
 void gfx_blit_irq_handler()
@@ -550,31 +620,32 @@ void gfx_blit_irq_handler()
     }
 }
 
-void sprout16(int16_t x, int16_t y, uint8_t img)
-{
-    x = x >> FX;
-    y = y >> FX;
-    if (x<0 || y<0 || x >= (SCREEN_W-16) || y >= (SCREEN_H-16)) {
-        return;
-    }
+static void generic_sprout(int16_t x, int16_t y,
+    const uint8_t* srcimg, const uint8_t* srcmask,
+    int16_t w_words, uint16_t h_lines) {
+
     if (blitq_head == MAX_BLITOPS) {
         return; // TOO MANY!
+    }
+    x = (x >> FX) + SCREEN_XPAD;
+    y = (y >> FX) + SCREEN_YPAD;
+    if (x < 0 || y < 0 || x >= (SCREEN_XPAD + SCREEN_W) || y >= (SCREEN_YPAD + SCREEN_H)) {
+        return; // Totally offscreen
     }
 
     size_t offset = (y * SCREEN_LINE_STRIDE) + (2 * (x / 16));
 
     // Add to blit queue.
     if (blitq_head < MAX_BLITOPS) {
-        const UWORD w_words = 2;  // 2 words to account for shifting.
         struct blitop_drawspr *op = &(blitq[blitq_head].drawspr);
         op->kind = BLITOP_DRAWSPR;
         op->xshift = x & 0xf;
         op->dest = backbuf + offset;
-        op->destmod = SCREEN_PLANE_STRIDE - (w_words*2);
-        op->srcimg = (uint8_t *)(spr16_mem + (img * SPR16_SIZE * 2));
-        op->srcmask = op->srcimg + SPR16_SIZE;
-        op->srcmod = 2 - (w_words*2);
-        op->bltsize = ((16*4)<<6) | w_words;
+        op->destmod = SCREEN_PLANE_STRIDE - ((w_words+1)*2);
+        op->srcimg = (uint8_t*)srcimg;
+        op->srcmask = (uint8_t*)srcmask;
+        op->srcmod = -2;
+        op->bltsize = ((h_lines*4)<<6) | (w_words+1);
 
         ++blitq_head;
         custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
@@ -583,69 +654,117 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
     if(back_damage->nentries<MAX_DAMAGEENTRIES) {
         DamageEntry* d = &back_damage->entries[back_damage->nentries++];
         d->offset = offset;
-        d->w_words = (x & 0xF) ? 2 : 1;
-        d->h_lines = 16;
+        d->w_words = (x & 0xF) ? w_words + 1 : w_words;
+        d->h_lines = h_lines;
     }
+}
+
+void sprout16(int16_t x, int16_t y, uint8_t img)
+{
+    const uint8_t *srcimg = (uint8_t *)(spr16_mem + (img * SPR16_SIZE * 2));
+    const uint8_t *srcmask = srcimg + SPR16_SIZE;
+    generic_sprout(x, y, srcimg, srcmask, 1, 16);
 }
 
 void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    const uint8_t *srcimg = (uint8_t *)(spr16_mem + (img * SPR16_SIZE * 2));
+    const uint8_t *srcmask = srcimg + SPR16_SIZE;
+    generic_sprout(x, y, srcmask, srcmask, 1, 16);
 }
 
 void sprout32(int16_t x, int16_t y, uint8_t img)
 {
-    x = x >> FX;
-    y = y >> FX;
-    if (x<0 || y<0 || x >= (SCREEN_W-32) || y >= (SCREEN_H-32)) {
-        return;
-    }
-    if (blitq_head == MAX_BLITOPS) {
-        return; // TOO MANY!
-    }
-
-    size_t offset = (y * SCREEN_LINE_STRIDE) + (2 * (x / 16));
-
-    // Add to blit queue.
-    if (blitq_head < MAX_BLITOPS) {
-        const UWORD w_words = 3;  // 3 words to account for shifting.
-        struct blitop_drawspr *op = &(blitq[blitq_head].drawspr);
-        op->kind = BLITOP_DRAWSPR;
-        op->xshift = x & 0xf;
-        op->dest = backbuf + offset;
-        op->destmod = SCREEN_PLANE_STRIDE - (w_words*2);
-        op->srcimg = (uint8_t *)(spr32_mem + (img * SPR32_SIZE * 2));
-        op->srcmask = op->srcimg + SPR32_SIZE;
-        op->srcmod = 4 - (w_words*2);
-        op->bltsize = ((32*4)<<6) | w_words;
-
-        ++blitq_head;
-        custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
-    }
-    // Record the damage.
-    if(back_damage->nentries<MAX_DAMAGEENTRIES) {
-        DamageEntry* d = &back_damage->entries[back_damage->nentries++];
-        d->offset = offset;
-        d->w_words = (x & 0xF) ? 3 : 2;
-        d->h_lines = 32;
-    }
+    const uint8_t *srcimg = (uint8_t *)(spr32_mem + (img * SPR32_SIZE * 2));
+    const uint8_t *srcmask = srcimg + SPR32_SIZE;
+    generic_sprout(x, y, srcimg, srcmask, 2, 32);
 }
 
 void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
 {
+    const uint8_t *srcimg = (uint8_t *)(spr32_mem + (img * SPR32_SIZE * 2));
+    const uint8_t *srcmask = srcimg + SPR32_SIZE;
+    generic_sprout(x, y, srcmask, srcmask, 2, 32);
 }
 
 void sprout64x8(int16_t x, int16_t y, uint8_t img )
 {
 }
 
-
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_HZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_HZAPPER_ON);
+            break;
+        case ZAPPER_ON:
+            {
+                uint16_t pixy = 8 + (uint16_t)(y>>FX) + SCREEN_YPAD;
+                size_t offset = (pixy * SCREEN_LINE_STRIDE) + (SCREEN_XPAD/8);
+                // Add to blit queue.
+                if (blitq_head < MAX_BLITOPS) {
+                    struct blitop_hzapper *op = &(blitq[blitq_head].hzapper);
+                    op->kind = BLITOP_HZAPPER;
+                    op->bltdpt = backbuf + offset;
+                    op->bltdmod = (2*SCREEN_XPAD)/8;
+                    ++blitq_head;
+                    custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+                }
+                // Record the damage.
+                if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+                    DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+                    d->offset = offset;
+                    d->w_words = SCREEN_W/16;
+                    d->h_lines = 1;
+                }
+
+                sprout16(x, y, SPR16_HZAPPER_ON);
+            }
+            break;
+    }
 }
 
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
+    switch(state) {
+        case ZAPPER_OFF:
+            sprout16(x, y, SPR16_VZAPPER);
+            break;
+        case ZAPPER_WARMING_UP:
+            sprout16(x, y, SPR16_VZAPPER_ON);
+            break;
+        case ZAPPER_ON:
+            {
+                uint16_t xpix = 8 + (x>>FX) + SCREEN_XPAD;
+                size_t offset = (SCREEN_YPAD * SCREEN_LINE_STRIDE) + (xpix/8);
+                // Add to blit queue.
+                if (blitq_head < MAX_BLITOPS) {
+                    struct blitop_vzapper *op = &(blitq[blitq_head].vzapper);
+                    op->kind = BLITOP_VZAPPER;
+                    op->bltdpt = backbuf + offset;
+                    op->xshift = xpix & 0x0f;
+                    ++blitq_head;
+                    custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+                }
+                // Record the damage.
+                if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+                    DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+                    d->offset = offset;
+                    d->w_words = 1;
+                    d->h_lines = SCREEN_H*4;
+                }
+
+                sprout16(x, y, SPR16_VZAPPER_ON);
+            }
+            break;
+    }
+
 }
+
 
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).

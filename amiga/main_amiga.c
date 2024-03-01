@@ -14,6 +14,8 @@
 #include "../misc.h"
 #include "gfx_amiga.h"
 
+#include "../player.h"
+
 volatile struct Custom *custom = (struct Custom*)0xdff000;
 
 struct ExecBase *SysBase;
@@ -176,6 +178,17 @@ static __attribute__((interrupt)) void interruptHandler() {
 
 
 
+void dbug_u16(uint8_t cx, uint8_t cy, uint16_t v)
+{
+    char buf[4];
+    buf[0] = hexdigits[(v>>12) & 0x0F];
+    buf[1] = hexdigits[(v>>8) & 0x0F];
+    buf[2] = hexdigits[(v>>4) & 0x0F];
+    buf[3] = hexdigits[(v>>0) & 0x0F];
+    plat_textn(cx,cy,buf,4,1);
+}
+
+
 int main() {
 	SysBase = *((struct ExecBase**)4UL);
 //	custom = (struct Custom*)0xdff000;
@@ -221,6 +234,14 @@ int main() {
         gfx_startrender();
         //custom->color[0] = 0x080;
         game_render();
+        for (int i=0; i<10; ++i) {
+            char c = '0' + i;
+            plat_textn(i,i,&c,1,15);
+        }
+
+        dbug_u16( 10,0, (uint16_t)(plrx[0]>>FX));
+        dbug_u16( 15,0, (uint16_t)(plry[0]>>FX));
+
         //custom->color[0] = 0x008;
         game_tick();
         ++tick;

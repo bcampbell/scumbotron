@@ -10,7 +10,7 @@ SRCS_ASM = amiga/support/gcc8_a_support.s
 OBJ_FILES = $(addprefix $(BLD)/,$(SRCS:.c=.o))
 OBJ_FILES += $(addprefix $(BLD)/,$(SRCS_ASM:.s=.o))
 
-CFLAGS = -g -MP -MMD -m68000 -Ofast -nostdlib -Wextra -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections
+CFLAGS = -g -MP -MMD -m68000 -Ofast -nostdlib -Wextra -Wno-attributes -Wno-unused-function -Wno-volatile-register-var -fomit-frame-pointer -fno-tree-loop-distribution -flto=auto -fwhole-program -fno-exceptions -ffunction-sections -fdata-sections
 ASFLAGS = -Wa,-g,--register-prefix-optional,-D
 LDFLAGS = -Wl,--emit-relocs,--gc-sections,-Ttext=0,-Map=$(BLD)/scumbotron.map
 
