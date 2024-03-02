@@ -234,6 +234,7 @@ int main() {
         gfx_startrender();
         //custom->color[0] = 0x080;
         game_render();
+        /*
         for (int i=0; i<10; ++i) {
             char c = '0' + i;
             plat_textn(i,i,&c,1,15);
@@ -241,6 +242,7 @@ int main() {
 
         dbug_u16( 10,0, (uint16_t)(plrx[0]>>FX));
         dbug_u16( 15,0, (uint16_t)(plry[0]>>FX));
+        */
 
         //custom->color[0] = 0x008;
         game_tick();
@@ -276,9 +278,54 @@ void plat_gatso(uint8_t t)
 }
 
 
-// TODO: should just pass in level and score as bcd
+
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
+    lives = (tick >>2) & 15;
+    const uint8_t cx = SCREEN_TEXT_W / 2;
+
+    char buf[8];
+    // Level
+    {
+        uint8_t bcd = bin2bcd8(level);
+        char* p = buf;
+        *p++ = 'L';
+        *p++ = 'V';
+        *p++ = ' ';
+        *p++ = hexdigits[bcd >> 4];
+        *p++ = hexdigits[bcd & 0x0f];
+        plat_textn(cx - 11, 0, buf, 5, 1);
+    }
+
+    // Score
+    {
+        uint32_t bcd = bin2bcd32(score);
+        char* p = buf;
+        *p++ = hexdigits[(bcd >> 28)&0x0f];
+        *p++ = hexdigits[(bcd >> 24)&0x0f];
+        *p++ = hexdigits[(bcd >> 20)&0x0f];
+        *p++ = hexdigits[(bcd >> 16)&0x0f];
+        *p++ = hexdigits[(bcd >> 12)&0x0f];
+        *p++ = hexdigits[(bcd >> 8)&0x0f];
+        *p++ = hexdigits[(bcd >> 4)&0x0f];
+        *p++ = hexdigits[(bcd >> 0)&0x0f];
+
+        plat_textn(cx-4, 0, buf, 8, 1);
+    }
+
+    // Lives
+    {
+        for (int i = 0; i < 8; ++i) {
+            char ch;
+            if (i < lives) {
+                ch = (i == 7) ? '+' : '*';
+            } else {
+                ch = ' ';
+            }
+            buf[i] = ch;
+        }
+        plat_textn(cx+6, 0, buf, 8, 2);
+    }
 }
 
 

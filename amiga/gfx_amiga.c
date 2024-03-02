@@ -605,18 +605,18 @@ void gfx_blit_irq_handler()
 {
     if (is_blitter_busy()) {
         // still busy. wait for next interrupt.
-        custom->color[0] = 0x004;
+        //custom->color[0] = 0x004;
         return;
     }
 
     if (blitq_tail < blitq_head) {
         int i = blitq_tail;
         ++blitq_tail;
-        custom->color[0] = 0x00f;
+        //custom->color[0] = 0x00f;
         blitq_do(&blitq[i]);
-        custom->color[0] = 0x008;
+        //custom->color[0] = 0x008;
     } else {
-        custom->color[0] = 0x000;
+        //custom->color[0] = 0x000;
     }
 }
 
