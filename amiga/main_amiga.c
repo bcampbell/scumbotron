@@ -235,11 +235,20 @@ int main() {
         //custom->color[0] = 0x080;
         game_render();
         /*
-        for (int i=0; i<10; ++i) {
-            char c = '0' + i;
-            plat_textn(i,i,&c,1,15);
+        for( int i = 0; i < 8; ++i) {
+            if(tick>>6 & 1) {
+            plat_hline_noclip(10-i,i+11,i,0,(i+tick)&0xf);
+            } else {
+            plat_hline_noclip(11-i,i+12,i,0,(i+tick)&0xf);
+            }
         }
+        */
+        //uint8_t i = (tick>>4);
+        //plat_drawbox(0,0,i,i,0, tick & 0x0f);
 
+        //plat_drawbox(21,1,i,i,0, tick & 0x0f);
+
+        /*
         dbug_u16( 10,0, (uint16_t)(plrx[0]>>FX));
         dbug_u16( 15,0, (uint16_t)(plry[0]>>FX));
         */
@@ -281,7 +290,6 @@ void plat_gatso(uint8_t t)
 
 void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
 {
-    lives = (tick >>2) & 15;
     const uint8_t cx = SCREEN_TEXT_W / 2;
 
     char buf[8];

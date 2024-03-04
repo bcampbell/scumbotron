@@ -302,11 +302,12 @@ void gfx_shutdown()
 #define BLITOP_DRAWSPR 1
 #define BLITOP_HZAPPER 2
 #define BLITOP_VZAPPER 3
+#define BLITOP_EFFECT 4
 
 // sprite with mask
 struct blitop_drawspr
 {
-    uint16_t kind;
+    uint16_t kind;  // BLITOP_DRAWSPR
     uint8_t* srcimg;
     uint8_t* srcmask;
     UWORD srcmod;
@@ -319,7 +320,7 @@ struct blitop_drawspr
 // copy word-aligned data
 struct blitop_wordcopy
 {
-    uint16_t kind;
+    uint16_t kind;  // BLITOP_WORDCOPY
     APTR bltapt;
     UWORD bltamod;
     APTR bltdpt;
@@ -329,16 +330,27 @@ struct blitop_wordcopy
 
 struct blitop_hzapper
 {
-    uint16_t kind;
+    uint16_t kind;  // BLITOP_HZAPPER
     APTR bltdpt;
     UWORD bltdmod;
 };
 
 struct blitop_vzapper
 {
-    uint16_t kind;
+    uint16_t kind;  // BLITOP_VZAPPER
     APTR bltdpt;    // first dest word
     UWORD xshift;   // 0-15, pixel within word
+};
+
+struct blitop_effect
+{
+    uint16_t kind;  // BLITOP_EFFECT
+    UWORD bltadat;
+    UWORD bltafwm;
+    UWORD bltalwm;
+    APTR bltdpt;
+    UWORD bltdmod;
+    UWORD bltsize;
 };
 
 union blitop
@@ -348,6 +360,7 @@ union blitop
     struct blitop_wordcopy wordcopy;
     struct blitop_hzapper hzapper;
     struct blitop_vzapper vzapper;
+    struct blitop_effect effect;
 };
 
 
@@ -453,6 +466,29 @@ void blitq_do(union blitop *op) {
                 custom->bltsize = (((SCREEN_H-1)*4)<<6) | 1;
             }
             break;
+        case BLITOP_EFFECT:
+            {
+                // A constant (masked by fwm/lwm)
+                // B existing screen
+                // D dest
+
+                custom->bltcon0 = SRCB | DEST | 0b11111100;
+                custom->bltcon1 = 0;
+
+                custom->bltadat = op->effect.bltadat;
+                custom->bltafwm = op->effect.bltafwm;
+                custom->bltalwm = op->effect.bltalwm;
+
+                custom->bltbpt = op->effect.bltdpt;
+                custom->bltbmod = op->effect.bltdmod;
+
+                custom->bltdpt = op->effect.bltdpt;
+                custom->bltdmod = op->effect.bltdmod;
+
+                custom->bltsize = op->effect.bltsize;
+            }
+            break;
+
     }
 }
 
@@ -572,9 +608,10 @@ bool is_blitter_busy() {
 void gfx_wait_for_blitting()
 {
     UWORD c = 0;
-   // while (blitq_tail < blitq_head) {
-   //    custom->color[0] = c++; 
-   // }
+        while (is_blitter_busy()) {
+            //custom->color[0] = c++;
+        }
+
     // Wait until all the blitting is done
 //        if (!is_blitter_busy()) {
 //            custom->intreq = INTF_SETCLR | INTF_BLIT; // kick!!!
@@ -766,15 +803,65 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 }
 
 
+// return offset of word at x,y on screen (0,0 is topleft visible).
+size_t offset_addr_word(int x, int y) {
+    return ((SCREEN_YPAD + y) * SCREEN_LINE_STRIDE) +
+        ((SCREEN_XPAD + x) / 16) * 2;
+}
+
+
+static void effect_fill(uint8_t cx_begin, uint8_t cx_end, uint8_t cy_begin, uint8_t cy_end, uint8_t colour) {
+
+    UWORD w_begin = cx_begin/2;
+    UWORD w_end = (cx_end+1)/2;
+
+    UWORD w_words = (w_end - w_begin);
+    UWORD h = (cy_end - cy_begin)*4;    // we skip odd lines
+    if (!w_words || !h) {
+        return;
+    }
+    // use masks to handle start/end on non-word boundaries
+    UWORD bltafwm = (cx_begin & 1) ? 0x00FF : 0xFFFF;
+    UWORD bltalwm = (cx_end & 1) ? 0xFF00 : 0xFFFF;
+
+    size_t offset = offset_addr_word(cx_begin * 8, cy_begin * 8);
+
+    // add a blit per bitplane
+    size_t plane_offset = offset;
+    for (int i = 0; i < 4; ++i) {
+        if (blitq_head < MAX_BLITOPS) {
+            struct blitop_effect *op = &(blitq[blitq_head].effect);
+            op->bltadat = (colour & (1 << i)) ? 0xffff : 0x0000;
+            op->bltafwm = bltafwm;
+            op->bltalwm = bltalwm;
+            op->kind = BLITOP_EFFECT;
+            op->bltdpt = backbuf + plane_offset;
+            op->bltdmod = (SCREEN_LINE_STRIDE*2) - (w_words*2);
+            op->bltsize = (h << 6) | w_words;
+            ++blitq_head;
+            custom->intreq = INTF_SETCLR | INTF_BLIT; // go!
+        }
+        plane_offset += SCREEN_PLANE_STRIDE;
+    }
+    // Record the damage for whole area.
+    if(back_damage->nentries<MAX_DAMAGEENTRIES) {
+        DamageEntry* d = &back_damage->entries[back_damage->nentries++];
+        d->offset = offset;
+        d->w_words = w_words;
+        d->h_lines = h*2;   // no skip facility on damage blits...
+    }
+}
 
 // Draw horizontal line of chars, range [cx_begin, cx_end).
 void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr, uint8_t colour)
 {
+    effect_fill(cx_begin, cx_end, cy, cy+1, colour);
 }
 
 
 // Draw vertical line of chars, range [cy_begin, cy_end).
 void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
+    effect_fill(cx, cx+1, cy_begin, cy_end, colour);
 }
 
