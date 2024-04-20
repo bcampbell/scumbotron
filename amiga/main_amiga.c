@@ -31,6 +31,16 @@ static APTR SystemIrq;
  
 struct View *ActiView;
 
+#ifdef PLAT_HAS_MOUSE
+int16_t plat_mouse_x;
+int16_t plat_mouse_y;
+uint8_t plat_mouse_buttons;   // left:0x01 right:0x02 middle:0x04
+static volatile uint8_t prev_mousex = 0;
+static volatile uint8_t prev_mousey = 0;
+static uint8_t mouse_watchdog = 0; // >0 = active
+static void update_mouse();
+#endif
+
 static APTR GetVBR(void) {
 	APTR vbr = 0;
 	UWORD getvbr[] = { 0x4e7a, 0x0801, 0x4e73 }; // MOVEC.L VBR,D0 RTE
@@ -234,6 +244,11 @@ int main() {
         gfx_startrender();
         //custom->color[0] = 0x080;
         game_render();
+#ifdef PLAT_HAS_MOUSE
+        if (mouse_watchdog > 0) {
+            sprout16(plat_mouse_x, plat_mouse_y, SPR16_RETICULE);
+        }
+#endif
         /*
         for( int i = 0; i < 8; ++i) {
             if(tick>>6 & 1) {
@@ -257,6 +272,9 @@ int main() {
         game_tick();
         ++tick;
         //custom->color[0] = 0x444;
+#ifdef PLAT_HAS_MOUSE
+        update_mouse();
+#endif
         gfx_wait_for_blitting();
     }   
 
@@ -435,9 +453,51 @@ uint8_t plat_raw_cheatkeys()
 }
 
 #ifdef PLAT_HAS_MOUSE
-int16_t plat_mouse_x;
-int16_t plat_mouse_y;
-uint8_t plat_mouse_buttons;   // left:0x01 right:0x02 middle:0x04
+
+static inline int16_t clip(int16_t v, int16_t vmin, int16_t vmax) {
+    if (v<vmin) {
+        return vmin;
+    }
+    if (v>vmax) {
+        return vmax;
+    }
+    return v;
+}
+
+static void update_mouse()
+{
+    uint16_t dat = custom->joy0dat;
+    uint8_t cntx = dat & 0xff;
+    uint8_t cnty = (dat>>8) & 0xff;
+
+    int16_t dx = cntx - prev_mousex;
+    int16_t dy = cnty - prev_mousey;
+    prev_mousex = cntx;
+    prev_mousey = cnty;
+
+    uint8_t mb = 0;
+    if (MouseLeft()) {
+        mb |= 0x01;
+    }
+    if (MouseRight()) {
+        mb |= 0x02;
+    }
+
+    if (mb != 0 || dx != 0 || dy != 0) {
+        plat_mouse_buttons = mb;
+        plat_mouse_x += dx<<FX;
+        plat_mouse_x = clip( plat_mouse_x, 0, (SCREEN_W-1)<<FX);
+        plat_mouse_y += dy<<FX;
+        plat_mouse_y = clip( plat_mouse_y, 0, (SCREEN_H-1)<<FX);
+        mouse_watchdog = 60;
+    } else {
+       if (mouse_watchdog > 0) {
+           --mouse_watchdog;
+       }
+    }
+}
+
+
 #endif // PLAT_HAS_MOUSE
 
 
