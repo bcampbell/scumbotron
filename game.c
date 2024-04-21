@@ -690,10 +690,12 @@ static void render_STATE_PAUSED()
     uint8_t cx = (SCREEN_TEXT_W-10)/2;
 
     plat_text(cx, cy, "* PAUSED *", colour);
-    plat_text(cx+1, cy+2, "CONTINUE", colour);
-    plat_text(cx+1, cy+3, "QUIT", colour);
+    plat_text(cx-1, cy+2, "  CONTINUE", colour);
+    plat_text(cx-1, cy+3, "  QUIT", colour);
 
-    plat_text(cx-1, cy + 2 + (state_paused_sel & 0x7f), ">", (tick>>1) & 0x0F);
+    if (!(state_paused_sel & 0x80)) {
+        plat_text(cx-1, cy + 2 + (state_paused_sel & 0x7f), ">", (tick>>1) & 0x0F);
+    }
 
 }
 
