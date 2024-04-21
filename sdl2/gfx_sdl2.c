@@ -11,6 +11,10 @@ uint16_t screen_h;
 
 // screen is our virtual screen (8bit indexed)
 static SDL_Surface* screen = NULL;
+
+// separate layer for text, as it's persistant across frames
+static SDL_Surface* textLayer = NULL;
+
 // conversionSurface and screenTexture are used to get screen to
 // the renderer.
 static SDL_Surface* conversionSurface = NULL;
@@ -38,8 +42,9 @@ extern unsigned int export_chars_bin_len;
 
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
-static void blit8_matte(const uint8_t *src, int srcw, int srch,
+static void blit8_mono(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty, uint8_t matte);
+static void blit8_solid_mono(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t colour);
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
@@ -94,6 +99,10 @@ bool gfx_screen_rethink(int w, int h)
         SDL_FreeSurface(screen);
         screen = NULL;
     }
+    if (textLayer) {
+        SDL_FreeSurface(textLayer);
+        textLayer = NULL;
+    }
     if (conversionSurface) {
         SDL_FreeSurface(conversionSurface); 
         conversionSurface = NULL;
@@ -136,10 +145,21 @@ bool gfx_screen_rethink(int w, int h)
     // Set up screen
     screen = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 8,
         SDL_PIXELFORMAT_INDEX8);
-    if (screen == NULL) {
+    if (!screen) {
         goto bailout;
     }
     SDL_SetSurfacePalette(screen, palette);
+
+    // Set up text layer (overlaid on screen)
+    textLayer = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 8,
+        SDL_PIXELFORMAT_INDEX8);
+    if (!textLayer) {
+        goto bailout;
+    }
+    SDL_SetSurfacePalette(textLayer, palette);
+    // SDL docs unclear, but I'm assuming key param is a palette index for
+    // INDEX8 surfaces. It seems to work, anyway.
+    SDL_SetColorKey(textLayer, SDL_TRUE, 0);
 
     // set up intermediate surface to convert to argb to update texture.
     conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 32,
@@ -173,6 +193,8 @@ void gfx_render_start()
 // Finalise frame and display it.
 void gfx_render_finish()
 {
+    // Overlay text on top of screen
+    SDL_BlitSurface(textLayer, NULL, screen, NULL);
     // Convert screen to argb.
     SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
     // Load into texture.
@@ -187,6 +209,7 @@ void gfx_render_finish()
 
 void plat_clr()
 {
+    SDL_FillRect(textLayer, NULL, 0);
 }
 
 
@@ -205,7 +228,7 @@ void plat_textn(uint8_t cx, uint8_t cy, const char* txt, uint8_t len, uint8_t co
 
     while(len--) {
         uint8_t i = glyph(*txt++);
-        blit8_matte(export_chars_bin + (8 * 8 * i), 8, 8, screen, x, y, colour);
+        blit8_solid_mono(export_chars_bin + (8 * 8 * i), 8, 8, textLayer, x, y, colour);
         x += 8;
     }
 }
@@ -222,10 +245,10 @@ void plat_mono4x2(uint8_t cx, int8_t cy, const uint8_t* src, uint8_t cw, uint8_t
         for (x=0; x < cw; x+=2) {
             // left char
             c = DRAWCHR_2x2 + (*src >> 4);
-            blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x) * 8, (cy + y) * 8, colour);
+            blit8_mono(export_chars_bin + (8 * 8 * c), 8, 8, textLayer, (cx + x) * 8, (cy + y) * 8, colour);
             // right char
             c = DRAWCHR_2x2 + (*src & 0x0f);
-            blit8_matte(export_chars_bin + (8 * 8 * c), 8, 8, screen, (cx + x + 1) * 8, (cy + y) * 8, colour);
+            blit8_mono(export_chars_bin + (8 * 8 * c), 8, 8, textLayer, (cx + x + 1) * 8, (cy + y) * 8, colour);
             ++src;
         }
     }
@@ -278,16 +301,11 @@ static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour)
     }
 }
 
-static void plonkchar(uint8_t cx, uint8_t cy, uint8_t ch, uint8_t colour)
-{
-    blit8_matte(export_chars_bin + (8 * 8 * ch), 8, 8, screen, cx*8, cy*8, colour);
-}
-
 // Draw vertical line of chars, range [cy_begin, cy_end).
 void plat_vline_noclip(uint8_t cx, uint8_t cy_begin, uint8_t cy_end, uint8_t chr, uint8_t colour)
 {
     for (uint8_t cy = cy_begin; cy < cy_end; ++cy) {
-        plonkchar(cx, cy, chr, colour);
+    blit8_mono(export_chars_bin + (8 * 8 * chr), 8, 8, screen, cx*8, cy*8, colour);
     }
 }
 
@@ -296,7 +314,7 @@ void plat_hline_noclip(uint8_t cx_begin, uint8_t cx_end, uint8_t cy, uint8_t chr
 {
     //chr=127;
     for (uint8_t cx = cx_begin; cx < cx_end; ++cx) {
-        plonkchar(cx, cy, chr, colour);
+        blit8_mono(export_chars_bin + (8 * 8 * chr), 8, 8, screen, cx*8, cy*8, colour);
     }
 }
 
@@ -324,7 +342,7 @@ static void blit8(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int
 }
 
 // blit with colour 0 transparent, replace all other pixels with matte.
-static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte)
+static void blit8_mono(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t matte)
 {
     int y;
     SDL_Rect unclipped = {destx, desty, srcw, srch};
@@ -339,6 +357,28 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch, SDL_Surface *des
         for (x = 0; x < r.w; ++x) {
             uint8_t c = *in++;
             if (c) { *out = matte; }
+            ++out;
+        }
+    }
+}
+
+// blit without matte, converting non-0 colours to colour param
+static void blit8_solid_mono(const uint8_t *src, int srcw, int srch, SDL_Surface *dest, int destx, int desty, uint8_t colour)
+{
+    int y;
+    SDL_Rect unclipped = {destx, desty, srcw, srch};
+    SDL_Rect r;
+    if (!SDL_IntersectRect(&dest->clip_rect, &unclipped, &r)) {
+        return;
+    }
+    for (y = 0; y < r.h; ++y) {
+        const uint8_t *in = src + (((r.y-desty) + y) * srcw) + (r.x-destx);
+        uint8_t *out = (uint8_t*)(dest->pixels) + ((r.y + y) * dest->pitch) + r.x;
+        int x;
+        for (x = 0; x < r.w; ++x) {
+            uint8_t c = *in++;
+            c = c ? colour : 0;
+            *out = c;
             ++out;
         }
     }
@@ -367,7 +407,7 @@ void sprout16_highlight(int16_t x, int16_t y, uint8_t img)
     const uint8_t *pix = export_spr16_bin + (img * BYTESIZE_SPR16);
     x = x >> FX;
     y = y >> FX;
-    blit8_matte(pix, 16, 16, screen, x, y, 1);
+    blit8_mono(pix, 16, 16, screen, x, y, 1);
 }
 
 void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
@@ -375,7 +415,7 @@ void sprout32_highlight(int16_t x, int16_t y, uint8_t img)
     const uint8_t *pix = export_spr32_bin + (img * BYTESIZE_SPR32);
     x = x >> FX;
     y = y >> FX;
-    blit8_matte(pix, 32, 32, screen, x, y, 1);
+    blit8_mono(pix, 32, 32, screen, x, y, 1);
 }
 
 
