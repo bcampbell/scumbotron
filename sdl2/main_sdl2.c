@@ -1,6 +1,4 @@
 #include "../plat.h"
-#include "../gob.h" // for ZAPPER_*
-#include "../misc.h"
 #include "plat_sdl2.h"
 #include "vera_psg.h"
 
@@ -8,35 +6,21 @@
 
 volatile uint8_t tick = 0;
 
-extern unsigned char export_palette_bin[];
-extern unsigned int export_palette_bin_len;
 static SDL_Window* fenster = NULL;
-static SDL_Renderer* renderer = NULL;
-
-// screen is our virtual screen (8bit indexed)
-SDL_Surface* screen = NULL;
-// conversionSurface and screenTexture are used to get screen to
-// the renderer.
-static SDL_Surface* conversionSurface = NULL;
-static SDL_Texture* screenTexture = NULL;
-
-//
-uint16_t screen_w;
-uint16_t screen_h;
-
 static bool quit = false;
-
-static SDL_Palette *palette;
 static char* scoreFile = NULL;
-
-
-static void plat_render_start();
-static void plat_render_finish();
 
 static bool startup();
 static void shutdown();
-static bool screen_rethink();
 static void pumpevents();
+
+// from gfx_sdl2.c:
+bool gfx_init(SDL_Window* fenster);
+bool gfx_screen_rethink(int w, int h);
+bool gfx_shutdown();
+bool gfx_render_start();
+bool gfx_render_finish();
+extern SDL_Renderer* renderer;
 
 // from input_sdl2.c:
 void controller_init();
@@ -78,7 +62,6 @@ static bool startup()
 
 //    if (fullscreen)
     flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-
     fenster = SDL_CreateWindow("Scumbotron",
                               SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                               640, 480, flags);
@@ -87,38 +70,10 @@ static bool startup()
     }
     SDL_ShowCursor(SDL_DISABLE);
 
-    // Set up palette
-    {
-        palette = SDL_AllocPalette(256);
-
-        const uint8_t *src = export_palette_bin;
-        SDL_Color colors[256];
-        for (int i = 0; i < 16; ++i) {
-            colors[i].r = *src++;
-            colors[i].g = *src++;
-            colors[i].b = *src++;
-            colors[i].a = *src++;
-        }
-        // fill out unused colours.
-        for (int i = 16; i < 256; ++i) {
-            colors[i].r = 255;
-            colors[i].g = 255;
-            colors[i].b = 255;
-            colors[i].a = 255;
-        }
-        SDL_SetPaletteColors(palette, colors, 0, 256);
-    }
-
-    //
-    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_PRESENTVSYNC);
-    if (!renderer) {
+    if (!gfx_init(fenster)) {
         goto bailout;
     }
 
-    if (!screen_rethink()) {
-        goto bailout;
-    }
-    
     psg_reset();
     if (!audio_init()) {
         goto bailout;
@@ -139,78 +94,8 @@ static void shutdown()
         SDL_free(scoreFile);
         scoreFile = NULL;
     }
+    gfx_shutdown();
 }
-
-
-// Sets up screen on startup, or reconfigures screen when window is resized.
-static bool screen_rethink()
-{
-    // Free old stuff if we're already running.
-    SDL_FreeSurface(screen);
-    screen = NULL;
-    SDL_FreeSurface(conversionSurface); 
-    conversionSurface = NULL;
-    if (screenTexture) {
-        SDL_DestroyTexture(screenTexture); 
-        screenTexture = NULL;
-    }
-
-    // Peek at the window size to get the aspect ratio and use
-    // that to decide our virtual screen size.
-    int w,h;
-    SDL_GetWindowSize(fenster, &w, &h);
-
-    // could use floating point, but why start now?
-    int aspect = (1024 * w) / h;
-
-    // We'll clip aspect ratio to reasonable bounds.
-    const int min_aspect = (1024 * 4)/3;    // 4:3 eg 640x480
-    const int max_aspect = (1024 * 16)/9;   // 16:9 eg 1280x768
-    if (aspect < min_aspect) {
-        aspect = min_aspect;
-    } else if (aspect > max_aspect) {
-        aspect = max_aspect;
-    }
-
-    // We'll allow wider playfield, but always 240 high.
-    screen_h = 240;
-    screen_w = (512 + (screen_h * aspect)) / 1024;
-
-    //printf("screen_rethink: window: %dx%d screen: %dx%d (aspect=%f)\n",w,h,screen_w, screen_h, (float)aspect/1024.0f);
-
-    SDL_RenderSetLogicalSize(renderer, screen_w, screen_h);
-
-    screenTexture = SDL_CreateTexture(renderer,
-                               SDL_PIXELFORMAT_ARGB8888,
-                               SDL_TEXTUREACCESS_STREAMING,
-                               screen_w, screen_h);
-    if (screenTexture == NULL) {
-        goto bailout;
-    }
-
-
-    // Set up screen
-    screen = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 8,
-        SDL_PIXELFORMAT_INDEX8);
-    if (screen == NULL) {
-        goto bailout;
-    }
-    SDL_SetSurfacePalette(screen, palette);
-    //SDL_SetColorKey(screen, SDL_TRUE, 0);
-
-
-    // set up intermediate surface to convert to argb to update texture.
-    conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 32,
-                               SDL_PIXELFORMAT_ARGB8888);
-    if (conversionSurface == NULL) {
-        goto bailout;
-    }
-    return true;
-
-bailout:
-    return false;
-}
-
 
 static void pumpevents()
 {
@@ -255,7 +140,9 @@ static void pumpevents()
         case SDL_WINDOWEVENT:
           {
             if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-              screen_rethink();
+              int w,h;
+              SDL_GetWindowSize(fenster, &w, &h);
+              gfx_screen_rethink(w, h); // TODO: handle failure?
             }
           }
           break;
@@ -282,31 +169,6 @@ static void pumpevents()
 }
 
 
-
-
-void plat_render_start()
-{
-    uint8_t i;
-    // clear the screen
-    memset(screen->pixels, 0, SCREEN_H*screen->pitch);
-    // cycle colour 15
-    i = (((tick >> 1)) & 0x7) + 2;
-    SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
-}
-
-void plat_render_finish()
-{
-
-    // Convert screen to argb.
-    SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
-    // Load into texture.
-    SDL_UpdateTexture(screenTexture, NULL, conversionSurface->pixels, conversionSurface->pitch);
-    SDL_SetRenderDrawColor(renderer, 32,32,32, 255);
-    SDL_RenderClear(renderer);
-    // Display screen.
-    SDL_RenderCopy(renderer, screenTexture, NULL, NULL);
-    SDL_RenderPresent(renderer);
-}
 
 bool plat_savescores(const void* begin, int nbytes)
 {
@@ -361,10 +223,10 @@ int main(int argc, char* argv[]) {
         // Renderer needed for coord mapping.
         mouse_update(renderer);
 
-        plat_render_start();
+        gfx_render_start();
         game_render();
         mouse_render();
-        plat_render_finish();
+        gfx_render_finish();
 
         game_tick();
         ++tick; // The 8bit byte ticker.

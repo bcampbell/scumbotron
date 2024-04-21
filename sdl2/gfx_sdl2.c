@@ -5,13 +5,23 @@
 
 #include <SDL.h>
 
+SDL_Renderer* renderer = NULL;
+uint16_t screen_w;
+uint16_t screen_h;
 
-extern SDL_Surface* screen;
-extern uint16_t screen_w;
-extern uint16_t screen_h;
+// screen is our virtual screen (8bit indexed)
+static SDL_Surface* screen = NULL;
+// conversionSurface and screenTexture are used to get screen to
+// the renderer.
+static SDL_Surface* conversionSurface = NULL;
+static SDL_Texture* screenTexture = NULL;
+
+static SDL_Palette *palette;
 
 
 // Exported gfx data and defs.
+extern unsigned char export_palette_bin[];
+extern unsigned int export_palette_bin_len;
 extern unsigned char export_spr16_bin[];
 extern unsigned int export_spr16_bin_len;
 extern unsigned char export_spr32_bin[];
@@ -26,8 +36,6 @@ extern unsigned int export_chars_bin_len;
 #define BYTESIZE_SPR32 (32*32)   // 32x32 8bpp
 #define BYTESIZE_SPR64x8 (64*8)   // 64x8 8bpp
 
-
-
 static void blit8(const uint8_t *src, int srcw, int srch,
     SDL_Surface *dest, int destx, int desty);
 static void blit8_matte(const uint8_t *src, int srcw, int srch,
@@ -35,6 +43,146 @@ static void blit8_matte(const uint8_t *src, int srcw, int srch,
 
 static void hline_noclip(int x_begin, int x_end, int y, uint8_t colour);
 static void vline_noclip(int x, int y_begin, int y_end, uint8_t colour);
+
+bool gfx_screen_rethink(int w, int h);
+
+
+bool gfx_init(SDL_Window* fenster)
+{
+    renderer = SDL_CreateRenderer(fenster, -1, SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer) {
+        return false;
+    }
+
+    // Set up palette
+    {
+        palette = SDL_AllocPalette(256);
+
+        const uint8_t *src = export_palette_bin;
+        SDL_Color colors[256];
+        for (int i = 0; i < 16; ++i) {
+            colors[i].r = *src++;
+            colors[i].g = *src++;
+            colors[i].b = *src++;
+            colors[i].a = *src++;
+        }
+        // fill out unused colours.
+        for (int i = 16; i < 256; ++i) {
+            colors[i].r = 255;
+            colors[i].g = 255;
+            colors[i].b = 255;
+            colors[i].a = 255;
+        }
+        SDL_SetPaletteColors(palette, colors, 0, 256);
+    }
+
+    // set up drawing
+    int w,h;
+    SDL_GetWindowSize(fenster, &w, &h);
+    if (!gfx_screen_rethink(w, h)) {
+        return false;
+    }
+    return true;
+}
+
+
+// Sets up screen on startup, or reconfigures screen when window is resized.
+bool gfx_screen_rethink(int w, int h)
+{
+    // Free old stuff if we're already running.
+    if (screen) {
+        SDL_FreeSurface(screen);
+        screen = NULL;
+    }
+    if (conversionSurface) {
+        SDL_FreeSurface(conversionSurface); 
+        conversionSurface = NULL;
+    }
+    if (screenTexture) {
+        SDL_DestroyTexture(screenTexture); 
+        screenTexture = NULL;
+    }
+
+
+    // could use floating point, but why start now?
+    int aspect = (1024 * w) / h;
+
+    // We'll clip aspect ratio to reasonable bounds.
+    const int min_aspect = (1024 * 4)/3;    // 4:3 eg 640x480
+    const int max_aspect = (1024 * 16)/9;   // 16:9 eg 1280x768
+    if (aspect < min_aspect) {
+        aspect = min_aspect;
+    } else if (aspect > max_aspect) {
+        aspect = max_aspect;
+    }
+
+    // We'll allow wider playfield, but always 240 high.
+    screen_h = 240;
+    screen_w = (512 + (screen_h * aspect)) / 1024;
+
+    //printf("screen_rethink: window: %dx%d screen: %dx%d (aspect=%f)\n",w,h,screen_w, screen_h, (float)aspect/1024.0f);
+
+    SDL_RenderSetLogicalSize(renderer, screen_w, screen_h);
+
+    screenTexture = SDL_CreateTexture(renderer,
+                               SDL_PIXELFORMAT_ARGB8888,
+                               SDL_TEXTUREACCESS_STREAMING,
+                               screen_w, screen_h);
+    if (screenTexture == NULL) {
+        goto bailout;
+    }
+
+
+    // Set up screen
+    screen = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 8,
+        SDL_PIXELFORMAT_INDEX8);
+    if (screen == NULL) {
+        goto bailout;
+    }
+    SDL_SetSurfacePalette(screen, palette);
+
+    // set up intermediate surface to convert to argb to update texture.
+    conversionSurface = SDL_CreateRGBSurfaceWithFormat(0, screen_w, screen_h, 32,
+                               SDL_PIXELFORMAT_ARGB8888);
+    if (conversionSurface == NULL) {
+        goto bailout;
+    }
+    return true;
+
+bailout:
+    return false;
+}
+
+void gfx_shutdown()
+{
+    // should really free stuff here...
+}
+
+
+// Start of frame.
+void gfx_render_start()
+{
+    uint8_t i;
+    // clear the screen
+    memset(screen->pixels, 0, SCREEN_H*screen->pitch);
+    // cycle colour 15
+    i = (((tick >> 1)) & 0x7) + 2;
+    SDL_SetPaletteColors(palette, &palette->colors[i], 15,1);
+}
+
+// Finalise frame and display it.
+void gfx_render_finish()
+{
+    // Convert screen to argb.
+    SDL_BlitSurface(screen, NULL, conversionSurface, NULL);
+    // Load into texture.
+    SDL_UpdateTexture(screenTexture, NULL, conversionSurface->pixels, conversionSurface->pitch);
+    SDL_SetRenderDrawColor(renderer, 32,32,32, 255);
+    SDL_RenderClear(renderer);
+    // Display screen.
+    SDL_RenderCopy(renderer, screenTexture, NULL, NULL);
+    SDL_RenderPresent(renderer);
+}
 
 
 void plat_clr()
