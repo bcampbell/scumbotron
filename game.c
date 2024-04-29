@@ -678,7 +678,7 @@ static void render_STATE_PAUSED()
 {
     // fudge!
     state = state_paused_prevstate;
-    game_render();
+    //game_render();
     state = STATE_PAUSED;
 
     // if we're resuming, erase message now!
