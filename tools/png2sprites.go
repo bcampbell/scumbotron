@@ -34,7 +34,7 @@ var fmtHandlers = map[string]fmtHandler{
 	"4bpp":      {"4 bits per pixel", cook4bpp},
 	"1bpp":      {"1 bit per pixel", cook1bpp},
 	"mdspr":     {"Megadrive sprite", cookMDSpr},
-	"nds4bpp":   {"NDS 4 bits per pixel", cook4bppNDS},
+	"nds4bpp":   {"GBA/NDS 4 bits per pixel", cook4bppNDS},
 	"mono4x2":   {"4x2 mono blocks", cookMono4x2},
 	"pcetile":   {"PC Engine tiles", cookPCETile},
 	"pcesprite": {"PC Engine sprites", cookPCESprite},
