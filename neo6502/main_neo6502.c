@@ -493,19 +493,19 @@ int main(int argc, char* argv[])
 
     game_init();
     while(1) {
+        waitvbl();
+        ++tick;
         neo_graphics_set_color(0);
         neo_graphics_draw_rectangle(0,0,SCREEN_W, SCREEN_H);
 //        neo_graphics_set_palette(0,0,tick,0);
-        for (uint8_t i=0; i<16; ++i) {
-            neo_graphics_set_color(i);
-            neo_graphics_draw_rectangle(0,i*4,8,(i+1)*4);
-        }
+        //for (uint8_t i=0; i<16; ++i) {
+        //    neo_graphics_set_color(i);
+        //    neo_graphics_draw_rectangle(0,i*4,8,(i+1)*4);
+        // }
         game_render();
-        char buf[16];
-        sprintf(buf, "%d %d\n", plrx[0]>>FX, plry[0]>>FX);
-        plat_text(0,0,buf,1);
-        waitvbl();
-        ++tick;
+        //char buf[16];
+        //sprintf(buf, "%d %d\n", plrx[0]>>FX, plry[0]>>FX);
+        //plat_text(0,0,buf,1);
         game_tick();
     }
 }
