@@ -15,14 +15,7 @@ DEPFLAGS = -MMD -MP -MF $@.d
 
 DEP_FILES = $(addsuffix .d,$(OBJ_FILES))
 
-$(BUILD_DIR)/scumbotron.neo: $(BUILD_DIR)/scumbotron
-	# TODO: patch FFFF file size!
-	# TODO: proper filename instead of AA
-	echo "0000: 03 4e 45 4f 00 00 00 08 00 00 08 FF FF 41 41 00" | xxd -r - $@
-	cat $< >>$@
-
-
-$(BUILD_DIR)/scumbotron: $(OBJ_FILES)
+$(BUILD_DIR)/scumbotron.neo: $(OBJ_FILES)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(BUILD_DIR)/%.o: %.c
@@ -48,16 +41,8 @@ $(EXPORT_DIR)/spr32.c: sprites32.png
 #$(EXPORT_DIR)/chars.c: chars.png
 #	tools/png2sprites -w 8 -h 8 -num 256 -fmt 8bpp -c -var export_chars_bin $< $@
 
-
-# TODO: add load file header
-#
-# $ echo "0000: 41 42 43 44" | xxd -r - data.bin
-
-#echo -en '\x'$(printf "%0x" $i)''
-
-
 .PHONY: run
-run: $(BUILD_DIR)/scumbotron
+run: $(BUILD_DIR)/scumbotron.neo
 	neo $<@0x800 cold
 
 .PHONY: clean
