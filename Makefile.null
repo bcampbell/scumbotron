@@ -2,7 +2,7 @@ BUILD_DIR=build_null
 #EXPORT_DIR=export_null
 
 SRCS = null/main_null.c \
-	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c
+	game.c gob.c player.c highscore.c input.c misc.c bub.c story.c vfx.c draw_common.c
 #$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))

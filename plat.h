@@ -173,27 +173,13 @@ extern char plat_textentry_getchar();
 #define GATSO_ON 1
 void plat_gatso(uint8_t t);
 
-// sfx
-
-// waveform types
-#define PLAT_PSG_PULSE 0
-#define PLAT_PSG_SAWTOOTH 1
-#define PLAT_PSG_TRIANGLE 2
-#define PLAT_PSG_NOISE 3
-
-// Set all the params for a PSG channel in one go.
-//
-// vol: 0=off, 63=max
-// freq: for frequency f, this should be f/(48828.125/(2^17))
-// waveform: one of PLAT_PSG_*
-void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth);
+// input
 
 #define DIR_UP 0x08
 #define DIR_DOWN 0x04
 #define DIR_LEFT 0x02
 #define DIR_RIGHT 0x01
 
-// input
 #define INP_UP DIR_UP
 #define INP_DOWN DIR_DOWN
 #define INP_LEFT DIR_LEFT

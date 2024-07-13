@@ -11,6 +11,7 @@
 #include <hardware/intbits.h>
 
 #include "../plat.h"
+#include "../sfx.h"
 #include "../misc.h"
 #include "gfx_amiga.h"
 
@@ -364,15 +365,20 @@ void plat_hud(uint8_t level, uint8_t lives, uint32_t score)
  * SOUND
  */
 
-// Set all the params for a PSG channel in one go.
-//
-// vol: 0=off, 63=max
-// freq: for frequency f, this should be f/(48828.125/(2^17))
-// waveform: one of PLAT_PSG_*
-void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
+
+void sfx_init()
 {
 }
 
+void sfx_tick(uint8_t frametick)
+{
+}
+
+void sfx_play(uint8_t effect, uint8_t pri)
+{
+}
+
+uint8_t sfx_continuous = SFX_NONE;
 
 /*
  * INPUT

@@ -2,7 +2,7 @@ BLD=build_amiga
 EXPORT_DIR=export_amiga
 
 SRCS = amiga/main_amiga.c amiga/gfx_amiga.c amiga/support/gcc8_c_support.c \
-	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c story.c vfx.c draw_common.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c chars.c)
 
 SRCS_ASM = amiga/support/gcc8_a_support.s

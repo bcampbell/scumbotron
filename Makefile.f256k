@@ -8,7 +8,7 @@ BLD=build_f256k
 EXP=export_f256k
 
 SRCS = f256k/main_f256k.c \
-	game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c \
+	game.c gob.c player.c highscore.c input.c misc.c bub.c story.c vfx.c draw_common.c \
 	$(addprefix $(EXP)/, palette.c)
 #SRCS_ASM = f256k/decompress_faster_v2.asm
 

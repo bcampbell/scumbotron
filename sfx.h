@@ -16,11 +16,20 @@
 #define SFX_INEFFECTIVE_THUD 10
 #define SFX_HIT 11
 #define SFX_BONUS 12
+// TODO:
+// collect bonus/marine
+// level clear
+// hit/thud (shoot invulerable dudes)
+// hit/damage (shoot dudes which take multiple hits)
+// zapper chargeup
+// zapper fire
+// spawner launch
+// poomerang launch? (maybe)
+// zombification
 
 void sfx_init();
-void sfx_tick();
+void sfx_tick(uint8_t frametime);
 void sfx_play(uint8_t effect, uint8_t pri);
-
 
 // A single effect to play continuously (or SFX_NONE).
 // Must be set every frame.

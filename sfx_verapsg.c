@@ -1,21 +1,23 @@
 /*
- * SFX
+ * SFX implementation using VERA PSG hardware.
  */
 
-// TODO:
-// collect bonus/marine
-// level clear
-// hit/thud (shoot invulerable dudes)
-// hit/damage (shoot dudes which take multiple hits)
-// zapper chargeup
-// zapper fire
-// spawner launch
-// poomerang launch? (maybe)
-// zombification
-
 #include "sfx.h"
-#include "plat.h"
 #include "misc.h"
+
+// waveform types
+#define PLAT_PSG_PULSE 0
+#define PLAT_PSG_SAWTOOTH 1
+#define PLAT_PSG_TRIANGLE 2
+#define PLAT_PSG_NOISE 3
+
+// Set all the params for a PSG channel in one go.
+//
+// vol: 0=off, 63=max
+// freq: for frequency f, this should be f/(48828.125/(2^17))
+// waveform: one of PLAT_PSG_*
+extern void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth);
+
 
 #define MAX_SFX (16-1)   // TODO: should be plat-specific
 #define CONTINUOUS_CHAN MAX_SFX
@@ -256,7 +258,7 @@ static bool gen(uint8_t ch, uint8_t effect, uint8_t t)
     return false;
 }
 
-void sfx_tick()
+void sfx_tick(uint8_t frametick)
 {
     uint8_t ch;
     for (ch=0; ch < MAX_SFX; ++ch) {
@@ -267,8 +269,8 @@ void sfx_tick()
         }
     }
 
-    // Update single continuous effect (driven by the global tick)
-    gen(CONTINUOUS_CHAN, sfx_continuous, tick);
+    // Update single continuous effect (driven by the frame tick)
+    gen(CONTINUOUS_CHAN, sfx_continuous, frametick);
     sfx_continuous = SFX_NONE;  // game has to set this every frame to keep it running.
 }
 

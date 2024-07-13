@@ -53,7 +53,7 @@ void game_init()
 void game_tick()
 {
     inp_tick();
-    sfx_tick();
+    sfx_tick(tick);
     if (state != STATE_PAUSED) {
         vfx_tick();
     }

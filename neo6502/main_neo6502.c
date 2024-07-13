@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "../plat.h"
-#include "../player.h"
-#include <stdio.h>
+#include "../sfx.h"
+//#include <stdio.h>
 
 /* exported gfx */
 #define SPR16_SIZE (8*16)   // 16x16, 4 bpp
@@ -258,21 +258,23 @@ void plat_vzapper_render(int16_t x, int16_t y, uint8_t state)
 {
 }
 
-
-
-
 /*
  * SOUND
  */
 
-// Set all the params for a PSG channel in one go.
-//
-// vol: 0=off, 63=max
-// freq: for frequency f, this should be f/(48828.125/(2^17))
-// waveform: one of PLAT_PSG_*
-void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
+void sfx_init()
 {
 }
+
+void sfx_tick(uint8_t frametick)
+{
+}
+
+void sfx_play(uint8_t effect, uint8_t pri)
+{
+}
+
+uint8_t sfx_continuous = SFX_NONE;
 
 
 /*

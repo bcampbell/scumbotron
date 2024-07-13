@@ -4,6 +4,7 @@
 PCE_ROM_FIXED_BANK_SIZE(6);
 
 #include "../plat.h"
+#include "../sfx.h"
 #include "../misc.h"
 
 volatile uint8_t tick = 0;
@@ -178,11 +179,23 @@ void plat_gatso(uint8_t t)
 {
 }
 
-// sfx
+/*
+ * SOUND
+ */
 
-void plat_psg(uint8_t chan, uint16_t freq, uint8_t vol, uint8_t waveform, uint8_t pulsewidth)
+void sfx_init()
 {
 }
+
+void sfx_tick(uint8_t frametick)
+{
+}
+
+void sfx_play(uint8_t effect, uint8_t pri)
+{
+}
+
+uint8_t sfx_continuous = SFX_NONE;
 
 // render fns
 
