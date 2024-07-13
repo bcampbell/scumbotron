@@ -5,13 +5,11 @@ endif
 DEVKITPATH=$(shell echo "$(DEVKITPRO)" | sed -e 's/^\([a-zA-Z]\):/\/\1/')
 export PATH	:=	$(DEVKITPATH)/tools/bin:$(DEVKITPATH)/devkitARM/bin:$(PATH)
 
-#include $(DEVKITARM)/ds_rules
-
 BUILD_DIR=build_gba
 EXPORT_DIR=export_gba
 
-SRCS += gba/main_gba.c
-SRCS += game.c gob.c player.c highscore.c input.c misc.c bub.c sfx.c story.c vfx.c draw_common.c
+SRCS += gba/main_gba.c gba/sfx_gba.c
+SRCS += game.c gob.c player.c highscore.c input.c misc.c bub.c story.c vfx.c draw_common.c
 SRCS += $(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c spr64x8.c spr32x8.c spr8x32.c chars.c)
 
 OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
