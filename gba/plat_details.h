@@ -8,4 +8,6 @@
 // #define PLAT_HAS_TEXTENTRY
 // #define PLAT_HAS_SCORESAVE
 
+#define PLAT_FAKE_DUALSTICK
+
 #endif // PLAT_DETAILS_H

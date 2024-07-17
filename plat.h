@@ -5,13 +5,19 @@
  * Common interface for all platforms
  */
 
+#include <stdint.h>
+#include <stdbool.h>
+#include "plat_details.h"    // platform-specific details (screen size etc...)
+
 // platform capabilities:
 // PLAT_HAS_MOUSE
 // PLAT_HAS_TEXTENTRY
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "plat_details.h"    // platform-specific details (screen size etc...)
+// input:
+// PLAT_FAKE_DUALSTICK
+// - if defined, use common plat_raw_dualstick() routine based upon
+//   plat_raw_gamepad(), using button A to lock fire direction.
+//   See input.c
 
 #define SCREEN_TEXT_W (SCREEN_W/8)
 #define SCREEN_TEXT_H (SCREEN_H/8)

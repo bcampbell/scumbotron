@@ -5,8 +5,7 @@
 #include "../plat.h"
 #include "../misc.h"
 #include "../gob.h" // for ZAPPER_*
-#include "joy.h"
-
+#include "../sfx.h" // for ZAPPER_*
 
 extern const unsigned char export_palette_bin[];
 extern const unsigned int export_palette_bin_len;
@@ -214,7 +213,6 @@ void main()
         dbug();
         //vdp_color(0,0x000e);
         game_tick();
-        joy_update();
 
         // start render
         //vdp_color(0,0x0002);
@@ -743,53 +741,42 @@ void plat_quit()
 {
 }
 
+/*
+ * INPUT
+ */
 
-// controllers
-static uint8_t firelock = 0;    // fire bits if locked (else 0)
-static uint8_t facing = 0;  // last non-zero direction
 
-uint8_t plat_raw_dualstick()
+uint8_t plat_raw_gamepad()
 {
-    // TODO: implement using plat_raw_gamepad()
-    uint16_t j = joy_get_state(0);
+    const uint8_t port = 0;
+    volatile uint8_t *ctrl = (volatile uint8_t *)(0xA10009 + (port<<1));
+    volatile uint8_t *data = (volatile uint8_t *)(0xA10003 + (port<<1));
+
+    *ctrl = 0x40;   // output on bit 6
+    *data = 0x40;   // TH=1
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+
+    uint8_t state0 = (*data) & 0x3F;
+    //state0: 0 | 0 | C | B | R | L | D | U
+    *data = 0x00;   // TH=0
+    __asm__ volatile ("nop");
+    __asm__ volatile ("nop");
+    uint8_t state1 = (*data) & 0x3F;
+    // state1: 0 | 0 | S | A | 0 | 0 | 0 | 0 |
 
     uint8_t out = 0;
-    if (j & BUTTON_UP) out |= INP_UP;
-    if (j & BUTTON_DOWN) out |= INP_DOWN;
-    if (j & BUTTON_LEFT) out |= INP_LEFT;
-    if (j & BUTTON_RIGHT) out |= INP_RIGHT;
-
-    if (out != 0) {
-        facing = out;
-    }
-
-    if (j & BUTTON_A) {
-        if (!firelock) {
-            firelock = (facing<<4);
-        }
-        out |= firelock;
-    } else {
-        firelock = 0;
-    }
+    if ((state0 & 0x01)==0) { out |= INP_UP; }
+    if ((state0 & 0x02)==0) { out |= INP_DOWN; }
+    if ((state0 & 0x04)==0) { out |= INP_LEFT; }
+    if ((state0 & 0x08)==0) { out |= INP_RIGHT; }
+    if ((state0 & 0x10)==0) { out |= INP_PAD_B; }
+    // if ((state0 & 0x20)==0) { out |= INP_???; } // button C
+    if ((state1 & 0x10)==0) { out |= INP_PAD_A; }
+    if ((state1 & 0x20)==0) { out |= INP_PAD_START; }
 
     return out;
 }
-
-// Returns direction + MENU_ bits.
-uint8_t plat_raw_gamepad()
-{
-    uint16_t j = joy_get_state(0);
-    uint8_t out = 0;
-    if (j & BUTTON_UP) out |= INP_UP;
-    if (j & BUTTON_DOWN) out |= INP_DOWN;
-    if (j & BUTTON_LEFT) out |= INP_LEFT;
-    if (j & BUTTON_RIGHT) out |= INP_RIGHT;
-    if (j & BUTTON_A) out |= INP_PAD_A;
-    if (j & BUTTON_B) out |= INP_PAD_B;
-    if (j & BUTTON_START) out |= INP_PAD_START;
-    //if (j & BUTTON_MODE) out |= INP_???;
-    return out;
-} 
 
 uint8_t plat_raw_keys()
 {

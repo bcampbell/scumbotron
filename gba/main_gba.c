@@ -71,33 +71,6 @@ void plat_quit()
  *  INPUT
  */
 
-// Returns direction + FIRE_ bits.
-// dualstick faked using plat_raw_gamepad()
-static uint8_t firelock = 0;    // fire bits if locked (else 0)
-static uint8_t facing = 0;  // last non-zero direction
-
-uint8_t plat_raw_dualstick()
-{
-    uint8_t pad = plat_raw_gamepad();
-
-    uint8_t out = pad & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT);
-    if (out != 0) {
-        facing = out;
-    }
-
-    if (pad & INP_PAD_A) {
-        if (!firelock) {
-            firelock = (facing<<4);
-        }
-        out |= firelock;
-    } else {
-        firelock = 0;
-    }
-
-    return out;
-}
-
-
 uint8_t plat_raw_gamepad()
 {
     static const struct {uint16_t hw; uint8_t bitmask; } key_mapping[7] = {

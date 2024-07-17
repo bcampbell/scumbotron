@@ -82,3 +82,35 @@ void inp_tick()
 
 
 
+
+#if defined(PLAT_FAKE_DUALSTICK)
+
+// Faked dualstick using plat_raw_gamepad(), and button A to lock
+// fire direction.
+// Returns direction + FIRE_ bits.
+static uint8_t firelock = 0;    // fire bits if locked (else 0)
+static uint8_t facing = 0;  // last non-zero direction
+
+uint8_t plat_raw_dualstick()
+{
+    uint8_t pad = plat_raw_gamepad();
+
+    uint8_t out = pad & (INP_UP|INP_DOWN|INP_LEFT|INP_RIGHT);
+    if (out != 0) {
+        facing = out;
+    }
+
+    if (pad & INP_PAD_A) {
+        if (!firelock) {
+            firelock = (facing<<4);
+        }
+        out |= firelock;
+    } else {
+        firelock = 0;
+    }
+
+    return out;
+}
+
+#endif
+

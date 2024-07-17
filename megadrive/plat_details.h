@@ -11,4 +11,6 @@ extern uint16_t screen_h;
 // No PLAT_HAS_TEXTENTRY
 // No PLAT_HAS_SCORESAVE
 
+#define PLAT_FAKE_DUALSTICK
+
 #endif // PLAT_DETAILS_H
