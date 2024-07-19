@@ -216,7 +216,10 @@ void main()
 
         // start render
         //vdp_color(0,0x0002);
-        nsprites = 0;
+        {
+            nsprites = 0;
+        }
+
         clearscreen();
         // Copy the screen to VRAM
         //vdp_color(0,0x0ee0);
@@ -230,9 +233,13 @@ void main()
             //vdp_color(0,0x00e0);
             // terminate the sprite chain
             if (nsprites == 0 ) {
-                sprout16(-128<<FX,-128<<FX,0);
+                // need a dummy sprite
+                sprites[0] = 0x0000;
+                sprites[1] = 0x0000;
+                sprites[2] = 0x0000;
+                sprites[3] = 0x0000;
+                ++nsprites;
             }
-            sprites[4*(nsprites-1) + 1] &= 0xff80;    // link = 0
             // copy sprite table into vram
             vdp_dma_vram((uint32_t)sprites, VRAM_SPRITE_ATTRS, (nsprites*8)/2);
             // copy screen to vram
@@ -615,15 +622,33 @@ static void internal_sprout(int16_t x, int16_t y, uint16_t tile, uint8_t size, u
     if (nsprites>=80) {
         return;
     }
-    x = (x>>FX) + 128;
-    y = (y>>FX) + 128;
+
+    // Off left or top? (32 is max sprite size)
+    if (x < -(32 << FX) || y < -(32 << FX)) {
+        return;
+    }
+
+    // Convert to unsigned VDP sprite coords.
+    uint16_t sprx = (x + (128<<FX)) >> FX;
+    uint16_t spry = (y + (128<<FX)) >> FX;
+
+    // Off right or bottom?
+    if (sprx > (SCREEN_W + 128) || spry > (SCREEN_H + 128)) {
+        return;
+    }
+
+    if (nsprites > 0) {
+        // patch previous sprite to continue the chain.
+        uint16_t *prevspr = &sprites[(nsprites-1)*4];
+        prevspr[1] = (prevspr[1] & 0xFF00) | nsprites;
+    }
 
     uint16_t *spr = &sprites[nsprites*4];
-    *spr++ = y & 0x3FF;
-    uint8_t link = nsprites+1;
-    *spr++ = (size<<8) | link;
-    *spr++ = 0x8000 | (palette<<13) | tile;
-    *spr++ = x & 0x3FF;
+    spr[0] = spry & 0x3FF;
+    uint8_t link = 0; // link 0 => end of sprite chain
+    spr[1] = (size<<8) | link;
+    spr[2] = 0x8000 | (palette<<13) | tile;
+    spr[3] = sprx & 0x3FF;
     ++nsprites;
 }
 
