@@ -1,5 +1,3 @@
-//#include "md.h"
-
 #include <stdint.h>
 #include <stdbool.h>
 #include "../plat.h"
@@ -741,24 +739,6 @@ char plat_textentry_getchar()
 void plat_gatso(uint8_t t)
 {
 }
-
-/*
- * SOUND
- */
-
-void sfx_init()
-{
-}
-
-void sfx_tick(uint8_t frametick)
-{
-}
-
-void sfx_play(uint8_t effect, uint8_t pri)
-{
-}
-
-uint8_t sfx_continuous = SFX_NONE;
 
 
 // Unsupported
