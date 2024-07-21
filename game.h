@@ -32,6 +32,7 @@
  
 #define STATE_COMPLETE 19
 
+#define STATE_SOUNDTEST 20
 
 #define NUM_LEVELS 42
 
@@ -65,6 +66,7 @@ void enter_STATE_KILLED();
 void enter_STATE_GAMEOVER();
 void enter_STATE_COMPLETE();
 void enter_STATE_PAUSED();
+void enter_STATE_SOUNDTEST();
 // In highscore.c:
 void enter_STATE_HIGHSCORES();
 void tick_STATE_HIGHSCORES();

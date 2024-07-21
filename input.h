@@ -12,7 +12,7 @@ extern uint8_t inp_dualstick;
 // Which gamepad buttons have been pressed since the last frame?
 extern uint8_t inp_gamepad;
 
-// Which keybaord keys have been presses since the last frame?
+// Which keyboard keys have been pressed since the last frame?
 extern uint8_t inp_keys;
 
 // Which cheatkeys have been pressed since the last frame?

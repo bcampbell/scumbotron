@@ -25,6 +25,7 @@ static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
 static void tick_STATE_COMPLETE();
 static void tick_STATE_PAUSED();
+static void tick_STATE_SOUNDTEST();
 
 static void render_STATE_TITLESCREEN();
 static void render_STATE_NEWGAME();
@@ -36,6 +37,7 @@ static void render_STATE_KILLED();
 static void render_STATE_GAMEOVER();
 static void render_STATE_COMPLETE();
 static void render_STATE_PAUSED();
+static void render_STATE_SOUNDTEST();
 
 static void level_init(uint8_t level);
 static void level_baiter_check();
@@ -79,6 +81,7 @@ void game_tick()
     case STATE_STORY_ATTACK:    tick_STATE_STORY_ATTACK(); break;
     case STATE_STORY_RUNAWAY:    tick_STATE_STORY_RUNAWAY(); break;
     case STATE_STORY_WHATNOW:    tick_STATE_STORY_WHATNOW(); break;
+    case STATE_SOUNDTEST:    tick_STATE_SOUNDTEST(); break;
     }
 
 }
@@ -106,6 +109,7 @@ void game_render()
         case STATE_STORY_ATTACK:    render_STATE_STORY_ATTACK(); break;
         case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
+        case STATE_SOUNDTEST:       render_STATE_SOUNDTEST(); break;
     }
     vfx_render();
 }
@@ -151,6 +155,10 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
+    if (inp_gamepad & INP_UP) {
+        enter_STATE_SOUNDTEST();
+        return;
+    }
 #if 0
     {
         static uint8_t prev = 0;
@@ -990,5 +998,53 @@ static void level_baiter_check()
             }
         }
     }
+}
+
+
+
+static uint8_t soundtest_current = SFX_NONE;
+
+void enter_STATE_SOUNDTEST()
+{
+    state = STATE_SOUNDTEST;
+    statetimer = 0;
+    plat_clr();
+}
+
+void tick_STATE_SOUNDTEST()
+{
+    if ((inp_keys & (INP_KEY_ESC|INP_KEY_ENTER)) || (inp_gamepad & INP_PAD_B)) {
+        enter_STATE_TITLESCREEN();
+        return;
+    }
+
+    if (inp_gamepad & INP_UP) {
+        if (soundtest_current > 0) {
+            --soundtest_current;
+        }
+    }
+    if (inp_gamepad & INP_DOWN) {
+        if (soundtest_current <SFX_NUMEFFECTS) {
+            ++soundtest_current;
+        }
+    }
+
+    if (inp_gamepad & (INP_LEFT|INP_RIGHT|INP_PAD_A)) {
+        sfx_play(soundtest_current, 0);
+    }
+
+}
+
+void render_STATE_SOUNDTEST()
+{
+   
+    for (uint8_t i = 0; i < SFX_NUMEFFECTS; ++i) {
+        char buf[2] = {
+            hexdigits[i>>4 & 0x0F],
+            hexdigits[i & 0x0F],
+        };
+        plat_textn(1, 3+i, buf, 2, (soundtest_current == i) ? (tick & 0x0f) : 1);
+    }
+    sfx_render_dbug();
 }
 

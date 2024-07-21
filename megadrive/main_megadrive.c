@@ -785,14 +785,13 @@ uint8_t plat_raw_gamepad()
 
 uint8_t plat_raw_keys()
 {
-    return 0;   // no keyboards here!
+    return 0;
 }
 
 uint8_t plat_raw_cheatkeys()
 {
     return 0;
 }
-
 
 bool plat_savescores(const void* begin, int nbytes)
 {
