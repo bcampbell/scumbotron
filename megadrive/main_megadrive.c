@@ -219,11 +219,11 @@ void main()
         }
 
         clearscreen();
+        //sfx_render_dbug();
         // Copy the screen to VRAM
         //vdp_color(0,0x0ee0);
         game_render();
         //vdp_color(0,0x0000);
-
         waitvbl();
 
         // end of rendering - do any dma while we're in the vblank!

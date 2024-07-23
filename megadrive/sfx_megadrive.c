@@ -14,7 +14,8 @@ static uint8_t chan_time[4];
 static uint8_t chan_pri[4];
 static uint8_t chan_prev = 0;
 
-static uint8_t chan_pick(uint8_t effect, uint8_t pri)
+
+static uint8_t chan_pick(uint8_t pri)
 {
     // free channel?
     for (uint8_t ch = 0; ch < 3; ++ch) {
@@ -41,7 +42,7 @@ static uint8_t chan_pick(uint8_t effect, uint8_t pri)
 }
 
 uint8_t sfx_continuous = SFX_NONE;
-
+static uint8_t prev_sfx_continuous = SFX_NONE;
 
 // Attenuation, 4bits. 0x00 = full, 0x0f=silent
 static void psg_attenuation(uint8_t ch, uint8_t att) {
@@ -62,6 +63,15 @@ static void psg_noise(uint8_t clock, uint8_t periodic) {
     *PSG_PORT = 0xE0 | periodic << 2 | clock;
 }
 
+static void chan_stop(uint8_t ch) {
+    chan_effect[ch] = SFX_NONE;
+    chan_time[ch] = 0;
+    chan_pri[ch] = 0;
+    psg_attenuation(ch, 0x0f);
+    if (ch!=3) {
+        psg_freq(ch, 0);
+    }
+}
 
 static uint8_t u8clip(uint8_t v, uint8_t vmin, uint8_t vmax)
 {
@@ -96,26 +106,27 @@ static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
             int8_t s = sin24((t<<1) & 0x0f);
             psg_freq(ch, 0x300 - (t<<1) - (s<<2));
             uint8_t att = 0;
-            if (t>8) {
-                att = u8clip(t-8>>3,0,15);
+            if (t > 8) {
+                att = u8clip((t - 8) >> 3,0,15);
             }
             psg_attenuation(ch, att);
         }
         return (t >= 64);
     case SFX_OWWWW:
-        // CHEESY HACK - use noise channel too!
         {
-            if (t >= 48) {
-                psg_attenuation(3,15);
-                return true;
-            } else if (t == 0) {
-                psg_noise(2,1);
-            }
             int8_t s = sin24((t<<3) & 0x0f);
-            psg_freq(ch, 0x200 + (t<<3) + (rnd()&0x7f));
-            psg_attenuation(ch, (128+s)>>6);
-            //psg_freq(ch, 0x220 - ((t&0x7)<<5) - (t<<3));
-            psg_attenuation(3, (128+s)>>5);
+            if (ch == 3) {
+                // noise part
+                if (t == 0) {
+                    psg_noise(2,1);
+                }
+                psg_attenuation(3, (128+s)>>5);
+            } else {
+                // psg part
+                psg_freq(ch, 0x200 + (t<<3) + (rnd()&0x7f));
+                psg_attenuation(ch, (128+s)>>6);
+            }
+            return (t >= 48);
         }
         return false;
     case SFX_HURRYUP:
@@ -131,7 +142,6 @@ static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
         return (t >= 48);
     case SFX_MARINE_SAVED:
         {
-            int8_t s = sin24(t & 0x0f);
             psg_freq(ch, 0x220 - ((t&0x7)<<5) - (t<<3));
             psg_attenuation(ch, 0);
         }
@@ -145,27 +155,22 @@ static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
         return false;
     case SFX_ZAPPING:
         {
-            int8_t s2 = sin24((t<<4) & 0x0f);
-            //if (t&1) {
-            //    psg_freq(ch, 0x010 + (rnd()&0x0f)); //(s<<4));
-            //} else {
-                psg_freq(ch, 0x3ff - ((t&0x03)<<7));// + (s<<4));
-           // }
+            psg_freq(ch, 0x3ff - ((t&0x03)<<7));// + (s<<4));
             if ((t & 0x7) == 0) {
                 psg_attenuation(ch, 0x04);//s2 & 0x0f);
             } else {
                 psg_attenuation(ch, 0x00);//s2 & 0x0f);
             }
-
         }
         return false;   // forever!
     case SFX_INEFFECTIVE_THUD:
-        // CHEESY HACK - use noise channel!
-        if (t >= 6) {
-            psg_attenuation(3,15);
-            return true;
-        } else if (t == 0) {
+        if (ch != 3) {
+            return true;    // free redundantly-allocated channel
+        }
+        if (t == 0) {
             psg_noise(1,1);
+        } else if (t >= 6) {
+             return true;
         }
         psg_attenuation(3, t<<1);
         return false;
@@ -213,35 +218,69 @@ void sfx_init()
 
 void sfx_tick(uint8_t frametick)
 {
-    for (uint8_t ch = 0; ch < 3; ++ch) {
+    // tick all channels (including noise)
+    for (uint8_t ch = 0; ch < 4; ++ch) {
         uint8_t t = chan_time[ch];
         ++chan_time[ch];
 
         bool fin = effect(ch,chan_effect[ch], t);
         if (fin) {
             // Off.
-            chan_effect[ch] = SFX_NONE;
-            chan_time[ch] = 0;
-            chan_pri[ch] = 0;
-            psg_attenuation(ch, 0x0f);
-            if (ch!=3) {
-                psg_freq(ch, 0);
-            }
-            continue;
+            chan_stop(ch);
         }
     }
+
+    if (sfx_continuous != prev_sfx_continuous) {
+        // stop playing old sound
+        if (prev_sfx_continuous != SFX_NONE) {
+            for (uint8_t ch = 0; ch < 4; ++ch) {
+                if (chan_effect[ch] == prev_sfx_continuous) {
+                    chan_stop(ch);
+                }
+            }
+        }
+
+        // start playing new sound
+        if (sfx_continuous != SFX_NONE) {
+            // use highest pri
+            sfx_play(sfx_continuous, 255);
+        }
+    }
+    prev_sfx_continuous = sfx_continuous;
+    sfx_continuous = SFX_NONE;
+
 }
 
 
+// returns true if effect needs a psg channel (0-2)
+static bool uses_psg(uint8_t effect) {
+    return effect != SFX_INEFFECTIVE_THUD;
+}
+
+// return true if effect uses noise channel (3)
+static bool uses_noise(uint8_t effect) {
+    return effect == SFX_OWWWW || effect == SFX_INEFFECTIVE_THUD;
+}
+
 void sfx_play(uint8_t effect, uint8_t pri)
 {
-    uint8_t ch = chan_pick(effect, pri);
-    if (ch == 0xff) {
-        return;
+    if (uses_psg(effect)) {
+        uint8_t ch = chan_pick(pri);
+        if (ch != 0xff) {
+            chan_effect[ch] = effect;
+            chan_pri[ch] = pri;
+            chan_time[ch] = 0;
+        }
     }
-    chan_effect[ch] = effect;
-    chan_pri[ch] = pri;
-    chan_time[ch] = 0;
+
+    if (uses_noise(effect)) {
+        if (chan_effect[3] == SFX_NONE || pri >= chan_pri[3]) {
+            // play on noise channel too
+            chan_effect[3] = effect;
+            chan_pri[3] = pri;
+            chan_time[3] = 0;
+        }
+    }
 }
 
 void sfx_render_dbug()
@@ -269,6 +308,22 @@ void sfx_render_dbug()
 
         uint8_t c = (effect == SFX_NONE) ? 2 : 1;
         plat_textn(basex, basey + ch, buf, 10, c);
+    }
+
+    // continuous sound
+    {
+        char buf[2] = {
+            hexdigits[sfx_continuous>>4],
+            hexdigits[sfx_continuous&0x0f],
+        };
+        plat_textn(basex, basey+4, buf,2,1);
+    }
+    {
+        char buf[2] = {
+            hexdigits[prev_sfx_continuous>>4],
+            hexdigits[prev_sfx_continuous&0x0f],
+        };
+        plat_textn(basex+3, basey+4, buf,2,1);
     }
 }
 
