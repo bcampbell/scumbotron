@@ -869,6 +869,7 @@ static void level_init(uint8_t level)
             gobs_create(GK_HZAPPER, 1);
             gobs_create(GK_VZAPPER, 1);
             gobs_create(GK_MARINE, 5);
+            break;
         case 28:
             gobs_create(GK_VULGON, 8);
             gobs_create(GK_BLOCK, 8);
