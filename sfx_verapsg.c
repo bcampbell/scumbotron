@@ -275,4 +275,7 @@ void sfx_tick(uint8_t frametick)
 }
 
 
+void sfx_render_dbug()
+{
+}
 

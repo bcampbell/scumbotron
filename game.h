@@ -31,8 +31,9 @@
 #define STATE_STORY_WHATNOW 18 // story part 5
  
 #define STATE_COMPLETE 19
-
+#if defined(SOUNDTEST)
 #define STATE_SOUNDTEST 20
+#endif
 
 #define NUM_LEVELS 42
 
@@ -66,7 +67,9 @@ void enter_STATE_KILLED();
 void enter_STATE_GAMEOVER();
 void enter_STATE_COMPLETE();
 void enter_STATE_PAUSED();
+#if defined(SOUNDTEST)
 void enter_STATE_SOUNDTEST();
+#endif
 // In highscore.c:
 void enter_STATE_HIGHSCORES();
 void tick_STATE_HIGHSCORES();

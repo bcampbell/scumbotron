@@ -25,7 +25,7 @@ static void tick_STATE_KILLED();
 static void tick_STATE_GAMEOVER();
 static void tick_STATE_COMPLETE();
 static void tick_STATE_PAUSED();
-static void tick_STATE_SOUNDTEST();
+
 
 static void render_STATE_TITLESCREEN();
 static void render_STATE_NEWGAME();
@@ -37,7 +37,11 @@ static void render_STATE_KILLED();
 static void render_STATE_GAMEOVER();
 static void render_STATE_COMPLETE();
 static void render_STATE_PAUSED();
+
+#if defined(SOUNDTEST)
+static void tick_STATE_SOUNDTEST();
 static void render_STATE_SOUNDTEST();
+#endif
 
 static void level_init(uint8_t level);
 static void level_baiter_check();
@@ -81,7 +85,9 @@ void game_tick()
     case STATE_STORY_ATTACK:    tick_STATE_STORY_ATTACK(); break;
     case STATE_STORY_RUNAWAY:    tick_STATE_STORY_RUNAWAY(); break;
     case STATE_STORY_WHATNOW:    tick_STATE_STORY_WHATNOW(); break;
+#if defined(SOUNDTEST)
     case STATE_SOUNDTEST:    tick_STATE_SOUNDTEST(); break;
+#endif
     }
 
 }
@@ -109,7 +115,9 @@ void game_render()
         case STATE_STORY_ATTACK:    render_STATE_STORY_ATTACK(); break;
         case STATE_STORY_RUNAWAY:   render_STATE_STORY_RUNAWAY(); break;
         case STATE_STORY_WHATNOW:   render_STATE_STORY_WHATNOW(); break;
+#if defined(SOUNDTEST)
         case STATE_SOUNDTEST:       render_STATE_SOUNDTEST(); break;
+#endif
     }
     vfx_render();
 }
@@ -155,20 +163,10 @@ static void tick_STATE_TITLESCREEN()
         return;
     }
 
+#if defined(SOUNDTEST)
     if (inp_gamepad & INP_UP) {
         enter_STATE_SOUNDTEST();
         return;
-    }
-#if 0
-    {
-        static uint8_t prev = 0;
-        uint8_t cur = plat_raw_cheatkeys();
-        if (~prev & cur & INP_CHEAT_POWERUP) {
-        //    vfx_play_warp();
-            sfx_play(SFX_BONUS,2);
-            statetimer = 0;
-        }
-        prev = cur;
     }
 #endif
 
@@ -1002,7 +1000,7 @@ static void level_baiter_check()
 }
 
 
-
+#if defined(SOUNDTEST)
 static uint8_t soundtest_current = SFX_NONE;
 
 void enter_STATE_SOUNDTEST()
@@ -1049,3 +1047,4 @@ void render_STATE_SOUNDTEST()
     sfx_render_dbug();
 }
 
+#endif // SOUNDTEST
