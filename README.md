@@ -25,27 +25,13 @@ The produced executable/rom/whatever will be in the `build_<PLATFORM>` dir.
 
 ## Platform status
 
-### cx16
-
-Build broken (overruns BASIC RAM limit)
-
-### sdl2
-
-Working. (tested on windows and linux)
-
-### megadrive
-
-Working. A little slow. No sound.
-
-### nds
-
-Working and emu and real hw. No sound. Screen layout a little awkward.
-
-### pce
-
-Broken. Suspect llvm-sdk-mos pce implementation needs tweaking.
-
-### f256k
-
-Partial. Trouble running on emulation/IDE (older IDE releases include PGZ loader?).
+- cx16: working
+- sdl2: working
+- megadrive: working, but has slowdowns
+- nds: working, no sound
+- gba: working, no sound
+- amiga: working, no sound, a bit slow (Amiga 3000 is fine)
+- neo6502: playable, incomplete, no sound
+- pce: Broken. Suspect llvm-sdk-mos pce implementation needs tweaking.
+- f256k: partial
 
