@@ -35,15 +35,11 @@ endif
 # Any C or C++ standard should be fine here as long as GCC supports it
 # GCC 10+ by default fails to link if you don't declare header variables extern,
 # and -fcommon reverts to the old behavior (needed to compile SGDK)
-CFLAGS  = -m68000 -Wall -std=c99 -ffreestanding
+CFLAGS  = -m68000 -Wall -std=c99 -flto=auto
+#-fno-tree-loop-distribute-patterns
 CFLAGS += -I$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)/include
 CFLAGS += -Imegadrive
-#CFLAGS += -Ofast
-CFLAGS += -O3
-# alternate function-calling convention - maybe faster?
-#CFLAGS += -mrtd
-# screws debugging, but hey
-CFLAGS += -fomit-frame-pointer
+CFLAGS += -O3 -flto
 
 # Another useful GAS flag is --bitwise-or, but it breaks SGDK
 ASFLAGS  = -m68000 --register-prefix-optional
@@ -51,7 +47,8 @@ ASFLAGS  = -m68000 --register-prefix-optional
 # -nostartfiles disables the c runtime startup code
 # -nostdlib unsets -lc, so when using Newlib don't set that option
 
-LDFLAGS = -T megadrive/megadrive.ld -nostdlib
+LDFLAGS = -T megadrive/megadrive.ld -flto=auto -nostdlib
+#-fno-tree-loop-distribute-patterns
 LDFLAGS += -L$(MARSDEV)/m68k-elf/lib/gcc/m68k-elf/$(GCC_VER)
 LDLIBS = -lgcc
 DEPFLAGS = -MMD -MP -MF $@.d

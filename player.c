@@ -82,7 +82,7 @@ void player_killed(uint8_t p)
     int16_t py0 = plry[p] + (4 << FX);
     vfx_play_kaboom(px0+(8<<FX), py0+(8<<FX));
     sfx_play(SFX_OWWWW, 2);
-    // reset weapon
+    // lose weapon powerup
     plrweapon[p] = WEAPON_SINGLESHOT;
     plrweaponpower[p] = 0;
     plrweaponage[p] = 0;

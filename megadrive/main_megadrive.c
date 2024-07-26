@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include "../plat.h"
 #include "../misc.h"
 #include "../gob.h" // for ZAPPER_*
@@ -32,7 +33,49 @@ extern const unsigned int export_spr64x8_bin_len;
 #define SPR32_TILEBASE (VRAM_SPR32/32)
 #define SPR64x8_TILEBASE (VRAM_SPR64x8/32)
 
+// START of bare-metal libc replacements
+// Code generated with 
+__attribute__((optimize("no-tree-loop-distribute-patterns"))) 
+void* memset(void *dest, int val, unsigned long len) {
+	unsigned char *ptr = (unsigned char *)dest;
+	while(len-- > 0)
+		*ptr++ = val;
+	return dest;
+}
 
+__attribute__((optimize("no-tree-loop-distribute-patterns"))) 
+void* memcpy(void *dest, const void *src, unsigned long len) {
+	char *d = (char *)dest;
+	const char *s = (const char *)src;
+	while(len--)
+		*d++ = *s++;
+	return dest;
+}
+
+__attribute__((optimize("no-tree-loop-distribute-patterns"))) 
+void* memmove(void *dest, const void *src, unsigned long len) {
+	char *d = dest;
+	const char *s = src;
+	if (d < s) {
+		while (len--)
+			*d++ = *s++;
+	} else {
+		const char *lasts = s + (len - 1);
+		char *lastd = d + (len - 1);
+		while (len--)
+			*lastd-- = *lasts--;
+	}
+	return dest;
+}
+
+unsigned long strlen(const char* s) {
+	unsigned long t=0;
+	while(*s++)
+		t++;
+	return t;
+}
+
+// END of bare-metal libc replacements
 
 //
 volatile uint8_t tick;
@@ -171,18 +214,10 @@ static void vdp_color(uint16_t index, uint16_t color) {
 	(((uint16_t)pal) << 13) | (((uint16_t)prio) << 15) | ((uint16_t)index))
 
 
-void dbug()
-{
-    uint8_t n = nsprites;
-    char buf[2];
-    buf[0] = hexdigits[(n >> 4) & 0x0F];
-    buf[1] = hexdigits[(n >> 0) & 0x0F];
-    plat_textn(0,0,buf,2,1);
-}
-
 
 // clear our offscreen buffer
-static void clearscreen()
+// TODO: replace with optimised asm movem version.
+void clearscreen()
 {
     uint16_t attr = TILE_ATTR(0,1,0,0,CHARBASE0 + 0);
     // two chars per uint32_t
@@ -202,28 +237,24 @@ static void clearscreen()
 }
 
 
-void main()
+int main()
 {
     megadrive_init();
     game_init();
     while(1) {
-        //vdp_color(0,0x0000);
-        dbug();
-        //vdp_color(0,0x000e);
         game_tick();
 
         // start render
-        //vdp_color(0,0x0002);
         {
             nsprites = 0;
         }
 
+        //vdp_color(0,0x0080);
         clearscreen();
+        //vdp_color(0,0x0000);
         //sfx_render_dbug();
         // Copy the screen to VRAM
-        //vdp_color(0,0x0ee0);
         game_render();
-        //vdp_color(0,0x0000);
         waitvbl();
 
         // end of rendering - do any dma while we're in the vblank!
@@ -250,6 +281,7 @@ void main()
         //vdp_color(0,0x0002);
 
     }
+    return 0;
 }
 
 static void megadrive_init()
