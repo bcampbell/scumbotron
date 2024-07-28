@@ -1,7 +1,7 @@
 BUILD_DIR=build_pce
 EXPORT_DIR=export_pce
 
-SRCS = pce/main.c pce/sprites.c \
+SRCS = pce/main_pce.c pce/sprites_pce.c \
 	game.c gob.c player.c highscore.c input.c misc.c \
 	bub.c story.c vfx.c draw_common.c \
 	$(addprefix $(EXPORT_DIR)/, palette.c spr16.c spr32.c chars.c)
@@ -10,8 +10,8 @@ OBJ_FILES = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 #OBJ_FILES += $(addprefix $(BUILD_DIR)/,$(SRCS_ASM:.s=.o))
 
 CC := mos-pce-clang
-CFLAGS = -Ipce -Os
-LDFLAGS =
+CFLAGS = -Ipce -Os -flto
+LDFLAGS = -flto
 LDLIBS = 
 DEPFLAGS = -MMD -MP -MF $@.d
 
@@ -49,7 +49,7 @@ $(EXPORT_DIR)/chars.c: chars.png
 
 .PHONY: run
 run: $(BUILD_DIR)/scumbotron
-	retroarch --verbose --libretro /usr/lib/x86_64-linux-gnu/libretro/mednafen_pce_fast_libretro.so $<
+	mednafen -force_module pce $<
 
 .PHONY: clean
 clean:

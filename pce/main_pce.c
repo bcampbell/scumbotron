@@ -32,6 +32,7 @@ extern const unsigned int export_palette_bin_len;
 extern const unsigned char export_chars_bin[];
 extern const unsigned int export_chars_bin_len;
 
+static void dbug();
 
 void waitvbl()
 {
@@ -39,22 +40,25 @@ void waitvbl()
     while (tmp == tick) {}
 }
 
+#if 0
+int main(void) {
+  // Configure the VDC screen resolution.
+  pce_vdc_set_resolution(256, 240, 0);
 
-void debug_gamepad()
-{
-    char buf[2] = {'H','I'};
-    //uint8_t b = 0x69;   //plat_raw_dualstick();
-    buf[0] = 'H';   //hexdigits[b >> 4];
-    buf[1] = '0';   //hexdigits[b & 0x0f];
-    plat_textn(0,0,buf,2,tick&15);
+  // Enable VDC interrupts for VBlanks.
+  pce_vdc_irq_vblank_enable();
+  pce_irq_enable(IRQ_VDC);
+  pce_cpu_irq_enable();
+
 }
+#endif
 
 int main(void) {
     // Configure the VDC screen resolution.
     pce_vdc_set_resolution(SCREEN_W, SCREEN_H, 0);  //256x240
 
     init_bg();
-    //sprites_init();
+    sprites_init();
 
     // Set up vblank interrupt
     pce_vdc_irq_vblank_enable();
@@ -63,7 +67,12 @@ int main(void) {
 
     game_init();
     while(1) {
+       //dbug();
+        *IO_VCE_COLOR_INDEX = 0x000;
+        *IO_VCE_COLOR_DATA = tick;
         waitvbl();
+        plat_text(3,3,"this is a test",tick&15);
+        //    plat_text(3,3,"this is a test",tick&15);
         render_start();
 //        *IO_VCE_COLOR_INDEX = 0x200;
 //        *IO_VCE_COLOR_DATA = (rnd()<<4) | rnd();
@@ -72,10 +81,8 @@ int main(void) {
     //        sprout16(plat_mouse_x, plat_mouse_y, 0);
     //    }
 
-        debug_gamepad();
         //debug_getin();
         render_finish();
-        //cx16_k_joystick_scan();
         //update_inp_mouse();
         game_tick();
 
@@ -96,25 +103,62 @@ int main(void) {
 #define VRAM_CG 0x4000
 #define TILE_BASEIDX (VRAM_CG/32)
 
+
+void dbug()
+{
+    {
+        uint16_t buf[64];
+        uint8_t b = plat_raw_gamepad();
+        buf[0] = hexdigits[tick >> 4];
+        buf[1] = hexdigits[tick & 0x0f];
+        buf[2] = ' ';
+        buf[3] = hexdigits[b >> 4];
+        buf[4] = hexdigits[b & 0x0f];
+
+        for (uint8_t i=0; i<5; ++i) {
+            buf[i] = (1<<12) | (TILE_BASEIDX + buf[i]);
+        }
+        pce_vdc_set_copy_word();
+        uint16_t vdest = 32*16;
+        pce_vdc_copy_to_vram(vdest/2, (const void *)buf, 5*2);
+    //   plat_textn(8, tick&0x0f, buf, 5, tick & 0x0f);
+
+    //    plat_textn(16, 16, "Hello!", 6, tick);
+    }
+
+    {
+        uint16_t buf[256];
+        for (int i=0; i<256; ++i) {
+            buf[i] = (((i+tick)&0x0f)<<12) | (TILE_BASEIDX+i);
+        }
+        pce_vdc_set_copy_word();
+        pce_vdc_copy_to_vram(0, (const void *)buf, 256*2);
+    }
+
+}
+
 static void init_bg()
 {
     pce_vdc_bg_enable();
     pce_vdc_bg_set_size(VDC_BG_SIZE_32_32);
 
-    // bg palette in first block
+    // 16 bg palettes in first block - we'll use one palette per colour :-)
     uint16_t idx = 0x0000;
     const uint8_t* src = export_palette_bin;
     for(uint8_t i=0; i<16; ++i) {
+        *IO_VCE_COLOR_INDEX = idx++;
+        *IO_VCE_COLOR_DATA = 0x0000;
         for(uint8_t j=0; j<16; ++j) {
             *IO_VCE_COLOR_INDEX = idx++;
-            *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>5, src[1]>>5, src[2]>>5);
+            //*IO_VCE_COLOR_DATA = VCE_COLOR(i/2,i/2,i/2);
+            *IO_VCE_COLOR_DATA = VCE_COLOR(src[0], src[1], src[2]);
         }
         src += 4;
     }
 
     // Load chars into vram as bg tiles
     pce_vdc_set_copy_word();
-    pce_vdc_copy_to_vram(VRAM_CG/2, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len/2);
+    pce_vdc_copy_to_vram(VRAM_CG/2, (const void *)export_chars_bin, (uint16_t)export_chars_bin_len);
 }
 
 static void render_start()
@@ -222,20 +266,6 @@ void plat_textentry_stop() {}
 extern char plat_textentry_getchar() {return 0;}
 // end PLAT_HAS_TEXTENTRY
  
-uint8_t plat_raw_dualstick()
-{
-    uint8_t out = 0;
-    uint8_t b = pce_joypad_read();
-
-    if (b & KEY_LEFT) { out |= INP_LEFT; }
-    if (b & KEY_RIGHT) { out |= INP_RIGHT; }
-    if (b & KEY_UP) { out |= INP_UP; }
-    if (b & KEY_DOWN) { out |= INP_DOWN; }
-   
-    out |= (out<<4);    /// fudge fire dirs for now
-    return 0;
-}
-
 uint8_t plat_raw_gamepad() {
     uint8_t out = 0;
     uint8_t b = pce_joypad_read();

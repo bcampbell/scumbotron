@@ -34,15 +34,20 @@ extern const unsigned int export_palette_bin_len;
 
 void sprites_init()
 {
-    //pce_vdc_sprite_enable();
+    pce_vdc_sprite_enable();
 
     // Sprite palette in second half of vce memory
-    uint16_t idx = 0x200;
+    uint16_t idx = 0x100;
     for(uint8_t i=0; i<16; ++i) {
         const uint8_t* src = export_palette_bin;
-        for(uint8_t j=0; j<16; ++j) {
+
             *IO_VCE_COLOR_INDEX = idx++;
-            *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>5, src[1]>>5, src[2]>>5);
+            *IO_VCE_COLOR_DATA = 0x0000;
+        for(uint8_t j=1; j<16; ++j) {
+            *IO_VCE_COLOR_INDEX = idx++;
+            *IO_VCE_COLOR_DATA = VCE_COLOR(7,7,7);
+
+        //    *IO_VCE_COLOR_DATA = VCE_COLOR(src[0]>>5, src[1]>>5, src[2]>>5);
             src += 4;
         }
     }
@@ -81,7 +86,7 @@ void sprout16(int16_t x, int16_t y, uint8_t img)
 
     pce_vdc_set_copy_word();
     uint16_t dest = VRAM_SG + nsprites*8;
-    pce_vdc_copy_to_vram(dest/2, (const void *)&s, (uint16_t)sizeof(s));
+    pce_vdc_copy_to_vram(dest/2, (const void *)&s, (uint16_t)sizeof(s)*2);
     ++nsprites;
 }
 
