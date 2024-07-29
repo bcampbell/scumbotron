@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include "plat_details.h"    // platform-specific details (screen size etc...)
 
+#define SOUNDTEST
+
+
 // platform capabilities:
 // PLAT_HAS_MOUSE
 // PLAT_HAS_TEXTENTRY

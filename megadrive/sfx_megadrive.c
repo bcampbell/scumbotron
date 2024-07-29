@@ -6,14 +6,14 @@
 
 #define PSG_PORT ((volatile uint8_t *) 0xC00011)
 
-
 // channels 0-2 are square wave
 // channel 3 is noise.
 static uint8_t chan_effect[4];
 static uint8_t chan_time[4];
 static uint8_t chan_pri[4];
-static uint8_t chan_prev = 0;
-
+static uint8_t chan_prev;
+uint8_t sfx_continuous = SFX_NONE;
+static uint8_t prev_sfx_continuous = SFX_NONE;
 
 static uint8_t chan_pick(uint8_t pri)
 {
@@ -40,9 +40,6 @@ static uint8_t chan_pick(uint8_t pri)
     }
     return 0xff;
 }
-
-uint8_t sfx_continuous = SFX_NONE;
-static uint8_t prev_sfx_continuous = SFX_NONE;
 
 // Attenuation, 4bits. 0x00 = full, 0x0f=silent
 static void psg_attenuation(uint8_t ch, uint8_t att) {
@@ -84,7 +81,7 @@ static uint8_t u8clip(uint8_t v, uint8_t vmin, uint8_t vmax)
     }
 }
 
-static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
+static bool chan_update(uint8_t ch, uint8_t effect, uint8_t t)
 {
     switch(effect) {
     case SFX_LASER:
@@ -199,8 +196,6 @@ static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
         }
         return (t >= 48);
     default:
-        psg_freq(ch, 0);
-        psg_attenuation(ch, 0x0f);
         return true;
     }
 }
@@ -208,7 +203,11 @@ static bool effect(uint8_t ch, uint8_t effect, uint8_t t)
 
 void sfx_init()
 {
+    chan_prev = 0;
     for (uint8_t ch = 0; ch < 4; ++ch) {
+        chan_effect[ch] = SFX_NONE;
+        chan_time[ch] = 0;
+        chan_pri[ch] = 0;
         psg_attenuation(ch, 0x0f);
         if (ch != 3) {
             psg_freq(ch, 0);
@@ -223,7 +222,7 @@ void sfx_tick(uint8_t frametick)
         uint8_t t = chan_time[ch];
         ++chan_time[ch];
 
-        bool fin = effect(ch,chan_effect[ch], t);
+        bool fin = chan_update(ch,chan_effect[ch], t);
         if (fin) {
             // Off.
             chan_stop(ch);
