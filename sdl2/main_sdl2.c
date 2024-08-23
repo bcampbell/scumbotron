@@ -4,6 +4,10 @@
 
 #include <SDL.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 volatile uint8_t tick = 0;
 
 static SDL_Window* fenster = NULL;
@@ -13,13 +17,14 @@ static char* scoreFile = NULL;
 static bool startup();
 static void shutdown();
 static void pumpevents();
+static void update();
 
 // from gfx_sdl2.c:
 bool gfx_init(SDL_Window* fenster);
 bool gfx_screen_rethink(int w, int h);
-bool gfx_shutdown();
-bool gfx_render_start();
-bool gfx_render_finish();
+void gfx_shutdown();
+void gfx_render_start();
+void gfx_render_finish();
 extern SDL_Renderer* renderer;
 
 // from input_sdl2.c:
@@ -205,6 +210,21 @@ void plat_quit()
     quit = true;
 }
 
+#ifdef __EMSCRIPTEN__
+int main(void)
+{
+    if (!startup()) {
+        shutdown();
+        return 1;
+    }
+    game_init();
+
+    emscripten_set_main_loop(update, 0, 1);
+    //    emscripten_cancel_main_loop()
+    return 0;
+}
+
+#else
 int main(int argc, char* argv[]) {
     if (!startup()) {
         shutdown();
@@ -215,23 +235,8 @@ int main(int argc, char* argv[]) {
     uint64_t starttime = SDL_GetTicks64();
     int frame = 0;
     quit = false;
-    while(1) {
-        pumpevents();
-        if (quit) {
-            break;
-        }
-        // Renderer needed for coord mapping.
-        mouse_update(renderer);
-
-        gfx_render_start();
-        game_render();
-        mouse_render();
-        gfx_render_finish();
-
-        game_tick();
-        ++tick; // The 8bit byte ticker.
-
-        audio_render();
+    while(!quit) {
+        update();
 
         ++frame;
 
@@ -241,10 +246,30 @@ int main(int argc, char* argv[]) {
         if (delta > 0) {
             SDL_Delay(delta);
         }
-
     }
     shutdown();
     return 0;
+}
+#endif
+
+static void update()
+{
+    pumpevents();
+    if (quit) {
+        return;
+    }
+    // Renderer needed for coord mapping.
+    mouse_update(renderer);
+
+    gfx_render_start();
+    game_render();
+    mouse_render();
+    gfx_render_finish();
+
+    game_tick();
+    ++tick; // The 8bit byte ticker.
+
+    audio_render();
 }
 
 
