@@ -22,6 +22,7 @@ var opts struct {
 	fmt       string
 	csource   bool
 	varName   string
+	pad       int
 }
 
 type fmtHandler struct {
@@ -70,6 +71,7 @@ Flags:
 	flag.IntVar(&opts.width, "w", 8, "Sprite width")
 	flag.IntVar(&opts.height, "h", 8, "Sprite height")
 	flag.IntVar(&opts.numFrames, "num", 1, "Number of sprites to export")
+	flag.IntVar(&opts.pad, "pad", 0, "Size to pad each sprite to in bytes (0=none)")
 	flag.StringVar(&opts.fmt, "fmt", "8bpp", "Output format, one of:\n"+describeHandlers())
 	flag.BoolVar(&opts.csource, "c", false, "Output C src instead of raw binary")
 	flag.StringVar(&opts.varName, "var", "", "Set variable name used for C source output (-c) (defaults to munged filename)")
@@ -255,6 +257,12 @@ func dumpImages(img *image.Paletted, writer Dumper) error {
 		if err != nil {
 			return err
 		}
+
+		// Apply padding if needed
+		for len(dat) < opts.pad {
+			dat = append(dat, 0)
+		}
+
 		err = writer.Commentf("img %d (%dx%d)\n", i, w, h)
 		if err != nil {
 			return err
