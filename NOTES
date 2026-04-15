@@ -7,6 +7,14 @@
 - slammer. invincible, fast, but pauses when shot
 - supergrunt - twice as fast
 
+## Miyoo mini+
+
+```
+ $ sudo apt install gcc-arm-linux-gnueabihf
+```
+
+
+
 ## SNES
 
 dev wiki: https://wiki.superfamicom.org/
