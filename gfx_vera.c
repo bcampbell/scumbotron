@@ -1,6 +1,10 @@
 #include "gfx_vera.h"
 
+#ifdef __CX16__
 #include <cx16.h>
+// Other platforms can sort out vera includes in plat_details.h (which
+// is inlcuded by plat.h).
+#endif
 
 #include "plat.h"
 #include "gob.h" // for ZAPPER_*
@@ -238,6 +242,16 @@ void gfx_vera_init()
     VERA.layer1.config = 0x10;    // 64x32 tiles, !T256C, !bitmapmode, 1bpp
     VERA.layer1.mapbase = (VRAM_LAYER1_MAP>>9);
     VERA.layer1.tilebase = ((VRAM_LAYER1_TILES)>>11)<<2 | 0<<1 | 0; // 8x8 tiles;
+
+    // ****** WARNING WARNING WARNING ******
+    // ****** WARNING WARNING WARNING ******
+    // ****** WARNING WARNING WARNING ******
+    //
+    // unaligned 16 bit memory accesses!
+    //
+    // ****** WARNING WARNING WARNING ******
+    // ****** WARNING WARNING WARNING ******
+    // ****** WARNING WARNING WARNING ******
     VERA.layer1.hscroll = 0; // 16bit
     VERA.layer1.vscroll = 0; // 16bit
 
