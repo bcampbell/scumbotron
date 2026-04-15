@@ -123,13 +123,6 @@ void plat_drawbox(int8_t x, int8_t y, uint8_t w, uint8_t h, uint8_t ch, uint8_t 
 
 #define SPR64x8_BUB 0   // Start of speech bubble sprites.
 
-void sprout16(int16_t x, int16_t y, uint8_t img);
-void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
-void sprout32(int16_t x, int16_t y, uint8_t img);
-void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
-void sprout64x8(int16_t x, int16_t y, uint8_t img );
-
-
 
 // these are all provided by draw_common.c
 void plat_player_render(int16_t x, int16_t y, uint8_t facing, bool moving);
@@ -163,6 +156,13 @@ void plat_cursor_render(int16_t x, int16_t y);
 // these two are platform-specific
 void plat_hzapper_render(int16_t x, int16_t y, uint8_t state);
 void plat_vzapper_render(int16_t x, int16_t y, uint8_t state);
+
+// Low-level sprite output, used by draw_common.c
+void sprout16(int16_t x, int16_t y, uint8_t img);
+void sprout16_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout32(int16_t x, int16_t y, uint8_t img);
+void sprout32_highlight(int16_t x, int16_t y, uint8_t img);
+void sprout64x8(int16_t x, int16_t y, uint8_t img );
 
 #ifdef PLAT_HAS_MOUSE
 extern int16_t plat_mouse_x;
